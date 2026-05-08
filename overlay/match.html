@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>ERA — Match Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<!-- No Supabase JS SDK — using raw fetch to avoid DataCloneError in OBS -->
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body {
+  background:transparent !important;
+  width:100vw; height:100vh;
+  overflow:hidden;
+  font-family:'Rajdhani',sans-serif;
+  color:white;
+}
+
+/* The overlay is designed at 1920x1080. The .canvas wrapper is scaled
+   via JS to fit whatever the OBS Browser source size is — so 2560x1440,
+   2715x1527, anything 16:9-ish all align with the in-game UI without
+   any per-resolution config. */
+.canvas {
+  position:absolute;
+  top:0; left:0;
+  width:1920px;
+  height:1080px;
+  transform-origin:top left;
+}
+
+@keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+
+/* === TOP-CENTER TEAM BANNERS ===
+   Two angled bars flanking a 460px gap so the in-game scoreboard stays
+   visible. Width is sized to fit the longest mascot name + logo without
+   overlapping the corner player cards. */
+.banner {
+  position:absolute;
+  top:14px;
+  height:60px;
+  display:flex; align-items:center;
+  padding:0 24px;
+  gap:14px;
+  opacity:0;
+  transition:opacity 0.35s ease;
+  /* Width is computed from left+right offsets per side below — both
+     banners span the same fixed distance between the corner player
+     card and the scoreboard area, so the layout stays symmetric
+     regardless of how short or long the team name is. */
+}
+.banner.visible { animation:fadeIn 0.4s ease both; }
+
+.banner-left {
+  left:320px;                       /* 20px gap from the player card so the
+                                       banner can fade off into the scene
+                                       instead of butting against the card */
+  right:calc(50% + 170px);          /* flush with the scoreboard's left edge */
+  background:linear-gradient(90deg, rgba(8,8,8,0) 0%, rgba(8,8,8,0.65) 30%, rgba(8,8,8,0.9) 60%, var(--team-color, #555) 100%);
+  border-bottom:2px solid var(--team-color, #555);
+  justify-content:flex-end;
+  padding-right:18px;
+  -webkit-mask-image:linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 28%, rgba(0,0,0,1) 100%);
+          mask-image:linear-gradient(90deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 28%, rgba(0,0,0,1) 100%);
+}
+.banner-right {
+  left:calc(50% + 170px);           /* flush with the scoreboard's right edge */
+  right:320px;                      /* mirror — fade-off gap on the outer edge */
+  background:linear-gradient(270deg, rgba(8,8,8,0) 0%, rgba(8,8,8,0.65) 30%, rgba(8,8,8,0.9) 60%, var(--team-color, #555) 100%);
+  border-bottom:2px solid var(--team-color, #555);
+  justify-content:flex-start;
+  padding-left:18px;
+  -webkit-mask-image:linear-gradient(270deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 28%, rgba(0,0,0,1) 100%);
+          mask-image:linear-gradient(270deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 28%, rgba(0,0,0,1) 100%);
+}
+
+.banner-name {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:28px;
+  letter-spacing:2px;
+  color:white;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-shadow:0 2px 6px rgba(0,0,0,0.75);
+}
+.banner-logo {
+  width:48px; height:48px;
+  border-radius:50%;
+  background:rgba(0,0,0,0.45);
+  border:2px solid var(--team-color, #555);
+  flex-shrink:0;
+  overflow:hidden;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 10px rgba(0,0,0,0.55);
+}
+.banner-logo img { width:100%; height:100%; object-fit:contain; }
+
+/* === TOP-CORNER PLAYER LISTS === */
+/* Sized to leave room for chat overlays without dominating the corners.
+   Position presets + drag-to-customize will land in a later update. */
+.players {
+  position:absolute;
+  top:156px;                         /* sits below the top scoreboard panel */
+  width:240px;
+  background:rgba(8,8,8,0.78);
+  border-radius:8px;
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  padding:8px 12px;
+  display:flex; flex-direction:column;
+  opacity:0;
+  transition:opacity 0.35s ease;
+  box-shadow:0 4px 20px rgba(0,0,0,0.55);
+}
+.players.visible { animation:fadeIn 0.4s ease both; }
+.players-left  {
+  left:0;
+  border-left:4px solid var(--team-color, #555);
+  border-top-left-radius:0;
+  border-bottom-left-radius:0;
+}
+.players-right {
+  right:0;
+  border-right:4px solid var(--team-color, #555);
+  border-top-right-radius:0;
+  border-bottom-right-radius:0;
+}
+
+.player-row {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:17px;
+  letter-spacing:1.4px;
+  color:rgba(255,255,255,0.96);
+  padding:5px 0;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+  text-shadow:0 1px 4px rgba(0,0,0,0.7);
+  display:flex; align-items:center; gap:8px;
+}
+.player-row:last-child { border-bottom:none; }
+.players-right .player-row { flex-direction:row-reverse; }
+.player-row.empty { color:rgba(255,255,255,0.28); font-style:italic; letter-spacing:1px; }
+.player-name {
+  flex:1 1 auto;
+  min-width:0;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.players-right .player-name { text-align:right; }
+.player-boost {
+  flex:0 0 115px;                  /* fixed width — all bars match length */
+  position:relative;
+  height:16px;
+  border-radius:3px;
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.12);
+  overflow:hidden;
+  box-shadow:inset 0 1px 2px rgba(0,0,0,0.5);
+}
+.player-boost-fill {
+  position:absolute;
+  top:0; bottom:0; left:0;
+  width:0%;
+  background:linear-gradient(90deg, var(--team-color, #C9A84C) 0%, var(--team-color, #ffd97a) 100%);
+  border-radius:inherit;
+  box-shadow:0 0 6px var(--team-color, #C9A84C);
+  /* Smooth fill — SOS bridge ticks frequently, transition keeps it
+     visually fluid without RAF interpolation. */
+  transition:width 0.18s linear;
+}
+/* Right-side bar fills from the right edge so it visually drains toward
+   the screen edge instead of toward the screen center. */
+.players-right .player-boost-fill {
+  left:auto;
+  right:0;
+}
+.player-boost-num {
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Orbitron', monospace;
+  font-size:10px;
+  font-weight:700;
+  color:#fff;
+  letter-spacing:0.4px;
+  text-shadow:0 1px 2px rgba(0,0,0,0.95), 0 0 2px rgba(0,0,0,0.7);
+  -webkit-text-stroke:0.3px rgba(0,0,0,0.55);
+  pointer-events:none;
+  z-index:2;
+}
+.player-row.empty .player-boost { display:none; }
+
+/* === NO-BRIDGE MODE ===
+   Producer-toggleable in the control page. Hides everything that depends on
+   the local stats bridge so the overlay still looks clean for streamers who
+   can't run era-stats-bridge.
+   Bridge-fed UI: boost bars, live center scoreboard, "now watching" card. */
+body.no-bridge .player-boost,
+body.no-bridge .scoreboard,
+body.no-bridge .now-watching {
+  display:none !important;
+}
+body.no-bridge .player-row { gap:0; }
+
+/* === SERIES + BO LABEL ROW ===
+   Sits flush directly under the scoreboard, BARL-style. Two sets of dots
+   (left team's wins, right team's wins) plus a "GAME N · BO5" label. */
+.series-row {
+  position:absolute;
+  top:74px;
+  left:50%;
+  transform:translateX(-50%);
+  width:340px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:3px;
+  padding:5px 0 5px;
+  background:rgba(8,8,8,0.92);
+  border:1px solid rgba(255,255,255,0.06);
+  border-top:none;
+  border-bottom-left-radius:6px;
+  border-bottom-right-radius:6px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.55);
+  opacity:0;
+  transition:opacity 0.3s ease;
+}
+.series-row.visible { opacity:1; }
+
+.series-dots-wrap {
+  display:flex;
+  align-items:center;
+  gap:14px;
+}
+.series-side-dots {
+  display:flex;
+  gap:5px;
+}
+.series-dot {
+  width:9px; height:9px;
+  border-radius:50%;
+  background:rgba(255,255,255,0.45);
+  border:1.5px solid rgba(255,255,255,0.85);
+  box-shadow:0 1px 3px rgba(0,0,0,0.55);
+  transition:background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.series-dot.won {
+  background:var(--team-color, #888);
+  border-color:rgba(255,255,255,0.95);
+  box-shadow:0 0 8px var(--team-color, #888), 0 1px 3px rgba(0,0,0,0.55);
+}
+
+.series-bo-label {
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:2.5px;
+  color:#C9A84C;
+  text-shadow:0 1px 2px rgba(0,0,0,0.7);
+}
+
+/* === CENTER SCOREBOARD ===
+   Sits in the gap between the two banners. Replaces the in-game scoreboard
+   (streamer hides RL's native HUD). */
+.scoreboard {
+  position:absolute;
+  top:14px;
+  left:50%;
+  transform:translateX(-50%);
+  width:340px;
+  height:60px;
+  display:flex;
+  align-items:stretch;
+  border-radius:6px;
+  overflow:hidden;
+  opacity:0;
+  transition:opacity 0.3s ease;
+  box-shadow:0 4px 18px rgba(0,0,0,0.7);
+  border:1px solid rgba(255,255,255,0.06);
+}
+.scoreboard.visible { opacity:1; }
+
+.sb-score {
+  flex:0 0 80px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Bebas Neue', sans-serif;
+  font-size:38px;
+  letter-spacing:1px;
+  color:var(--score-text, white);
+  /* Strong drop shadow plus an inner-edge stroke so the number stays
+     legible on any team color, light or dark. */
+  text-shadow:
+    0 2px 4px rgba(0,0,0,0.65),
+    0 0 1px rgba(0,0,0,0.9);
+  -webkit-text-stroke:1px rgba(0,0,0,0.35);
+  background:var(--score-color, #444);
+  transition:background 0.3s ease, color 0.3s ease;
+}
+.sb-left  { --score-color:#1873FF; }
+.sb-right { --score-color:#C26418; }
+
+.sb-timer {
+  flex:1;
+  background:rgba(8,8,8,0.94);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  border-left:2px solid rgba(0,0,0,0.6);
+  border-right:2px solid rgba(0,0,0,0.6);
+}
+.sb-time {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:30px;
+  letter-spacing:2px;
+  color:white;
+  line-height:1;
+  text-shadow:0 1px 3px rgba(0,0,0,0.7);
+}
+.sb-ot {
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  color:#C9A84C;
+  margin-top:3px;
+  height:11px;
+}
+.sb-ot.active { animation:sb-ot-pulse 1.2s ease-in-out infinite; }
+@keyframes sb-ot-pulse {
+  0%, 100% { opacity:0.6; }
+  50%      { opacity:1; }
+}
+
+/* === CENTERED POST-GAME STATS CARD ===
+   Manually toggled from the control page. Stays hidden until the producer
+   hits SHOW. */
+.post-game {
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%, calc(-50% + 18px));
+  width:1240px;
+  max-width:calc(100% - 80px);
+  background:linear-gradient(180deg, rgba(15,15,15,0.96) 0%, rgba(8,8,8,0.96) 100%);
+  border:2px solid rgba(230,57,70,0.45);
+  border-radius:12px;
+  padding:30px 38px 34px;
+  opacity:0;
+  transition:opacity 0.4s ease, transform 0.4s ease;
+  box-shadow:0 12px 50px rgba(0,0,0,0.85), 0 0 80px rgba(230,57,70,0.15);
+  -webkit-backdrop-filter:blur(8px);
+  backdrop-filter:blur(8px);
+}
+.post-game.visible {
+  opacity:1;
+  transform:translate(-50%, -50%);
+}
+
+.pg-eyebrow {
+  font-family:'Orbitron', monospace;
+  font-size:11px;
+  letter-spacing:5px;
+  color:#C9A84C;
+  text-align:center;
+  margin-bottom:6px;
+}
+.pg-title {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:46px;
+  letter-spacing:5px;
+  color:white;
+  text-align:center;
+  margin-bottom:24px;
+  text-shadow:0 2px 6px rgba(0,0,0,0.7);
+}
+.pg-title span { color:#C9A84C; }
+
+.pg-score-bar {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:24px;
+  margin-bottom:30px;
+}
+.pg-team-block {
+  display:flex;
+  align-items:center;
+  gap:18px;
+  flex:1;
+}
+.pg-team-block.pg-left  { justify-content:flex-end; }
+.pg-team-block.pg-right { justify-content:flex-start; }
+.pg-team-name {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:38px;
+  letter-spacing:3px;
+  color:white;
+  text-shadow:0 2px 4px rgba(0,0,0,0.7);
+}
+.pg-team-score {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:60px;
+  color:var(--score-text, white);
+  width:90px;
+  height:90px;
+  background:var(--score-color, #444);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:8px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.6);
+  text-shadow:0 2px 5px rgba(0,0,0,0.7), 0 0 1px rgba(0,0,0,0.9);
+  -webkit-text-stroke:1px rgba(0,0,0,0.35);
+  flex-shrink:0;
+}
+.pg-team-block.pg-left  .pg-team-score { --score-color:var(--left-color, #1873FF); }
+.pg-team-block.pg-right .pg-team-score { --score-color:var(--right-color, #C26418); }
+.pg-vs {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:32px;
+  letter-spacing:2px;
+  color:#666;
+  flex-shrink:0;
+}
+
+.pg-rosters {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:24px;
+}
+.pg-roster {
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.pg-roster.pg-roster-left  { --team-color:var(--left-color,  #1873FF); }
+.pg-roster.pg-roster-right { --team-color:var(--right-color, #C26418); }
+.pg-player {
+  background:rgba(255,255,255,0.04);
+  border-left:4px solid var(--team-color, #555);
+  padding:13px 16px;
+  border-radius:6px;
+}
+.pg-roster.pg-roster-right .pg-player {
+  border-left:none;
+  border-right:4px solid var(--team-color, #555);
+}
+.pg-player-name {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:22px;
+  letter-spacing:2px;
+  color:white;
+  margin-bottom:8px;
+  text-shadow:0 1px 3px rgba(0,0,0,0.6);
+}
+.pg-player-stats {
+  display:grid;
+  grid-template-columns:repeat(6, 1fr);
+  gap:6px;
+}
+.pg-player-stat {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+}
+.pg-player-stat .l {
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:1.5px;
+  color:#888;
+}
+.pg-player-stat .v {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:22px;
+  color:white;
+  letter-spacing:1px;
+  text-shadow:0 1px 3px rgba(0,0,0,0.6);
+}
+
+/* Team total row sits at the top of each roster as the headline number,
+   players listed below. Distinct background + bottom divider in the team
+   color so it reads as a header. */
+.pg-player.pg-team-total {
+  background:rgba(255,255,255,0.08);
+  margin-bottom:4px;
+  border-bottom:2px solid var(--team-color, #888);
+  position:relative;
+}
+.pg-player.pg-team-total .pg-player-name {
+  color:var(--team-color, white);
+  letter-spacing:4px;
+  font-size:20px;
+}
+.pg-player.pg-team-total .pg-player-stat .v {
+  font-size:24px;
+}
+
+/* === BOTTOM-LEFT "NOW WATCHING" CARD ===
+   Populated from the local stats bridge. Always invisible until the bridge
+   reports a spectator target, so the overlay still works for streamers who
+   haven't enabled the stats API. */
+.now-watching {
+  position:absolute;
+  bottom:24px;
+  left:24px;
+  width:380px;
+  background:rgba(8,8,8,0.84);
+  border-radius:8px;
+  border-right:4px solid var(--team-color, #555);
+  padding:14px 18px 16px;
+  opacity:0;
+  transform:translateY(8px);
+  transition:opacity 0.3s ease, transform 0.3s ease;
+  box-shadow:0 4px 22px rgba(0,0,0,0.65);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  pointer-events:none;
+}
+.now-watching.visible { opacity:1; transform:translateY(0); }
+
+.nw-label {
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:3px;
+  color:var(--team-color, #888);
+  margin-bottom:5px;
+  text-shadow:0 1px 3px rgba(0,0,0,0.7);
+}
+.nw-name {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:28px;
+  letter-spacing:2px;
+  color:white;
+  line-height:1.05;
+  margin-bottom:11px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  text-shadow:0 2px 4px rgba(0,0,0,0.7);
+}
+.nw-boost-num-deprecated {
+  /* boost bar removed; boost now shown next to player names in the
+     top-left and top-right cards instead */
+  display:none;
+}
+.nw-stats {
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:8px;
+}
+.nw-stat {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:2px;
+}
+.nw-stat-l {
+  font-family:'Orbitron', monospace;
+  font-size:8px;
+  letter-spacing:1.5px;
+  color:#888;
+}
+.nw-stat-v {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:24px;
+  color:white;
+  letter-spacing:1px;
+  text-shadow:0 1px 3px rgba(0,0,0,0.7);
+}
+</style>
+</head>
+<body>
+  <div class="canvas">
+    <!-- Top-center banners (team name + logo, flanking the in-game scoreboard) -->
+    <div id="leftBanner" class="banner banner-left">
+      <div class="banner-name" id="leftName">—</div>
+      <div class="banner-logo" id="leftLogo"></div>
+    </div>
+    <div id="rightBanner" class="banner banner-right">
+      <div class="banner-logo" id="rightLogo"></div>
+      <div class="banner-name" id="rightName">—</div>
+    </div>
+
+    <!-- Top-corner player lists -->
+    <div id="leftPlayers"  class="players players-left"></div>
+    <div id="rightPlayers" class="players players-right"></div>
+
+    <!-- Center scoreboard (between the two banners). Live game scores +
+         timer pulled from the bridge. Hides when no bridge data. -->
+    <div id="scoreboard" class="scoreboard">
+      <div class="sb-score sb-left"  id="sbLeftScore">0</div>
+      <div class="sb-timer">
+        <div class="sb-time" id="sbTimer">0:00</div>
+        <div class="sb-ot"   id="sbOt"></div>
+      </div>
+      <div class="sb-score sb-right" id="sbRightScore">0</div>
+    </div>
+
+    <!-- Series progress row — sits flush below the scoreboard (BARL-style).
+         Holds both teams' dots side by side and the GAME N · BO5 label. -->
+    <div id="seriesRow" class="series-row">
+      <div class="series-dots-wrap">
+        <div class="series-side-dots" id="leftSeries"></div>
+        <div class="series-side-dots" id="rightSeries"></div>
+      </div>
+      <div class="series-bo-label" id="seriesBo">BO5</div>
+    </div>
+
+    <!-- Centered post-game / post-series stats card. Hidden by default.
+         The producer toggles it from the control page; cardMode is one of
+         'game' (latest game's stats) or 'series' (combined totals). -->
+    <div id="postGame" class="post-game">
+      <div class="pg-eyebrow" id="pgEyebrow">POST-GAME STATS</div>
+      <div class="pg-title"   id="pgTitleEl">GAME <span id="pgGameNum">1</span> RESULTS</div>
+      <div class="pg-score-bar">
+        <div class="pg-team-block pg-left">
+          <div class="pg-team-name" id="pgLeftName">—</div>
+          <div class="pg-team-score" id="pgLeftScore">0</div>
+        </div>
+        <div class="pg-vs">VS</div>
+        <div class="pg-team-block pg-right">
+          <div class="pg-team-score" id="pgRightScore">0</div>
+          <div class="pg-team-name" id="pgRightName">—</div>
+        </div>
+      </div>
+      <div class="pg-rosters">
+        <div class="pg-roster" id="pgLeftRoster"></div>
+        <div class="pg-roster" id="pgRightRoster"></div>
+      </div>
+    </div>
+
+    <!-- Bottom-left "now watching" card. Populated from the local stats
+         bridge (ws://127.0.0.1:49124). Hides automatically if the bridge
+         isn't running, so the overlay degrades gracefully. -->
+    <div id="nowWatching" class="now-watching">
+      <div class="nw-label">WATCHING</div>
+      <div class="nw-name" id="nwName">—</div>
+      <div class="nw-stats">
+        <div class="nw-stat"><div class="nw-stat-l">SCORE</div><div class="nw-stat-v" id="nwScore">0</div></div>
+        <div class="nw-stat"><div class="nw-stat-l">GOALS</div><div class="nw-stat-v" id="nwGoals">0</div></div>
+        <div class="nw-stat"><div class="nw-stat-l">SAVES</div><div class="nw-stat-v" id="nwSaves">0</div></div>
+        <div class="nw-stat"><div class="nw-stat-l">SHOTS</div><div class="nw-stat-v" id="nwShots">0</div></div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// ERA Streamer (desktop app) bundles this overlay and serves it from the
+// local app server. SUPABASE_URL is empty so the overlay's existing fetch
+// calls hit the same origin (the app server), which exposes a Supabase-
+// shaped /rest/v1/settings endpoint for backwards compatibility.
+const SUPABASE_URL = '';
+const SUPABASE_KEY = '';
+const REST_HEADERS = {};
+
+const LEAGUE_KEYS = ['league1','league2','league3','league4'];
+
+const TEAM_DATA = [
+  { code:'berk',   gm:'Tarry', leagues:[
+    { name:'Night Furies', org:'The Berk',        logo:'images/Champion/night_furies.png' },
+    { name:'Light Furies', org:'Vanaheim',        logo:'images/Major/light_furies.png' },
+    { name:'Rumblehorns',  org:"Dragon's Edge",   logo:"images/Minor/Dragon's Edge Rumblehorns.png" },
+    { name:'Zipplebacks',  org:'Forbidden Isle',  logo:'images/Academy/Forbidden Isle Zipplebacks.png' },
+  ]},
+  { code:'qc',     gm:'MiniMedic', leagues:[
+    { name:'Monarchs',  org:'Queen City', logo:'images/Champion/QC Monarch.png' },
+    { name:'Knights',   org:'Queen City', logo:'images/Major/QC Knights.png' },
+    { name:'Squires',   org:'Queen City', logo:'images/Minor/QC Squires.png' },
+    { name:'Commoners', org:'Queen City', logo:'images/Academy/QC Commoners.png' },
+  ]},
+  { code:'bamboo', gm:'JugPanda', leagues:[
+    { name:'Bamboo Blackout', org:'Panda Syndicate', logo:'images/Champion/Bamboo Blackout.png' },
+    { name:'Bamboo Blitz',    org:'Panda Syndicate', logo:'images/Major/Bamboo Blitz.png' },
+    { name:'Bamboo Bloom',    org:'Panda Syndicate', logo:'images/Minor/Bamboo Bloom.png' },
+    { name:'Bamboo Bud',      org:'Panda Syndicate', logo:'images/Academy/Bamboo Bud.png' },
+  ]},
+  { code:'suit',   gm:'Solurr', leagues:[
+    { name:'Supernova', org:'Suitland',     logo:'images/Champion/Suitland Supernova.png' },
+    { name:'Stars',     org:'Silver Spring', logo:'images/Major/Silver Spring Stars.png' },
+    { name:'Cosmos',    org:'Columbia',      logo:'images/Minor/Columbia Cosmos.png' },
+    { name:'Nebula',    org:'New Market',    logo:'images/Academy/New Market Nebula.png' },
+  ]},
+  { code:'leeds',  gm:'Precons', leagues:[
+    { name:'Lightning', org:'Leeds',   logo:'images/Champion/Leeds Lightning.png' },
+    { name:'Blizzards', org:'Bristol', logo:'images/Major/Bristol Blizzards.png' },
+    { name:'Glacier',   org:'Glasgow', logo:'images/Minor/Glascow Glacier.png' },
+    { name:'Ospreys',   org:'Oxford',  logo:'images/Academy/Oxford Ospreys.png' },
+  ]},
+  { code:'mont',   gm:'KingMoroz', leagues:[
+    { name:'Rebels',        org:'Montgomery',   logo:'images/Champion/Montgomery Rebels.png' },
+    { name:'Conquistadors', org:'Childersburg', logo:'images/Major/Childersburg Conquistadors.jpeg' },
+    { name:'Militia',       org:'Mobile',       logo:'images/Minor/Mobile Militia.png' },
+    { name:'Red Sticks',    org:'Tallapoosa',   logo:'images/Academy/Tallapoosa Red Sticks.jpeg' },
+  ]},
+  { code:'vb',     gm:'Souls', leagues:[
+    { name:'Tides',    org:'Virginia Beach', logo:'images/Champion/Virgnia Beach Tides.png' },
+    { name:'Admirals', org:'Arlington',      logo:'images/Major/Arlginton Admirals.png' },
+    { name:'Captains', org:'Chesapeake Bay', logo:'images/Minor/Chesapeake Bay Captains.png' },
+    { name:'Fleet',    org:'Norfolk',        logo:'images/Academy/Norfolk Fleet.png' },
+  ]},
+  { code:'osaka',  gm:'Tiptoe', leagues:[
+    { name:'Revenants', org:'Osaka',    logo:'images/Champion/Osaka Revenants.png' },
+    { name:'Wraiths',   org:'Tokyo',    logo:'images/Major/Tokyo Wraiths.png' },
+    { name:'Yokais',    org:'Yokohama', logo:'images/Minor/Yokohama Yokais.png' },
+    { name:'Hollows',   org:'Kyoto',    logo:'images/Academy/Kyoto Hollows.png' },
+  ]},
+];
+
+function lookupTeam(slot, league) {
+  const t = TEAM_DATA[slot];
+  if (!t) return null;
+  const idx = LEAGUE_KEYS.indexOf(league);
+  if (idx < 0) return null;
+  const lg = t.leagues[idx];
+  return {
+    code: t.code,
+    gm: t.gm,
+    league,
+    name: lg.name,
+    org: lg.org,
+    logo: lg.logo,
+    fullName: (lg.org + ' ' + lg.name).trim(),
+  };
+}
+
+// ── Overlay config (bridge mode toggle) ────────────────────────
+// Producer-controlled flag from `stream_overlay_config` settings row. When
+// noBridge is true the overlay hides bridge-fed UI and skips the WS connect
+// so streamers who can't run era-stats-bridge still get a clean overlay.
+let noBridgeMode = false;
+let statsConnectStarted = false;
+
+function applyOverlayConfig(cfg) {
+  const next = !!(cfg && cfg.noBridge);
+  if (next === noBridgeMode) return;
+  noBridgeMode = next;
+  document.body.classList.toggle('no-bridge', noBridgeMode);
+  if (noBridgeMode) {
+    // Drop any active bridge connection so we stop trying to reach it.
+    try { if (statsWs) statsWs.close(); } catch (e) {}
+  } else if (statsConnectStarted) {
+    // Was connected before; trigger a reconnect so live UI comes back.
+    try { if (statsWs) statsWs.close(); } catch (e) {}
+  } else {
+    // First time enabling bridge — kick off the connect.
+    statsConnectStarted = true;
+    connectStats();
+  }
+}
+
+async function fetchOverlayConfig() {
+  // When the producer hard-forces no-bridge via URL (?nobridge=1), skip the
+  // Supabase poll so it can't flap the flag back to false on each tick.
+  if (window.__overlayForceNoBridge) return;
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.stream_overlay_config&select=value', { headers: REST_HEADERS });
+    if (!r.ok) return;
+    const arr = await r.json();
+    applyOverlayConfig(arr[0] && arr[0].value);
+  } catch (e) {}
+}
+
+async function fetchMatch() {
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.stream_match&select=value,updated_at', { headers: REST_HEADERS });
+    if (!r.ok) return null;
+    const arr = await r.json();
+    return arr[0] || null;
+  } catch (e) { return null; }
+}
+
+// ── Color extraction from logo ────────────────────────────
+function getDominantColor(img) {
+  try {
+    const c = document.createElement('canvas');
+    const W = 64, H = 64;
+    c.width = W; c.height = H;
+    const ctx = c.getContext('2d', { willReadFrequently:true });
+    ctx.drawImage(img, 0, 0, W, H);
+    const d = ctx.getImageData(0, 0, W, H).data;
+    const buckets = {};
+    for (let i = 0; i < d.length; i += 4) {
+      const r = d[i], g = d[i+1], b = d[i+2], a = d[i+3];
+      if (a < 128) continue;
+      const max = Math.max(r,g,b), min = Math.min(r,g,b);
+      if (max < 40) continue;
+      if (min > 220) continue;
+      if (max - min < 28) continue;
+      const key = (r>>5) + ',' + (g>>5) + ',' + (b>>5);
+      if (!buckets[key]) buckets[key] = { count:0, r:0, g:0, b:0 };
+      buckets[key].count++;
+      buckets[key].r += r; buckets[key].g += g; buckets[key].b += b;
+    }
+    let best = null;
+    for (const k in buckets) {
+      if (!best || buckets[k].count > best.count) best = buckets[k];
+    }
+    if (!best) return '#888';
+    const r = Math.round(best.r / best.count);
+    const g = Math.round(best.g / best.count);
+    const b = Math.round(best.b / best.count);
+    return 'rgb(' + r + ',' + g + ',' + b + ')';
+  } catch (e) {
+    return '#888';
+  }
+}
+
+const colorCache = {};
+function loadLogoAndColor(path) {
+  return new Promise(resolve => {
+    if (colorCache[path]) return resolve(colorCache[path]);
+    const img = new Image();
+    img.onload = () => {
+      const color = getDominantColor(img);
+      colorCache[path] = { img, color };
+      resolve(colorCache[path]);
+    };
+    img.onerror = () => resolve({ img:null, color:'#888' });
+    img.src = path;
+  });
+}
+
+// ── Render ────────────────────────────
+// ERA team colors extracted from logos. Convention: left side = TeamNum 0,
+// right side = TeamNum 1. Used by the scoreboard and post-game card so the
+// score-box backgrounds reflect ERA brand colors instead of whatever was
+// set in the RL lobby.
+const matchupTeamColors = { 0: null, 1: null };
+
+// Cached most recent UpdateState from the bridge so we can re-render the
+// scoreboard when a team's logo color finishes loading after first paint.
+let lastBridgeUpdate = null;
+
+function getContrastTextColor(color) {
+  // Accept '#rrggbb' or 'rgb(r, g, b)' and return a near-white or near-black
+  // text color depending on the background's perceived luminance.
+  let r = 128, g = 128, b = 128;
+  if (typeof color !== 'string') return '#fff';
+  const trimmed = color.trim();
+  if (trimmed.startsWith('#')) {
+    const h = trimmed.slice(1).padStart(6, '0');
+    r = parseInt(h.substr(0, 2), 16);
+    g = parseInt(h.substr(2, 2), 16);
+    b = parseInt(h.substr(4, 2), 16);
+  } else {
+    const m = trimmed.match(/(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/);
+    if (m) { r = +m[1]; g = +m[2]; b = +m[3]; }
+  }
+  if ([r,g,b].some(v => isNaN(v))) return '#fff';
+  // Perceived luminance, ITU BT.601
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  return lum > 175 ? '#0a0a0a' : '#ffffff';
+}
+
+// Sub eligibility — same org, exactly one league below.
+const _SUB_LEAGUE_MAP = { league1:'league2', league2:'league3', league3:'league4', league4:null };
+
+async function renderSide(side, slot, league /*, playerOverrides — ignored */) {
+  const banner   = document.getElementById(side + 'Banner');
+  const playersBox = document.getElementById(side + 'Players');
+  const logoBox  = document.getElementById(side + 'Logo');
+  const nameBox  = document.getElementById(side + 'Name');
+
+  const team = lookupTeam(slot, league);
+  if (!team) {
+    banner.classList.remove('visible');
+    playersBox.classList.remove('visible');
+    return;
+  }
+
+  const { color } = await loadLogoAndColor(team.logo);
+
+  banner.style.setProperty('--team-color', color);
+  playersBox.style.setProperty('--team-color', color);
+  document.getElementById(side + 'Series').style.setProperty('--team-color', color);
+  nameBox.textContent = team.name;
+
+  // Remember the ERA color for this side so the live scoreboard + post-game
+  // card can use it. Re-render the scoreboard immediately if we already
+  // have bridge data so the new color is applied on the next paint.
+  matchupTeamColors[side === 'left' ? 0 : 1] = color;
+  if (lastBridgeUpdate) renderScoreboard(lastBridgeUpdate);
+
+  logoBox.innerHTML = '';
+  const logoImg = document.createElement('img');
+  logoImg.src = team.logo;
+  logoBox.appendChild(logoImg);
+
+  // Pre-render N empty rows. Names + boosts arrive from the live RL bridge
+  // — no rostered-name pre-fill, no alias matching. Whatever RL says is
+  // playing on this side is what shows up.
+  playersBox.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    const row = document.createElement('div');
+    row.className = 'player-row empty';
+    const nameEl = document.createElement('span');
+    nameEl.className = 'player-name';
+    const boostEl = document.createElement('div');
+    boostEl.className = 'player-boost';
+    const fillEl = document.createElement('div');
+    fillEl.className = 'player-boost-fill';
+    const numEl = document.createElement('div');
+    numEl.className = 'player-boost-num';
+    boostEl.appendChild(fillEl);
+    boostEl.appendChild(numEl);
+    row.appendChild(nameEl);
+    row.appendChild(boostEl);
+    playersBox.appendChild(row);
+  }
+  if (lastBridgeUpdate) updatePlayerBoosts(lastBridgeUpdate.Players);
+
+  banner.classList.add('visible');
+  playersBox.classList.add('visible');
+}
+
+let lastSig = '';
+async function applyMatch(match) {
+  if (!match || !match.left || !match.right) {
+    ['left','right'].forEach(s => {
+      document.getElementById(s + 'Banner').classList.remove('visible');
+      document.getElementById(s + 'Players').classList.remove('visible');
+    });
+    const row = document.getElementById('seriesRow');
+    if (row) row.classList.remove('visible');
+    return;
+  }
+  await Promise.all([
+    renderSide('left',  match.left.slot,  match.left.league,  match.left.playerOverrides),
+    renderSide('right', match.right.slot, match.right.league, match.right.playerOverrides),
+  ]);
+}
+
+// ── Series rendering ────────────────────────────
+function renderSeriesSide(side, format, wins) {
+  const el = document.getElementById(side + 'Series');
+  const total = format === 'BO7' ? 4 : 3;
+  el.innerHTML = '';
+  // Fill from the inside out: dots nearest the center timer light up first,
+  // so each team's wins emanate outward toward their score block.
+  // Right side: index 0 is the leftmost (= closest to timer) — fill 0..wins-1.
+  // Left side: index 0 is the leftmost (= farthest from timer) — invert so
+  // the rightmost `wins` dots are filled instead.
+  for (let i = 0; i < total; i++) {
+    const filled = side === 'left' ? (i >= total - wins) : (i < wins);
+    const dot = document.createElement('div');
+    dot.className = 'series-dot' + (filled ? ' won' : '');
+    el.appendChild(dot);
+  }
+  el.classList.add('visible');
+}
+
+async function fetchSeries() {
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.stream_series&select=value,updated_at', { headers: REST_HEADERS });
+    if (!r.ok) return null;
+    const arr = await r.json();
+    return arr[0] || null;
+  } catch (e) { return null; }
+}
+
+let lastSeriesSig = '';
+function applySeries(value) {
+  const row = document.getElementById('seriesRow');
+  if (!value || !value.format) {
+    if (row) row.classList.remove('visible');
+    return;
+  }
+  renderSeriesSide('left',  value.format, value.leftWins  || 0);
+  renderSeriesSide('right', value.format, value.rightWins || 0);
+  const game = (value.leftWins || 0) + (value.rightWins || 0) + 1;
+  const boEl = document.getElementById('seriesBo');
+  if (boEl) boEl.textContent = 'GAME ' + game + ' · ' + value.format;
+  if (row) row.classList.add('visible');
+}
+
+async function poll() {
+  const [matchRow, seriesRow] = await Promise.all([fetchMatch(), fetchSeries(), fetchOverlayConfig()]);
+  if (matchRow && matchRow.value) {
+    const sig = JSON.stringify(matchRow.value) + '|' + matchRow.updated_at;
+    if (sig !== lastSig) {
+      lastSig = sig;
+      await applyMatch(matchRow.value);
+    }
+  }
+  if (seriesRow && seriesRow.value) {
+    const sig = JSON.stringify(seriesRow.value) + '|' + seriesRow.updated_at;
+    if (sig !== lastSeriesSig) {
+      lastSeriesSig = sig;
+      applySeries(seriesRow.value);
+    }
+  }
+  setTimeout(poll, 2000);
+}
+
+// ── Local stats bridge (ws://127.0.0.1:49124) ────────────────────────────
+// Powers the bottom-left "now watching" card. Bridge runs on the streamer's
+// machine (see development/era-rl-admin/bridge/). If it isn't running the card
+// stays hidden — the rest of the overlay continues to work as before.
+let statsWs = null;
+let statsBackoff = 1500;
+
+function nwHide() {
+  const el = document.getElementById('nowWatching');
+  if (el) el.classList.remove('visible');
+}
+
+// Names + boosts come straight from the live RL bridge. TeamNum 0 → left,
+// TeamNum 1 → right. Whichever players RL reports on each side fill the
+// pre-rendered slots in bridge order.
+function updatePlayerBoosts(bridgePlayers) {
+  const players = (bridgePlayers || []).filter(p => p && p.Name);
+  fillSide('left',  players.filter(p => p.TeamNum === 0));
+  fillSide('right', players.filter(p => p.TeamNum === 1));
+}
+
+function fillSide(side, sidePlayers) {
+  const box = document.getElementById(side + 'Players');
+  if (!box) return;
+  const rows = box.querySelectorAll('.player-row');
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const p = sidePlayers[i];
+    const nameEl = row.querySelector('.player-name');
+    const fillEl = row.querySelector('.player-boost-fill');
+    const numEl  = row.querySelector('.player-boost-num');
+    if (p) {
+      row.classList.remove('empty');
+      if (nameEl) nameEl.textContent = p.Name;
+      const pct = Math.max(0, Math.min(100, Number(p.Boost) || 0));
+      if (fillEl) fillEl.style.width = pct + '%';
+      if (numEl) numEl.textContent = Math.round(pct);
+    } else {
+      row.classList.add('empty');
+      if (nameEl) nameEl.textContent = '';
+      if (fillEl) fillEl.style.width = '0%';
+      if (numEl) numEl.textContent = '';
+    }
+  }
+}
+
+function sbHide() {
+  const el = document.getElementById('scoreboard');
+  if (el) el.classList.remove('visible');
+}
+
+function applyScoreColor(el, color) {
+  if (!color) return;
+  el.style.setProperty('--score-color', color);
+  el.style.setProperty('--score-text', getContrastTextColor(color));
+}
+
+function renderScoreboard(data) {
+  if (!data || !data.Game || !data.Game.Teams) {
+    sbHide();
+    return;
+  }
+  const teams = data.Game.Teams;
+  const t0 = teams.find(t => t.TeamNum === 0);
+  const t1 = teams.find(t => t.TeamNum === 1);
+
+  const leftEl  = document.getElementById('sbLeftScore');
+  const rightEl = document.getElementById('sbRightScore');
+  // Always use the ERA team color extracted from the matchup logo. Fall back
+  // to a neutral dark grey only if the matchup hasn't been pushed yet — we
+  // explicitly avoid RL's lobby colors here so the scoreboard never shows
+  // generic blue/orange when an ERA matchup is active.
+  const leftColor  = matchupTeamColors[0] || '#2a2a2a';
+  const rightColor = matchupTeamColors[1] || '#2a2a2a';
+  if (t0) leftEl.textContent  = t0.Score != null ? t0.Score : 0;
+  if (t1) rightEl.textContent = t1.Score != null ? t1.Score : 0;
+  applyScoreColor(leftEl,  leftColor);
+  applyScoreColor(rightEl, rightColor);
+
+  const sec = data.Game.TimeSeconds != null ? data.Game.TimeSeconds : 0;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  document.getElementById('sbTimer').textContent = m + ':' + String(s).padStart(2, '0');
+
+  const ot = document.getElementById('sbOt');
+  if (data.Game.bOvertime) {
+    ot.textContent = 'OVERTIME';
+    ot.classList.add('active');
+  } else {
+    ot.textContent = '';
+    ot.classList.remove('active');
+  }
+
+  document.getElementById('scoreboard').classList.add('visible');
+}
+
+function renderNowWatching(data) {
+  if (!data || !data.Game || !data.Game.bHasTarget || !data.Game.Target) {
+    nwHide();
+    return;
+  }
+  const target = data.Game.Target;
+  const player = (data.Players || []).find(p => p.Name === target.Name && p.TeamNum === target.TeamNum);
+  if (!player) {
+    nwHide();
+    return;
+  }
+  const teamData = (data.Game.Teams || []).find(t => t.TeamNum === target.TeamNum);
+  const color = (teamData && teamData.ColorPrimary)
+    ? '#' + teamData.ColorPrimary
+    : (target.TeamNum === 0 ? '#6495ED' : '#ff8a3d');
+
+  const el = document.getElementById('nowWatching');
+  el.style.setProperty('--team-color', color);
+  document.getElementById('nwName').textContent = player.Name || '—';
+  document.getElementById('nwScore').textContent = player.Score   || 0;
+  document.getElementById('nwGoals').textContent = player.Goals   || 0;
+  document.getElementById('nwSaves').textContent = player.Saves   || 0;
+  document.getElementById('nwShots').textContent = player.Shots   || 0;
+  el.classList.add('visible');
+}
+
+function connectStats() {
+  try {
+    statsWs = new WebSocket('ws://127.0.0.1:49124');
+  } catch (e) {
+    setTimeout(connectStats, statsBackoff);
+    statsBackoff = Math.min(statsBackoff * 1.5, 10000);
+    return;
+  }
+  statsWs.onopen = () => { statsBackoff = 1500; };
+  statsWs.onerror = () => { /* silent — onclose handles retry */ };
+  statsWs.onclose = () => {
+    nwHide();
+    sbHide();
+    updatePlayerBoosts([]); // clear stale boost numbers
+    setTimeout(connectStats, statsBackoff);
+    statsBackoff = Math.min(statsBackoff * 1.5, 10000);
+  };
+  statsWs.onmessage = e => {
+    let msg;
+    try { msg = JSON.parse(e.data); } catch (err) { return; }
+    if (!msg) return;
+    if (msg.Event === 'UpdateState') {
+      lastBridgeUpdate = msg.Data;
+      renderNowWatching(msg.Data);
+      renderScoreboard(msg.Data);
+      updatePlayerBoosts(msg.Data && msg.Data.Players);
+      trackMatchSnapshot(msg.Data);
+    } else if (msg.Event === 'MatchDestroyed') {
+      nwHide();
+      sbHide();
+    } else if (msg.Event === 'MatchEnded') {
+      nwHide();
+      // Leave scoreboard up after match ends so the final score is visible.
+      onMatchEnded(msg.Data);
+    } else if (msg.Event === 'PodiumStart') {
+      // Podium fires reliably even when MatchEnded is missed
+      onMatchEnded(msg.Data);
+    }
+  };
+}
+// Defer the initial bridge connect until we've checked the overlay config.
+// Otherwise a no-bridge streamer would briefly see boost bars before the
+// config comes back and hides them.
+// `?nobridge=1` forces no-bridge mode locally for previewing the layout.
+// The window flag also makes fetchOverlayConfig short-circuit so the 2s poll
+// can't flap the body class back.
+window.__overlayForceNoBridge = new URLSearchParams(location.search).get('nobridge') === '1';
+if (window.__overlayForceNoBridge) applyOverlayConfig({ noBridge: true });
+fetchOverlayConfig().then(() => {
+  if (!noBridgeMode) {
+    statsConnectStarted = true;
+    connectStats();
+  }
+});
+
+// ── Series recording (capture side) ────────────────────────────
+// The control page sets recording.active=true. The overlay (running on the
+// streamer's machine, with access to the bridge) snapshots each match's
+// final stats on MatchEnded and pushes them into the same Supabase row.
+let recordingState = null; // last loaded { active, format, games:[...] }
+const liveMatch = {
+  matchGuid: null,
+  arena: '',
+  teams: [],
+  players: {}, // PrimaryId -> latest stats
+};
+
+function trackMatchSnapshot(data) {
+  if (!data) return;
+  if (data.MatchGuid && data.MatchGuid !== liveMatch.matchGuid) {
+    // New match started without us seeing MatchEnded for the previous one —
+    // capture the previous one before resetting (best-effort).
+    if (liveMatch.matchGuid && Object.keys(liveMatch.players).length && recordingState && recordingState.active) {
+      flushMatchToRecording(null);
+    }
+    liveMatch.matchGuid = data.MatchGuid;
+    liveMatch.players = {};
+  }
+  if (data.Game) {
+    if (data.Game.Teams && data.Game.Teams.length) liveMatch.teams = data.Game.Teams;
+    if (data.Game.Arena) liveMatch.arena = data.Game.Arena;
+  }
+  for (const p of (data.Players || [])) {
+    if (!p.PrimaryId) continue;
+    liveMatch.players[p.PrimaryId] = {
+      name: p.Name,
+      teamNum: p.TeamNum,
+      score: p.Score || 0,
+      goals: p.Goals || 0,
+      assists: p.Assists || 0,
+      saves: p.Saves || 0,
+      shots: p.Shots || 0,
+      demos: p.Demos || 0,
+      touches: p.Touches || 0,
+    };
+  }
+}
+
+// Track which matches we've already advanced the series for, since
+// MatchEnded and PodiumStart can both fire and we want to advance once.
+const advancedSeriesGuids = new Set();
+
+function onMatchEnded(data) {
+  const winner = data && data.WinnerTeamNum != null ? data.WinnerTeamNum : null;
+  const guid = liveMatch.matchGuid;
+
+  if (recordingState && recordingState.active && guid) {
+    flushMatchToRecording(winner);
+  }
+
+  // Auto-advance the series counter on every match end, deduped per match.
+  // TeamNum 0 -> left, TeamNum 1 -> right (matches our banner convention).
+  if (winner != null && guid && !advancedSeriesGuids.has(guid)) {
+    advancedSeriesGuids.add(guid);
+    autoAdvanceSeries(winner);
+  }
+}
+
+async function autoAdvanceSeries(winnerTeamNum) {
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.stream_series&select=value', { headers: REST_HEADERS });
+    const arr = r.ok ? await r.json() : [];
+    const fresh = (arr[0] && arr[0].value) || { format: 'BO5', leftWins: 0, rightWins: 0 };
+    const max = fresh.format === 'BO7' ? 4 : 3;
+    if (winnerTeamNum === 0) fresh.leftWins  = Math.min(max, (fresh.leftWins  || 0) + 1);
+    if (winnerTeamNum === 1) fresh.rightWins = Math.min(max, (fresh.rightWins || 0) + 1);
+    await fetch(SUPABASE_URL + '/rest/v1/settings?on_conflict=key', {
+      method: 'POST',
+      headers: { ...REST_HEADERS, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify({
+        key: 'stream_series',
+        value: fresh,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+  } catch (e) {
+    console.error('[series] auto-advance failed', e);
+  }
+}
+
+async function flushMatchToRecording(winnerTeamNum) {
+  if (!recordingState || !recordingState.active) return;
+  // Skip if already recorded
+  const games = (recordingState.games || []);
+  if (games.find(g => g.matchGuid === liveMatch.matchGuid)) return;
+  if (!Object.keys(liveMatch.players).length) return;
+
+  const teamScores = {};
+  Object.values(liveMatch.players).forEach(p => {
+    teamScores[p.teamNum] = (teamScores[p.teamNum] || 0) + (p.goals || 0);
+  });
+
+  // Capture team metadata so the post-game card can show real team
+  // names and colors instead of generic blue/orange.
+  const teamMeta = {};
+  for (const t of (liveMatch.teams || [])) {
+    if (t.TeamNum != null) {
+      teamMeta[t.TeamNum] = {
+        name: t.Name || ('Team ' + t.TeamNum),
+        color: t.ColorPrimary || (t.TeamNum === 0 ? '1873FF' : 'C26418'),
+        finalScore: t.Score != null ? t.Score : (teamScores[t.TeamNum] || 0),
+      };
+    }
+  }
+
+  const newGame = {
+    matchGuid: liveMatch.matchGuid,
+    endedAt: new Date().toISOString(),
+    winnerTeamNum,
+    arena: liveMatch.arena,
+    teamScores,
+    teams: teamMeta,
+    players: { ...liveMatch.players },
+  };
+
+  // Re-fetch the recording row right before writing to minimize race with
+  // the control page's reset button.
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.stream_recording&select=value', { headers: REST_HEADERS });
+    const arr = r.ok ? await r.json() : [];
+    const fresh = (arr[0] && arr[0].value) || { active:false, format:'BO5', games:[] };
+    if (!fresh.active) return; // recording was stopped between snapshot and write
+    if ((fresh.games || []).find(g => g.matchGuid === newGame.matchGuid)) return;
+    fresh.games = (fresh.games || []).concat([newGame]);
+    await fetch(SUPABASE_URL + '/rest/v1/settings?on_conflict=key', {
+      method: 'POST',
+      headers: { ...REST_HEADERS, 'Content-Type':'application/json', 'Prefer':'resolution=merge-duplicates' },
+      body: JSON.stringify({
+        key: 'stream_recording',
+        value: fresh,
+        updated_at: new Date().toISOString(),
+      }),
+    });
+    // Reset live match state so the next game starts clean
+    liveMatch.matchGuid = null;
+    liveMatch.players = {};
+  } catch (e) {
+    console.error('[recording] flush failed', e);
+  }
+}
+
+async function fetchRecording() {
+  try {
+    const r = await fetch(SUPABASE_URL + '/rest/v1/settings?key=eq.stream_recording&select=value', { headers: REST_HEADERS });
+    if (!r.ok) return;
+    const arr = await r.json();
+    recordingState = (arr[0] && arr[0].value) || { active:false, format:'BO5', games:[] };
+    renderPostGameCard(recordingState);
+  } catch (e) {}
+}
+
+// Suppress the poll in test mode so manual demos don't get overridden by
+// whatever's in Supabase. Production runs poll normally.
+const __testModeActive = ['1','2','3','4','5','6'].includes(new URLSearchParams(location.search).get('test') || '');
+if (!__testModeActive) {
+  setInterval(fetchRecording, 2500);
+  fetchRecording();
+}
+
+// ── Post-game / post-series card rendering ─────────────────────────────
+// Producer toggles cardMode in stream_recording. 'game' shows the latest
+// captured match; 'series' shows aggregated totals across all captured
+// games of the active series.
+function renderPostGameCard(rec) {
+  const card = document.getElementById('postGame');
+  if (!card) return;
+  // Backward compat: older recordings used `cardVisible: true` to mean game.
+  const mode = rec
+    ? (rec.cardMode || (rec.cardVisible ? 'game' : null))
+    : null;
+  if (!mode || !(rec.games || []).length) {
+    card.classList.remove('visible');
+    return;
+  }
+  if (mode === 'series') renderPostSeries(rec);
+  else                   renderPostGame(rec);
+  card.classList.add('visible');
+}
+
+function pgTeamMetaFromRec(rec) {
+  // Use the latest game's team metadata (names / fallback colors)
+  const games = rec.games;
+  const lastGame = games[games.length - 1];
+  const meta = (lastGame && lastGame.teams) || {};
+  const left  = meta[0] || { name:'BLUE',   color:'1873FF' };
+  const right = meta[1] || { name:'ORANGE', color:'C26418' };
+  // Prefer ERA-logo colors (matchup banners). Fall back to captured RL color.
+  const leftColor  = matchupTeamColors[0] || ('#' + (left.color  || '1873FF'));
+  const rightColor = matchupTeamColors[1] || ('#' + (right.color || 'C26418'));
+  return {
+    leftName:  (left.name  || 'BLUE').toUpperCase(),
+    rightName: (right.name || 'ORANGE').toUpperCase(),
+    leftColor, rightColor,
+  };
+}
+
+function pgApplyHeaderColors(meta) {
+  const card = document.getElementById('postGame');
+  card.style.setProperty('--left-color',  meta.leftColor);
+  card.style.setProperty('--right-color', meta.rightColor);
+  document.getElementById('pgLeftScore').style.setProperty('--score-text',  getContrastTextColor(meta.leftColor));
+  document.getElementById('pgRightScore').style.setProperty('--score-text', getContrastTextColor(meta.rightColor));
+  document.getElementById('pgLeftName').textContent  = meta.leftName;
+  document.getElementById('pgRightName').textContent = meta.rightName;
+  document.getElementById('pgLeftRoster').className  = 'pg-roster pg-roster-left';
+  document.getElementById('pgRightRoster').className = 'pg-roster pg-roster-right';
+}
+
+function pgRosterHtml(list) {
+  const STAT_KEYS = [['SCORE','score'], ['GOALS','goals'], ['ASSISTS','assists'], ['SAVES','saves'], ['SHOTS','shots'], ['DEMOS','demos']];
+
+  // Team total row — sum every stat across this team's players. Sits at the
+  // top of the column as the headline number, players listed below.
+  let html = '';
+  if (list.length) {
+    const totals = list.reduce((acc, [_, p]) => {
+      STAT_KEYS.forEach(([_, k]) => { acc[k] = (acc[k] || 0) + (p[k] || 0); });
+      return acc;
+    }, {});
+    html += '<div class="pg-player pg-team-total">';
+    html += '<div class="pg-player-name">TEAM TOTAL</div>';
+    html += '<div class="pg-player-stats">';
+    STAT_KEYS.forEach(([l, k]) => {
+      html += '<div class="pg-player-stat"><div class="l">' + l + '</div><div class="v">' + (totals[k] || 0) + '</div></div>';
+    });
+    html += '</div></div>';
+  }
+
+  html += list.map(([_, p]) => {
+    let h = '<div class="pg-player">';
+    h += '<div class="pg-player-name">' + escapeHtmlPg(p.name || '—') + '</div>';
+    h += '<div class="pg-player-stats">';
+    STAT_KEYS.forEach(([l, k]) => {
+      const v = p[k];
+      h += '<div class="pg-player-stat"><div class="l">' + l + '</div><div class="v">' + (v != null ? v : 0) + '</div></div>';
+    });
+    h += '</div></div>';
+    return h;
+  }).join('');
+
+  return html;
+}
+
+function renderPostGame(rec) {
+  const games = rec.games;
+  const game  = games[games.length - 1];
+  const meta  = pgTeamMetaFromRec(rec);
+  pgApplyHeaderColors(meta);
+
+  document.getElementById('pgEyebrow').textContent = 'POST-GAME STATS';
+  const titleEl = document.getElementById('pgTitleEl');
+  titleEl.innerHTML = 'GAME <span id="pgGameNum">' + games.length + '</span> RESULTS';
+
+  const s0 = (game.teamScores && game.teamScores[0]) || 0;
+  const s1 = (game.teamScores && game.teamScores[1]) || 0;
+  document.getElementById('pgLeftScore').textContent  = s0;
+  document.getElementById('pgRightScore').textContent = s1;
+
+  const players = game.players || {};
+  const leftPlayers  = Object.entries(players).filter(([_, p]) => p.teamNum === 0).sort((a,b) => (b[1].score||0) - (a[1].score||0));
+  const rightPlayers = Object.entries(players).filter(([_, p]) => p.teamNum === 1).sort((a,b) => (b[1].score||0) - (a[1].score||0));
+  document.getElementById('pgLeftRoster').innerHTML  = pgRosterHtml(leftPlayers);
+  document.getElementById('pgRightRoster').innerHTML = pgRosterHtml(rightPlayers);
+}
+
+function renderPostSeries(rec) {
+  const games = rec.games;
+  const meta  = pgTeamMetaFromRec(rec);
+  pgApplyHeaderColors(meta);
+
+  document.getElementById('pgEyebrow').textContent = 'SERIES RESULTS · ' + (rec.format || 'BO5');
+  const titleEl = document.getElementById('pgTitleEl');
+  titleEl.innerHTML = 'SERIES <span>RESULTS</span>';
+
+  // Series wins (count of games each team won)
+  const wins = { 0: 0, 1: 0 };
+  games.forEach(g => {
+    if (g.winnerTeamNum != null) {
+      wins[g.winnerTeamNum] = (wins[g.winnerTeamNum] || 0) + 1;
+    } else {
+      // No explicit winner — infer from team goals
+      const s0 = (g.teamScores && g.teamScores[0]) || 0;
+      const s1 = (g.teamScores && g.teamScores[1]) || 0;
+      if (s0 > s1) wins[0]++; else if (s1 > s0) wins[1]++;
+    }
+  });
+  document.getElementById('pgLeftScore').textContent  = wins[0];
+  document.getElementById('pgRightScore').textContent = wins[1];
+
+  // Sum per-player stats across every captured game, keyed by PrimaryId
+  const totals = {};
+  for (const g of games) {
+    const pls = g.players || {};
+    for (const pid in pls) {
+      const p = pls[pid];
+      if (!totals[pid]) totals[pid] = { name: p.name, teamNum: p.teamNum, score:0, goals:0, assists:0, saves:0, shots:0, demos:0 };
+      const t = totals[pid];
+      t.score   += p.score   || 0;
+      t.goals   += p.goals   || 0;
+      t.assists += p.assists || 0;
+      t.saves   += p.saves   || 0;
+      t.shots   += p.shots   || 0;
+      t.demos   += p.demos   || 0;
+      // Keep latest known name/team in case a player switched sides mid-series
+      if (p.name) t.name = p.name;
+      if (p.teamNum != null) t.teamNum = p.teamNum;
+    }
+  }
+  const entries = Object.entries(totals);
+  const leftPlayers  = entries.filter(([_, p]) => p.teamNum === 0).sort((a,b) => (b[1].score||0) - (a[1].score||0));
+  const rightPlayers = entries.filter(([_, p]) => p.teamNum === 1).sort((a,b) => (b[1].score||0) - (a[1].score||0));
+  document.getElementById('pgLeftRoster').innerHTML  = pgRosterHtml(leftPlayers);
+  document.getElementById('pgRightRoster').innerHTML = pgRosterHtml(rightPlayers);
+}
+
+function escapeHtmlPg(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Auto-scale the 1920x1080 canvas to fit whatever the OBS Browser source
+// (or browser window) size is. No per-resolution config needed.
+function rescaleCanvas() {
+  const c = document.querySelector('.canvas');
+  if (!c) return;
+  const sx = window.innerWidth / 1920;
+  const sy = window.innerHeight / 1080;
+  const s = Math.min(sx, sy);
+  c.style.transform = 'scale(' + s + ')';
+}
+window.addEventListener('resize', rescaleCanvas);
+rescaleCanvas();
+
+// Debug mode: ?test=1 in the URL renders a demo match so you can verify the
+// overlay loaded correctly without pushing anything. OBS uses the bare URL
+// without any query string, so this is invisible in production.
+const params = new URLSearchParams(location.search);
+if (params.get('test') === '1') {
+  applyMatch({ left:{ league:'league1', slot:0 }, right:{ league:'league1', slot:6 } });
+  applySeries({ format:'BO5', leftWins:2, rightWins:1 });
+}
+if (params.get('test') === '2') {
+  // Lightning (slot 4) vs Bamboo Blackout (slot 2) — matches the user-reported screenshot
+  applyMatch({ left:{ league:'league1', slot:4 }, right:{ league:'league1', slot:2 } });
+  applySeries({ format:'BO7', leftWins:2, rightWins:3 });
+}
+if (params.get('test') === '3') {
+  // Demo of the bottom-left now-watching card without needing the live bridge.
+  applyMatch({ left:{ league:'league1', slot:4 }, right:{ league:'league1', slot:2 } });
+  applySeries({ format:'BO5', leftWins:1, rightWins:2 });
+  renderNowWatching({
+    Game: {
+      bHasTarget: true,
+      Target: { Name: 'Screech', Shortcut: 1, TeamNum: 0 },
+      Teams: [
+        { TeamNum: 0, ColorPrimary: '1873FF' },
+        { TeamNum: 1, ColorPrimary: 'C26418' },
+      ],
+    },
+    Players: [{
+      Name: 'Screech', TeamNum: 0, Boost: 67, Score: 312, Goals: 2, Saves: 1, Shots: 4,
+    }],
+  });
+}
+if (params.get('test') === '4') {
+  // Demo of the center scoreboard (and overtime indicator).
+  applyMatch({ left:{ league:'league1', slot:4 }, right:{ league:'league1', slot:2 } });
+  applySeries({ format:'BO5', leftWins:1, rightWins:1 });
+  renderScoreboard({
+    Game: {
+      Teams: [
+        { TeamNum: 0, Score: 3, ColorPrimary: '1873FF' },
+        { TeamNum: 1, Score: 2, ColorPrimary: 'C26418' },
+      ],
+      TimeSeconds: 47,
+      bOvertime: true,
+    },
+  });
+}
+if (params.get('test') === '5') {
+  // Demo of the centered post-game card.
+  applyMatch({ left:{ league:'league1', slot:4 }, right:{ league:'league1', slot:2 } });
+  renderPostGameCard({
+    cardMode: 'game',
+    games: [{
+      matchGuid: 'demo',
+      arena: 'Stadium_P',
+      winnerTeamNum: 0,
+      teamScores: { 0: 4, 1: 2 },
+      teams: {
+        0: { name: 'COSMOS',   color: '1873FF' },
+        1: { name: 'CAPTAINS', color: 'C26418' },
+      },
+      players: {
+        'p1': { name: 'Screech', teamNum: 0, score: 412, goals: 2, assists: 1, saves: 2, shots: 5, demos: 1 },
+        'p2': { name: 'R4nsome', teamNum: 0, score: 305, goals: 1, assists: 2, saves: 1, shots: 3, demos: 0 },
+        'p3': { name: 'VRL',     teamNum: 0, score: 268, goals: 1, assists: 0, saves: 3, shots: 2, demos: 2 },
+        'p4': { name: 'Moondual',teamNum: 1, score: 380, goals: 1, assists: 1, saves: 2, shots: 4, demos: 0 },
+        'p5': { name: '8vo',     teamNum: 1, score: 290, goals: 1, assists: 0, saves: 1, shots: 3, demos: 1 },
+        'p6': { name: 'Bacon',   teamNum: 1, score: 215, goals: 0, assists: 1, saves: 2, shots: 1, demos: 0 },
+      },
+    }],
+  });
+}
+if (params.get('test') === '6') {
+  // Demo of the post-SERIES card aggregating across multiple games.
+  applyMatch({ left:{ league:'league1', slot:4 }, right:{ league:'league1', slot:2 } });
+  const teams = { 0:{name:'COSMOS',color:'1873FF'}, 1:{name:'CAPTAINS',color:'C26418'} };
+  function game(matchGuid, winner, s0, s1, statsFn) {
+    return {
+      matchGuid, winnerTeamNum: winner, arena: 'Stadium_P',
+      teamScores: { 0:s0, 1:s1 }, teams,
+      players: statsFn(),
+    };
+  }
+  renderPostGameCard({
+    cardMode: 'series',
+    format: 'BO5',
+    games: [
+      game('g1', 0, 4, 2, () => ({
+        'p1':{name:'Screech',teamNum:0,score:412,goals:2,assists:1,saves:2,shots:5,demos:1},
+        'p2':{name:'R4nsome',teamNum:0,score:305,goals:1,assists:2,saves:1,shots:3,demos:0},
+        'p3':{name:'VRL',    teamNum:0,score:268,goals:1,assists:0,saves:3,shots:2,demos:2},
+        'p4':{name:'Moondual',teamNum:1,score:380,goals:1,assists:1,saves:2,shots:4,demos:0},
+        'p5':{name:'8vo',    teamNum:1,score:290,goals:1,assists:0,saves:1,shots:3,demos:1},
+        'p6':{name:'Bacon',  teamNum:1,score:215,goals:0,assists:1,saves:2,shots:1,demos:0},
+      })),
+      game('g2', 1, 1, 3, () => ({
+        'p1':{name:'Screech',teamNum:0,score:280,goals:1,assists:0,saves:1,shots:3,demos:0},
+        'p2':{name:'R4nsome',teamNum:0,score:215,goals:0,assists:1,saves:2,shots:2,demos:1},
+        'p3':{name:'VRL',    teamNum:0,score:188,goals:0,assists:0,saves:1,shots:1,demos:0},
+        'p4':{name:'Moondual',teamNum:1,score:445,goals:2,assists:1,saves:1,shots:6,demos:1},
+        'p5':{name:'8vo',    teamNum:1,score:340,goals:1,assists:1,saves:2,shots:3,demos:0},
+        'p6':{name:'Bacon',  teamNum:1,score:268,goals:0,assists:1,saves:3,shots:2,demos:1},
+      })),
+      game('g3', 0, 5, 4, () => ({
+        'p1':{name:'Screech',teamNum:0,score:520,goals:3,assists:1,saves:3,shots:6,demos:2},
+        'p2':{name:'R4nsome',teamNum:0,score:412,goals:1,assists:2,saves:1,shots:4,demos:1},
+        'p3':{name:'VRL',    teamNum:0,score:298,goals:1,assists:1,saves:2,shots:2,demos:0},
+        'p4':{name:'Moondual',teamNum:1,score:475,goals:2,assists:2,saves:2,shots:5,demos:1},
+        'p5':{name:'8vo',    teamNum:1,score:380,goals:1,assists:0,saves:1,shots:4,demos:0},
+        'p6':{name:'Bacon',  teamNum:1,score:312,goals:1,assists:1,saves:3,shots:2,demos:1},
+      })),
+    ],
+  });
+}
+
+poll();
+</script>
+</body>
+</html>
