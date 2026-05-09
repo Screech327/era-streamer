@@ -480,6 +480,23 @@ h1, h2, h3 {
 .match-panel{padding:24px 28px;}
 .match-panel .row{margin-bottom:18px;}
 .match-panel .row:last-child{margin-bottom:0;}
+/* Swap button between the L/R dropdowns. Sized to align with the dropdown
+   bottom edge (it's a `align-items: flex-end` row). Flips both teams and
+   their series win counts so the score follows the matchup. */
+.swap-btn {
+  flex:0 0 auto;
+  width:42px; height:46px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:6px;
+  color:#bbb;
+  cursor:pointer;
+  transition:border-color 0.12s, color 0.12s, background 0.12s, transform 0.12s;
+}
+.swap-btn:hover { border-color:var(--red); color:white; }
+.swap-btn:active { transform:rotate(180deg); }
+.swap-btn svg { width:18px; height:18px; }
 .input-lg{padding:12px 14px;font-size:16px;}
 .select-lg{padding:12px 14px;font-size:16px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;color:white;font-family:'Rajdhani',sans-serif;font-weight:600;outline:none;width:100%;}
 .select-lg:focus{border-color:var(--gold);}
@@ -752,6 +769,34 @@ h1, h2, h3 {
   /* Reduce the iframe's interactivity — this is a preview, not a control. */
   pointer-events:none;
 }
+/* Push-confirmation badge in the top-right of the preview. Two states:
+   `pending` (gold, "PUSHING…") and `ok` (green, "✓ PUSHED"). Hidden when
+   no push is in flight. */
+.preview-badge {
+  position:absolute;
+  top:10px; right:10px;
+  padding:6px 12px;
+  border-radius:4px;
+  font-family:'Orbitron', monospace;
+  font-size:10px;
+  letter-spacing:2px;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 0.2s, background 0.2s, color 0.2s, border-color 0.2s;
+  border:1px solid transparent;
+}
+.preview-badge.show { opacity:1; }
+.preview-badge.pending {
+  background:rgba(201,168,76,0.15);
+  border-color:rgba(201,168,76,0.55);
+  color:var(--gold);
+}
+.preview-badge.ok {
+  background:rgba(80,205,80,0.15);
+  border-color:rgba(80,205,80,0.5);
+  color:var(--green);
+  box-shadow:0 0 8px rgba(80,205,80,0.4);
+}
 .btn.btn-small {
   font-size:10px;
   letter-spacing:1.5px;
@@ -876,6 +921,12 @@ h1, h2, h3 {
         <div class="label">Left Team</div>
         <select class="select select-lg" id="leftSel"></select>
       </div>
+      <button class="swap-btn" id="swapTeamsBtn" type="button" title="Swap left and right">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+          <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+        </svg>
+      </button>
       <div class="field">
         <div class="label">Right Team</div>
         <select class="select select-lg" id="rightSel"></select>
@@ -937,6 +988,9 @@ h1, h2, h3 {
          hitting the OBS browser source. -->
     <div class="preview-stage" id="previewStage">
       <iframe class="preview-frame" id="previewFrame" src="/match.html" title="Match overlay preview"></iframe>
+      <!-- Push confirmation badge — flashes when the overlay actually
+           applied the producer's push (postMessage from the iframe). -->
+      <div class="preview-badge" id="previewBadge"></div>
     </div>
   </div>
 
@@ -1232,9 +1286,25 @@ $('rightSel').addEventListener('change', () => {
 });
 $('titleInput').addEventListener('input', () => { state.title = $('titleInput').value; });
 
+// Swap teams — flips left/right team selection AND their series win
+// counts so the scoreboard tracks who actually won. Persists the new
+// series state but DOES NOT push to the overlay automatically; producer
+// hits PUSH to confirm.
+$('swapTeamsBtn').addEventListener('click', async () => {
+  [state.leftSlot, state.rightSlot] = [state.rightSlot, state.leftSlot];
+  [state.series.leftWins, state.series.rightWins] = [state.series.rightWins, state.series.leftWins];
+  fillTeamSelect('leftSel',  state.leftSlot);
+  fillTeamSelect('rightSel', state.rightSlot);
+  renderPreview('left'); renderPreview('right');
+  renderSeriesUI();
+  await upsert('stream_series', state.series);
+  showToast('TEAMS SWAPPED');
+});
+
 $('pushBtn').addEventListener('click', async () => {
   const btn = $('pushBtn');
   btn.disabled = true;
+  beginPushBadge();
   await upsert('stream_match', {
     left:  { league: state.league, slot: state.leftSlot },
     right: { league: state.league, slot: state.rightSlot },
@@ -1250,11 +1320,48 @@ $('pushBtn').addEventListener('click', async () => {
     }),
   }).then(loadRecentMatchups).catch(() => {});
   btn.disabled = false;
-  showToast('PUSHED — overlay updates in ~2s');
 });
 $('clearBtn').addEventListener('click', async () => {
+  beginPushBadge();
   await upsert('stream_match', {});
-  showToast('OVERLAY CLEARED');
+});
+
+// ── Push confirmation ─────────────────────────────────────────────────
+// When the producer hits PUSH/CLEAR, show a "PUSHING…" badge on the
+// preview, then upgrade it to "✓ PUSHED" once the overlay iframe
+// postMessages back that it applied the change. If no confirmation
+// arrives within 5s we time out with a yellow "TIMEOUT" so the producer
+// notices something's off (e.g. preview not loaded).
+let pushBadgeTimer = null;
+function beginPushBadge() {
+  const b = $('previewBadge');
+  if (!b) return;
+  b.classList.remove('ok');
+  b.classList.add('show', 'pending');
+  b.textContent = 'PUSHING…';
+  clearTimeout(pushBadgeTimer);
+  pushBadgeTimer = setTimeout(() => {
+    if (b.classList.contains('pending')) {
+      b.textContent = 'TIMEOUT';
+    }
+  }, 5000);
+}
+function confirmPushBadge() {
+  const b = $('previewBadge');
+  if (!b || !b.classList.contains('show')) return;
+  b.classList.remove('pending');
+  b.classList.add('ok');
+  b.textContent = '✓ PUSHED';
+  clearTimeout(pushBadgeTimer);
+  pushBadgeTimer = setTimeout(() => {
+    b.classList.remove('show', 'ok');
+    b.textContent = '';
+  }, 1600);
+}
+window.addEventListener('message', (e) => {
+  if (e && e.data && e.data.type === 'overlay-applied' && e.data.target === 'match') {
+    confirmPushBadge();
+  }
 });
 document.querySelectorAll('.fmt-btn').forEach(b => {
   b.addEventListener('click', async () => {

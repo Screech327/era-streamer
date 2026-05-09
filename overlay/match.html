@@ -1101,6 +1101,19 @@ function applySeries(value) {
   if (row) row.classList.add('visible');
 }
 
+// Notify the embedding control window (when running inside the streamer's
+// preview iframe) that we just applied a state change — used to flash a
+// "✓ PUSHED" badge on the preview so the producer knows the overlay
+// actually picked up their push. Safe no-op when running standalone in
+// OBS (window.parent === window).
+function notifyParentApplied(target, updatedAt) {
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'overlay-applied', target, updated_at: updatedAt }, '*');
+    }
+  } catch (_) {}
+}
+
 async function poll() {
   const [matchRow, seriesRow] = await Promise.all([fetchMatch(), fetchSeries(), fetchOverlayConfig()]);
   if (matchRow && matchRow.value) {
@@ -1108,6 +1121,7 @@ async function poll() {
     if (sig !== lastSig) {
       lastSig = sig;
       await applyMatch(matchRow.value);
+      notifyParentApplied('match', matchRow.updated_at);
     }
   }
   if (seriesRow && seriesRow.value) {
@@ -1115,6 +1129,7 @@ async function poll() {
     if (sig !== lastSeriesSig) {
       lastSeriesSig = sig;
       applySeries(seriesRow.value);
+      notifyParentApplied('series', seriesRow.updated_at);
     }
   }
   setTimeout(poll, 2000);
