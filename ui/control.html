@@ -1546,7 +1546,7 @@ async function dismissWizard() {
 document.querySelectorAll('[data-wiz-next]').forEach((btn) => {
   btn.addEventListener('click', () => showWizardStep(parseInt(btn.dataset.wizNext, 10)));
 });
-$('wizSkip').addEventListener('click', dismissWizard);
+$('wizardSkip').addEventListener('click', dismissWizard);
 $('wizFinish').addEventListener('click', dismissWizard);
 $('wizCopyUrl').addEventListener('click', () => {
   navigator.clipboard.writeText('http://127.0.0.1:49124/match.html').then(() => showToast('OBS URL COPIED'));
