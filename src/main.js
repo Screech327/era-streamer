@@ -166,11 +166,17 @@ if (!gotLock) {
     // updater fails on dev runs and the buttons in the UI still let
     // the producer trigger checks if they really want to.
     if (app.isPackaged) {
-      setTimeout(() => {
+      const runCheck = () => {
         autoUpdater.checkForUpdates().catch((err) => {
           console.log('[updater] check failed:', err && err.message || err);
         });
-      }, 4000);
+      };
+      // Initial check, ~1s after boot — short delay just so the server
+      // is fully listening before the autoUpdater pings the network.
+      setTimeout(runCheck, 1000);
+      // Re-check every 30 minutes while the app stays open, so a release
+      // that drops mid-session is still picked up without restarting.
+      setInterval(runCheck, 30 * 60 * 1000);
     }
 
     app.on('activate', () => {
