@@ -276,6 +276,12 @@ h1, h2, h3 {
   <div class="panel">
     <h2>MATCH</h2>
     <div class="row">
+      <div class="field" style="flex:1 1 100%">
+        <div class="label">Match title <span style="color:var(--text-dim);font-weight:normal">(shown above the scoreboard — leave blank to hide)</span></div>
+        <input type="text" class="input" id="titleInput" placeholder="e.g. ERA Week 2 — Yokais vs Cosmos">
+      </div>
+    </div>
+    <div class="row">
       <div class="field">
         <div class="label">League</div>
         <select class="select" id="leagueSel"></select>
@@ -345,6 +351,7 @@ const state = {
   league: 'league1',
   leftSlot: 0,
   rightSlot: 1,
+  title: '',
   series: { format: 'BO5', leftWins: 0, rightWins: 0 },
 };
 
@@ -428,6 +435,7 @@ async function loadState() {
       state.league    = m[0].value.left.league || state.league;
       state.leftSlot  = m[0].value.left.slot ?? state.leftSlot;
       state.rightSlot = m[0].value.right.slot ?? state.rightSlot;
+      state.title     = String(m[0].value.title || '');
     }
     if (s[0] && s[0].value) Object.assign(state.series, s[0].value);
   } catch (e) {}
@@ -472,12 +480,15 @@ $('rightSel').addEventListener('change', () => {
   state.rightSlot = parseInt($('rightSel').value, 10);
   renderPreview('right');
 });
+$('titleInput').addEventListener('input', () => { state.title = $('titleInput').value; });
+
 $('pushBtn').addEventListener('click', async () => {
   const btn = $('pushBtn');
   btn.disabled = true;
   await upsert('stream_match', {
     left:  { league: state.league, slot: state.leftSlot },
     right: { league: state.league, slot: state.rightSlot },
+    title: String(state.title || '').trim(),
   });
   btn.disabled = false;
   showToast('PUSHED — overlay updates in ~2s');
@@ -522,6 +533,7 @@ $('copyObsBtn').addEventListener('click', () => {
   await loadState();
   fillTeamSelect('leftSel',  state.leftSlot);
   fillTeamSelect('rightSel', state.rightSlot);
+  $('titleInput').value = state.title || '';
   renderPreview('left'); renderPreview('right');
   renderSeriesUI();
   pollStatus();

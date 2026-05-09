@@ -201,60 +201,89 @@ body.no-bridge .now-watching {
 }
 body.no-bridge .player-row { gap:0; }
 
-/* === SERIES + BO LABEL ROW ===
-   Sits flush directly under the scoreboard, BARL-style. Two sets of dots
-   (left team's wins, right team's wins) plus a "GAME N · BO5" label. */
-.series-row {
+/* === MATCH TITLE BAR ===
+   Tiny broadcaster line above the scoreboard ("ERA Week 2 — Yokais vs
+   Cosmos", etc.). Hidden when no title is set. */
+.match-title {
   position:absolute;
-  top:74px;
+  top:-2px;
   left:50%;
   transform:translateX(-50%);
-  width:340px;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:3px;
-  padding:5px 0 5px;
-  background:rgba(8,8,8,0.92);
-  border:1px solid rgba(255,255,255,0.06);
+  font-family:'Orbitron', monospace;
+  font-size:10px;
+  letter-spacing:3px;
+  color:rgba(255,255,255,0.85);
+  text-transform:uppercase;
+  padding:3px 18px;
+  background:rgba(8,8,8,0.78);
+  border:1px solid rgba(255,255,255,0.08);
   border-top:none;
-  border-bottom-left-radius:6px;
-  border-bottom-right-radius:6px;
+  border-bottom-left-radius:5px;
+  border-bottom-right-radius:5px;
+  text-shadow:0 1px 2px rgba(0,0,0,0.85);
+  white-space:nowrap;
+  opacity:0;
+  transition:opacity 0.3s ease;
+}
+.match-title.visible { opacity:1; }
+
+/* === SERIES + BO LABEL ROW ===
+   Wider than before so the win dots can spread out into the empty space
+   under each team's banner. White-filled wins (no team-color tinting) so
+   the score is readable regardless of how saturated the team logos are. */
+.series-row {
+  position:absolute;
+  top:78px;
+  left:50%;
+  transform:translateX(-50%);
+  width:680px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  padding:7px 28px;
+  background:rgba(8,8,8,0.78);
+  border:1px solid rgba(255,255,255,0.08);
+  border-top:none;
+  border-bottom-left-radius:8px;
+  border-bottom-right-radius:8px;
   box-shadow:0 4px 14px rgba(0,0,0,0.55);
   opacity:0;
   transition:opacity 0.3s ease;
 }
 .series-row.visible { opacity:1; }
 
-.series-dots-wrap {
-  display:flex;
-  align-items:center;
-  gap:14px;
-}
 .series-side-dots {
   display:flex;
-  gap:5px;
+  gap:8px;
 }
 .series-dot {
-  width:9px; height:9px;
+  width:14px; height:14px;
   border-radius:50%;
-  background:rgba(255,255,255,0.45);
-  border:1.5px solid rgba(255,255,255,0.85);
+  background:rgba(255,255,255,0.18);
+  border:2px solid rgba(255,255,255,0.65);
   box-shadow:0 1px 3px rgba(0,0,0,0.55);
   transition:background 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
 }
 .series-dot.won {
-  background:var(--team-color, #888);
-  border-color:rgba(255,255,255,0.95);
-  box-shadow:0 0 8px var(--team-color, #888), 0 1px 3px rgba(0,0,0,0.55);
+  background:#fff;
+  border-color:#fff;
+  box-shadow:0 0 10px rgba(255,255,255,0.65), 0 1px 3px rgba(0,0,0,0.55);
 }
 
 .series-bo-label {
-  font-family:'Orbitron', monospace;
-  font-size:9px;
-  letter-spacing:2.5px;
-  color:#C9A84C;
-  text-shadow:0 1px 2px rgba(0,0,0,0.7);
+  font-family:'Bebas Neue', sans-serif;
+  font-size:20px;
+  letter-spacing:3px;
+  font-weight:700;
+  color:#fff;
+  background:#000;
+  border:2px solid #e63946;
+  border-radius:6px;
+  padding:2px 14px;
+  line-height:1;
+  white-space:nowrap;
+  box-shadow:0 0 14px rgba(230,57,70,0.45), 0 1px 3px rgba(0,0,0,0.55);
 }
 
 /* === CENTER SCOREBOARD ===
@@ -572,6 +601,10 @@ body.no-bridge .player-row { gap:0; }
 </head>
 <body>
   <div class="canvas">
+    <!-- Optional broadcaster title above the scoreboard. Set from the
+         Stats Hub control panel; renders only when non-empty. -->
+    <div id="matchTitle" class="match-title"></div>
+
     <!-- Top-center banners (team name + logo, flanking the in-game scoreboard) -->
     <div id="leftBanner" class="banner banner-left">
       <div class="banner-name" id="leftName">—</div>
@@ -597,14 +630,14 @@ body.no-bridge .player-row { gap:0; }
       <div class="sb-score sb-right" id="sbRightScore">0</div>
     </div>
 
-    <!-- Series progress row — sits flush below the scoreboard (BARL-style).
-         Holds both teams' dots side by side and the GAME N · BO5 label. -->
+    <!-- Series progress row — sits flush below the scoreboard. Three flex
+         children: left team's dots, GAME N · BO5 label centered, right
+         team's dots. justify-content:space-between pushes the dots out
+         into the empty space under each team's banner. -->
     <div id="seriesRow" class="series-row">
-      <div class="series-dots-wrap">
-        <div class="series-side-dots" id="leftSeries"></div>
-        <div class="series-side-dots" id="rightSeries"></div>
-      </div>
+      <div class="series-side-dots" id="leftSeries"></div>
       <div class="series-bo-label" id="seriesBo">BO5</div>
+      <div class="series-side-dots" id="rightSeries"></div>
     </div>
 
     <!-- Centered post-game / post-series stats card. Hidden by default.
@@ -916,6 +949,7 @@ async function renderSide(side, slot, league /*, playerOverrides — ignored */)
 
 let lastSig = '';
 async function applyMatch(match) {
+  applyMatchTitle(match && match.title);
   if (!match || !match.left || !match.right) {
     ['left','right'].forEach(s => {
       document.getElementById(s + 'Banner').classList.remove('visible');
@@ -929,6 +963,19 @@ async function applyMatch(match) {
     renderSide('left',  match.left.slot,  match.left.league,  match.left.playerOverrides),
     renderSide('right', match.right.slot, match.right.league, match.right.playerOverrides),
   ]);
+}
+
+function applyMatchTitle(t) {
+  const el = document.getElementById('matchTitle');
+  if (!el) return;
+  const v = String(t || '').trim();
+  if (v) {
+    el.textContent = v;
+    el.classList.add('visible');
+  } else {
+    el.classList.remove('visible');
+    el.textContent = '';
+  }
 }
 
 // ── Series rendering ────────────────────────────
@@ -966,9 +1013,16 @@ function applySeries(value) {
     if (row) row.classList.remove('visible');
     return;
   }
-  renderSeriesSide('left',  value.format, value.leftWins  || 0);
-  renderSeriesSide('right', value.format, value.rightWins || 0);
-  const game = (value.leftWins || 0) + (value.rightWins || 0) + 1;
+  const lw = value.leftWins  || 0;
+  const rw = value.rightWins || 0;
+  renderSeriesSide('left',  value.format, lw);
+  renderSeriesSide('right', value.format, rw);
+  // Cap the displayed game number at the series win threshold. Once one
+  // side has reached the threshold (3 in BO5, 4 in BO7), the series is over
+  // — there's no Game N+1, so the label should freeze on the final game.
+  const winsToWin = value.format === 'BO7' ? 4 : 3;
+  const seriesOver = lw >= winsToWin || rw >= winsToWin;
+  const game = seriesOver ? (lw + rw) : (lw + rw + 1);
   const boEl = document.getElementById('seriesBo');
   if (boEl) boEl.textContent = 'GAME ' + game + ' · ' + value.format;
   if (row) row.classList.add('visible');
