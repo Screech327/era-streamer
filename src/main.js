@@ -50,10 +50,75 @@ if (!gotLock) {
     serverHandle.setStatus({ iniResult });
     console.log('[ini]', iniResult);
 
+    // Track in-progress match state so we can snapshot on MatchEnded.
+    // Mirrors what the website overlay's recording flow does, but lives
+    // in the main process so it captures even when OBS isn't open.
+    const liveMatch = { matchGuid: null, players: {}, teams: [], arena: '' };
+    const flushedGuids = new Set();
+    function ingestBridge(msg) {
+      if (!msg) return;
+      if (msg.Event === 'UpdateState') {
+        const data = msg.Data;
+        if (!data) return;
+        if (data.MatchGuid && data.MatchGuid !== liveMatch.matchGuid) {
+          liveMatch.matchGuid = data.MatchGuid;
+          liveMatch.players = {};
+        }
+        if (data.Game) {
+          if (data.Game.Teams && data.Game.Teams.length) liveMatch.teams = data.Game.Teams;
+          if (data.Game.Arena) liveMatch.arena = data.Game.Arena;
+        }
+        for (const p of (data.Players || [])) {
+          if (!p.PrimaryId) continue;
+          liveMatch.players[p.PrimaryId] = {
+            name: p.Name,
+            teamNum: p.TeamNum,
+            score: p.Score || 0,
+            goals: p.Goals || 0,
+            assists: p.Assists || 0,
+            saves: p.Saves || 0,
+            shots: p.Shots || 0,
+            demos: p.Demos || 0,
+            touches: p.Touches || 0,
+          };
+        }
+      } else if (msg.Event === 'MatchEnded' || msg.Event === 'PodiumStart') {
+        const guid = liveMatch.matchGuid;
+        if (!guid || flushedGuids.has(guid)) return;
+        if (!Object.keys(liveMatch.players).length) return;
+        flushedGuids.add(guid);
+        const teamScores = {};
+        Object.values(liveMatch.players).forEach((p) => {
+          teamScores[p.teamNum] = (teamScores[p.teamNum] || 0) + (p.goals || 0);
+        });
+        const teamMeta = {};
+        for (const t of (liveMatch.teams || [])) {
+          if (t.TeamNum != null) {
+            teamMeta[t.TeamNum] = {
+              name: t.Name || ('Team ' + t.TeamNum),
+              color: t.ColorPrimary || (t.TeamNum === 0 ? '1873FF' : 'C26418'),
+              finalScore: t.Score != null ? t.Score : (teamScores[t.TeamNum] || 0),
+            };
+          }
+        }
+        const winner = msg.Data && msg.Data.WinnerTeamNum;
+        const game = {
+          matchGuid: guid,
+          endedAt: new Date().toISOString(),
+          winnerTeamNum: (winner === 0 || winner === 1) ? winner : null,
+          arena: liveMatch.arena,
+          teamScores,
+          teams: teamMeta,
+          players: { ...liveMatch.players },
+        };
+        if (serverHandle && serverHandle.appendRecordingGame) serverHandle.appendRecordingGame(game);
+      }
+    }
+
     bridgeHandle = startBridge({
       onConnect:    () => serverHandle.setStatus({ rlConnected: true,  bridgeStarted: true }),
       onDisconnect: () => serverHandle.setStatus({ rlConnected: false, bridgeStarted: true }),
-      onUpdate:     (msg) => serverHandle.relayBridgeMessage(msg),
+      onUpdate:     (msg) => { ingestBridge(msg); serverHandle.relayBridgeMessage(msg); },
     });
     serverHandle.setStatus({ bridgeStarted: true });
 

@@ -38,6 +38,12 @@ const MIME = {
   '.ico':'image/x-icon',
 };
 
+// ERA's hosted Supabase — same anon key the website's admin pages use, so
+// "SAVE SERIES STATS" pushes a recorded series straight into the public
+// archive. Anon key is a public credential; safe to embed.
+const ERA_SUPABASE_URL = 'https://qamonwkxafbzvyrlisjv.supabase.co';
+const ERA_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhbW9ud2t4YWZienZ5cmxpc2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ3NjcsImV4cCI6MjA5MTUxMDc2N30.AOKN9Ioz5m8Om2CutdlTownmoEbZ3DFVcAHovhhj7wM';
+
 function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck, onUpdateInstall }) {
   // ── Persisted state (match config, series, overlay flags) ────────────
   const defaultState = {
@@ -45,6 +51,10 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     stream_series:          { value: { format: 'BO5', leftWins: 0, rightWins: 0 }, updated_at: new Date().toISOString() },
     stream_overlay_config:  { value: { noBridge: false }, updated_at: new Date().toISOString() },
     player_aliases:         { value: {}, updated_at: new Date().toISOString() },
+    // Series recording is always-on for era-streamer — every match end gets
+    // captured automatically. The producer hits SAVE SERIES STATS at the
+    // end of the series to push it up to the ERA archive.
+    stream_recording:       { value: { active: true, games: [] }, updated_at: new Date().toISOString() },
   };
   let state = { ...defaultState };
   try {
@@ -81,6 +91,81 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
   const updateState = { status: 'idle', version: null, percent: 0, error: null, appVersion: appVersion || '0.0.0' };
   function setUpdateState(patch) {
     Object.assign(updateState, patch);
+  }
+
+  // ── Series recording — main.js calls this on each match end ──────────
+  function appendRecordingGame(game) {
+    if (!game || !game.matchGuid) return;
+    const rec = state.stream_recording.value || { active: true, games: [] };
+    rec.games = rec.games || [];
+    if (rec.games.some((g) => g.matchGuid === game.matchGuid)) return; // dedupe
+    rec.games.push(game);
+    state.stream_recording.value = rec;
+    state.stream_recording.updated_at = new Date().toISOString();
+    saveState();
+    if (onLog) onLog(`recording: captured match ${rec.games.length} (${game.matchGuid.slice(0, 8)})`);
+  }
+
+  // Push the current recording up to ERA's Supabase archive, then clear it
+  // locally so the next series starts fresh. Resolves matchup metadata
+  // (team names, codes, leagues) from the active stream_match selection.
+  async function saveSeries() {
+    const rec = state.stream_recording.value || {};
+    const games = rec.games || [];
+    if (!games.length) throw new Error('No games captured yet — record a series first.');
+    const match = state.stream_match.value || {};
+    if (!match.left || !match.right) throw new Error('No matchup pushed — pick teams in the MATCH panel and PUSH TO OVERLAY first.');
+
+    const teamsMod = require('./teams');
+    const leftTm  = teamsMod.lookupTeam(match.left.slot,  match.left.league);
+    const rightTm = teamsMod.lookupTeam(match.right.slot, match.right.league);
+    if (!leftTm || !rightTm) throw new Error('Unknown team slot in the active matchup.');
+
+    const seriesVal = state.stream_series.value || {};
+    const fmt = seriesVal.format || (games.length <= 5 ? 'BO5' : 'BO7');
+
+    const series = {
+      id: (require('crypto').randomUUID && require('crypto').randomUUID()) || ('es_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
+      name: `${leftTm.fullName} vs ${rightTm.fullName} — ${new Date().toLocaleDateString()}`,
+      savedAt: new Date().toISOString(),
+      format: fmt,
+      games,
+      matchup: {
+        left:  { code: leftTm.code,  league: leftTm.league,  name: leftTm.name,  org: leftTm.org,  gm: leftTm.gm,  logo: leftTm.logo },
+        right: { code: rightTm.code, league: rightTm.league, name: rightTm.name, org: rightTm.org, gm: rightTm.gm, logo: rightTm.logo },
+      },
+      source: 'era-streamer',
+    };
+
+    // Read existing archive, append, upsert. Done in two HTTP hops — same
+    // pattern the website's overlay uses for the same Supabase table.
+    const headers = { apikey: ERA_SUPABASE_KEY, Authorization: 'Bearer ' + ERA_SUPABASE_KEY };
+    const readRes = await fetch(`${ERA_SUPABASE_URL}/rest/v1/settings?key=eq.series_archive&select=value`, { headers });
+    if (!readRes.ok) throw new Error(`Archive read failed: ${readRes.status}`);
+    const rows = await readRes.json();
+    const existing = rows[0] && Array.isArray(rows[0].value) ? rows[0].value : [];
+    existing.push(series);
+    const writeRes = await fetch(`${ERA_SUPABASE_URL}/rest/v1/settings?on_conflict=key`, {
+      method: 'POST',
+      headers: Object.assign({ 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' }, headers),
+      body: JSON.stringify({ key: 'series_archive', value: existing, updated_at: new Date().toISOString() }),
+    });
+    if (!writeRes.ok) {
+      const detail = await writeRes.text().catch(() => '');
+      throw new Error(`Archive upsert failed: ${writeRes.status} ${detail.slice(0, 200)}`);
+    }
+
+    // Clear the recording locally — next series captures fresh.
+    state.stream_recording.value = { active: true, games: [] };
+    state.stream_recording.updated_at = new Date().toISOString();
+    saveState();
+    return series;
+  }
+
+  function resetRecording() {
+    state.stream_recording.value = { active: true, games: [] };
+    state.stream_recording.updated_at = new Date().toISOString();
+    saveState();
   }
 
   // ── HTTP server ──────────────────────────────────────────────────────
@@ -204,6 +289,26 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
       return sendJson(res, 200, { ok: true });
     }
 
+    if (req.method === 'GET' && pathname === '/api/recording') {
+      const rec = state.stream_recording.value || { games: [] };
+      return sendJson(res, 200, {
+        gameCount: (rec.games || []).length,
+        games: rec.games || [],
+      });
+    }
+    if (req.method === 'POST' && pathname === '/api/series/save') {
+      try {
+        const series = await saveSeries();
+        return sendJson(res, 200, { ok: true, series: { id: series.id, name: series.name, gameCount: series.games.length } });
+      } catch (e) {
+        return sendJson(res, 400, { ok: false, error: (e && e.message) || String(e) });
+      }
+    }
+    if (req.method === 'POST' && pathname === '/api/series/reset') {
+      resetRecording();
+      return sendJson(res, 200, { ok: true });
+    }
+
     return send(res, 404, 'not found');
   });
 
@@ -244,6 +349,7 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
         relayBridgeMessage,
         setStatus,
         setUpdateState,
+        appendRecordingGame,
         getState: () => state,
         stop: () => { try { server.close(); } catch (_) {} },
       });

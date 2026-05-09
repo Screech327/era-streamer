@@ -607,8 +607,8 @@ body.no-bridge .player-row { gap:0; }
 }
 .nw-stats {
   display:grid;
-  grid-template-columns:repeat(4, 1fr);
-  gap:8px;
+  grid-template-columns:repeat(6, 1fr);
+  gap:6px;
 }
 .nw-stat {
   display:flex;
@@ -710,8 +710,10 @@ body.no-bridge .player-row { gap:0; }
       <div class="nw-stats">
         <div class="nw-stat"><div class="nw-stat-l">SCORE</div><div class="nw-stat-v" id="nwScore">0</div></div>
         <div class="nw-stat"><div class="nw-stat-l">GOALS</div><div class="nw-stat-v" id="nwGoals">0</div></div>
+        <div class="nw-stat"><div class="nw-stat-l">ASSISTS</div><div class="nw-stat-v" id="nwAssists">0</div></div>
         <div class="nw-stat"><div class="nw-stat-l">SAVES</div><div class="nw-stat-v" id="nwSaves">0</div></div>
         <div class="nw-stat"><div class="nw-stat-l">SHOTS</div><div class="nw-stat-v" id="nwShots">0</div></div>
+        <div class="nw-stat"><div class="nw-stat-l">DEMOS</div><div class="nw-stat-v" id="nwDemos">0</div></div>
       </div>
     </div>
   </div>
@@ -1212,10 +1214,12 @@ function renderNowWatching(data) {
   const el = document.getElementById('nowWatching');
   el.style.setProperty('--team-color', color);
   document.getElementById('nwName').textContent = player.Name || '—';
-  document.getElementById('nwScore').textContent = player.Score   || 0;
-  document.getElementById('nwGoals').textContent = player.Goals   || 0;
-  document.getElementById('nwSaves').textContent = player.Saves   || 0;
-  document.getElementById('nwShots').textContent = player.Shots   || 0;
+  document.getElementById('nwScore').textContent   = player.Score   || 0;
+  document.getElementById('nwGoals').textContent   = player.Goals   || 0;
+  document.getElementById('nwAssists').textContent = player.Assists || 0;
+  document.getElementById('nwSaves').textContent   = player.Saves   || 0;
+  document.getElementById('nwShots').textContent   = player.Shots   || 0;
+  document.getElementById('nwDemos').textContent   = player.Demos   || 0;
   el.classList.add('visible');
 }
 

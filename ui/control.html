@@ -349,6 +349,27 @@ h1, h2, h3 {
     </div>
   </div>
 
+  <div class="panel">
+    <h2>SERIES RECORDING</h2>
+    <div class="row">
+      <div class="field" style="flex:1">
+        <div class="label">Auto-captured games</div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);min-width:50px;" id="recCount">0</div>
+          <div style="flex:1;font-size:13px;color:var(--text-dim);line-height:1.5;">
+            Every match the bridge sees gets snapshotted automatically. Hit
+            <strong>SAVE SERIES STATS</strong> at the end of the series to push it to
+            the public ERA archive (visible on the website's Stats Hub).
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-primary" id="saveSeriesBtn">SAVE SERIES STATS</button>
+      <button class="btn btn-danger" id="resetRecBtn">DISCARD</button>
+    </div>
+  </div>
+
 </div>
 
 <div class="toast" id="toast"></div>
@@ -578,6 +599,39 @@ async function pollUpdate() {
     }
   } catch (e) {}
 }
+async function pollRecording() {
+  try {
+    const r = await fetch(API + '/api/recording');
+    const d = await r.json();
+    const n = (d && d.gameCount) || 0;
+    $('recCount').textContent = n;
+    $('saveSeriesBtn').disabled = n === 0;
+    $('resetRecBtn').disabled = n === 0;
+  } catch (e) {}
+}
+$('saveSeriesBtn').addEventListener('click', async () => {
+  if (!confirm('Save the recorded series to the public archive?\n\nIt will appear on the website\'s Stats Hub immediately.')) return;
+  const btn = $('saveSeriesBtn');
+  btn.disabled = true; btn.textContent = 'SAVING…';
+  try {
+    const r = await fetch(API + '/api/series/save', { method: 'POST' });
+    const d = await r.json();
+    if (!d.ok) throw new Error(d.error || 'Save failed');
+    showToast('SAVED · ' + (d.series && d.series.gameCount ? d.series.gameCount + ' games' : 'archived'));
+    pollRecording();
+  } catch (e) {
+    showToast('Save failed: ' + (e.message || String(e)), true);
+  } finally {
+    btn.textContent = 'SAVE SERIES STATS';
+  }
+});
+$('resetRecBtn').addEventListener('click', async () => {
+  if (!confirm('Discard the recorded games without saving?\n\nThis can\'t be undone.')) return;
+  await fetch(API + '/api/series/reset', { method: 'POST' });
+  showToast('RECORDING DISCARDED');
+  pollRecording();
+});
+
 $('updateBtn').addEventListener('click', async () => {
   const action = $('updateBtn').dataset.action || 'check';
   if (action === 'install') {
@@ -602,8 +656,10 @@ $('updateBtn').addEventListener('click', async () => {
   renderSeriesUI();
   pollStatus();
   pollUpdate();
+  pollRecording();
   setInterval(pollStatus, 2000);
   setInterval(pollUpdate, 1500);
+  setInterval(pollRecording, 2000);
 })();
 </script>
 </body>
