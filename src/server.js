@@ -63,6 +63,9 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     // recent first, capped at 5). Together they make the daily flow
     // smoother for repeat users.
     app_prefs:              { value: { firstRunComplete: false, recentMatchups: [] }, updated_at: new Date().toISOString() },
+    // Last window bounds — persisted on resize/move so the producer's
+    // preferred layout sticks across launches. null until first save.
+    window_bounds:          { value: null, updated_at: new Date().toISOString() },
   };
   let state = { ...defaultState };
   let stateLoaded = false;
@@ -546,6 +549,14 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
         appendRecordingGame,
         advanceSeriesWin,
         getState: () => state,
+        // Window-bounds persistence — main.js calls these to restore
+        // size/position on launch and save on resize/move.
+        getWindowBounds: () => (state.window_bounds && state.window_bounds.value) || null,
+        saveWindowBounds: (b) => {
+          if (!b) return;
+          state.window_bounds = { value: { x: b.x, y: b.y, width: b.width, height: b.height }, updated_at: new Date().toISOString() };
+          saveState();
+        },
         stop: () => { try { server.close(); } catch (_) {} },
       });
     });

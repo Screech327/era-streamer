@@ -154,9 +154,22 @@ if (!gotLock) {
     // Auto-launch passes `--hidden-launch` so the window starts in the
     // tray without popping. User-initiated launches show normally.
     const hiddenLaunch = process.argv.includes('--hidden-launch');
+    // Restore the window's last size and position. Falls back to the
+    // default size for first-run and ignores stored bounds that are
+    // off-screen (e.g. monitor disconnected since last launch).
+    const savedBounds = serverHandle.getWindowBounds();
+    const sane = savedBounds && (() => {
+      const { screen } = require('electron');
+      const inArea = (b, a) =>
+        b.x + b.width  > a.x && b.x < a.x + a.width &&
+        b.y + b.height > a.y && b.y < a.y + a.height;
+      return screen.getAllDisplays().some((d) => inArea(savedBounds, d.workArea));
+    })();
+    const winOpts = sane
+      ? { x: savedBounds.x, y: savedBounds.y, width: savedBounds.width, height: savedBounds.height }
+      : { width: 1360, height: 940 };
     mainWindow = new BrowserWindow({
-      width: 1360,
-      height: 940,
+      ...winOpts,
       minWidth: 1080,
       minHeight: 760,
       backgroundColor: '#0a0a0a',
@@ -190,10 +203,32 @@ if (!gotLock) {
       shell.openExternal(url);
       return { action: 'deny' };
     });
+    // Persist window size/position so it sticks across launches. Debounced
+    // (200ms) so we're not rewriting state.json on every drag pixel.
+    let saveBoundsTimer = null;
+    const persistBounds = () => {
+      clearTimeout(saveBoundsTimer);
+      saveBoundsTimer = setTimeout(() => {
+        if (!mainWindow || mainWindow.isDestroyed()) return;
+        // Skip while minimized/maximized — the snapshot would be wrong.
+        if (mainWindow.isMinimized() || mainWindow.isMaximized()) return;
+        try { serverHandle.saveWindowBounds(mainWindow.getBounds()); } catch (_) {}
+      }, 200);
+    };
+    mainWindow.on('resize', persistBounds);
+    mainWindow.on('move',   persistBounds);
+
     // Closing the window hides to the tray instead of quitting — the
     // bridge keeps capturing matches in the background. Real quit only
     // happens via the tray's Quit option (which sets isQuitting first).
     mainWindow.on('close', (event) => {
+      // Snapshot bounds before the window goes away so the next launch
+      // restores exactly where the producer left it.
+      try {
+        if (!mainWindow.isMinimized() && !mainWindow.isMaximized()) {
+          serverHandle.saveWindowBounds(mainWindow.getBounds());
+        }
+      } catch (_) {}
       if (!isQuitting) {
         event.preventDefault();
         mainWindow.hide();
