@@ -92,8 +92,193 @@ body { padding:0; }
 .titlebar-btn.close:hover { background:#e63946; color:white; }
 .titlebar-btn svg { width:11px; height:11px; }
 
-/* App content sits below the titlebar */
-.app-body { padding:24px; }
+/* App content sits below the titlebar — split into sidebar + main */
+.app-body {
+  display:grid;
+  grid-template-columns:220px 1fr;
+  min-height:calc(100vh - 38px);
+}
+.sidebar {
+  background:#0a0a0a;
+  border-right:1px solid rgba(255,255,255,0.05);
+  padding:18px 0;
+  display:flex;
+  flex-direction:column;
+}
+.side-tag {
+  font-family:'Orbitron',monospace;
+  font-size:8px;
+  letter-spacing:2.5px;
+  color:#555;
+  padding:0 22px;
+  margin-bottom:10px;
+}
+.side-nav { display:flex; flex-direction:column; }
+.side-link {
+  display:flex; align-items:center; gap:12px;
+  padding:11px 22px;
+  border:none;
+  background:transparent;
+  color:var(--text-dim);
+  font-family:'Bebas Neue', sans-serif;
+  font-size:15px;
+  letter-spacing:2px;
+  cursor:pointer;
+  border-left:3px solid transparent;
+  transition:background 0.12s, color 0.12s, border-color 0.12s;
+  text-align:left;
+}
+.side-link:hover { background:rgba(255,255,255,0.03); color:white; }
+.side-link.active {
+  background:rgba(230,57,70,0.10);
+  border-left-color:var(--red);
+  color:white;
+}
+.side-link .ico { width:16px; text-align:center; font-size:14px; }
+.side-spacer { flex:1; }
+.side-status { padding:0 22px 14px; display:flex; flex-direction:column; gap:6px; }
+.main-content {
+  padding:22px 26px 32px;
+  overflow:auto;
+}
+
+/* Old .tabs / .tab kept for compatibility — hidden now since the
+   sidebar handles navigation. */
+.tabs { display:none; }
+
+/* === Recent matchups panel === */
+.recent-list { display:flex; flex-direction:column; gap:6px; }
+.recent-row {
+  display:grid;
+  grid-template-columns:auto 1fr auto;
+  gap:12px;
+  align-items:center;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:8px 14px;
+  cursor:pointer;
+  transition:border-color 0.12s, background 0.12s;
+}
+.recent-row:hover { border-color:var(--gold); background:#161616; }
+.recent-row .league-tag {
+  font-family:'Orbitron',monospace;
+  font-size:9px;
+  letter-spacing:1.5px;
+  font-weight:700;
+  padding:3px 8px;
+  border-radius:99px;
+}
+.recent-row .league-tag.league1 { background:rgba(230,57,70,0.18); color:var(--red); border:1px solid rgba(230,57,70,0.45); }
+.recent-row .league-tag.league2 { background:rgba(100,149,237,0.15); color:#7da7e8; border:1px solid rgba(100,149,237,0.4); }
+.recent-row .league-tag.league3 { background:rgba(80,205,80,0.12); color:var(--green); border:1px solid rgba(80,205,80,0.35); }
+.recent-row .league-tag.league4 { background:rgba(201,168,76,0.12); color:var(--gold); border:1px solid rgba(201,168,76,0.4); }
+.recent-row .matchup {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:15px;
+  letter-spacing:1.5px;
+  color:white;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.recent-row .when {
+  font-family:'Orbitron',monospace;
+  font-size:9px;
+  letter-spacing:1.4px;
+  color:var(--text-dim);
+}
+.recent-empty {
+  font-size:13px; color:var(--text-dim); font-style:italic;
+  padding:8px 0;
+}
+
+/* === First-run wizard === */
+.wizard {
+  position:fixed;
+  inset:38px 0 0 0; /* below titlebar */
+  background:rgba(0,0,0,0.85);
+  backdrop-filter:blur(6px);
+  z-index:200;
+  display:flex; align-items:center; justify-content:center;
+  padding:30px;
+}
+.wizard-card {
+  position:relative;
+  width:100%; max-width:580px;
+  background:var(--panel);
+  border:1px solid rgba(230,57,70,0.4);
+  border-radius:14px;
+  padding:36px 40px 32px;
+  box-shadow:0 20px 60px rgba(0,0,0,0.6), 0 0 30px rgba(230,57,70,0.08);
+}
+.wizard-close {
+  position:absolute; top:14px; right:14px;
+  width:32px; height:32px;
+  border:1px solid #333; background:transparent;
+  border-radius:6px;
+  font-size:18px; color:#888;
+  cursor:pointer;
+}
+.wizard-close:hover { border-color:var(--red); color:var(--red); }
+.wizard-progress { display:flex; gap:8px; margin-bottom:24px; }
+.wp-step {
+  height:3px; flex:1;
+  background:rgba(255,255,255,0.08);
+  border-radius:2px;
+  transition:background 0.2s;
+}
+.wp-step.done   { background:var(--gold); }
+.wp-step.active { background:var(--red); box-shadow:0 0 8px rgba(230,57,70,0.5); }
+.wizard-step h2 {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:32px;
+  letter-spacing:3px;
+  color:white;
+  margin:6px 0 14px;
+}
+.wizard-eyebrow {
+  font-family:'Orbitron', monospace;
+  font-size:10px;
+  letter-spacing:3px;
+  color:var(--gold);
+}
+.wizard-step p {
+  font-size:14px;
+  line-height:1.6;
+  color:var(--text);
+  margin-bottom:14px;
+}
+.wizard-status {
+  font-family:'Orbitron', monospace;
+  font-size:11px;
+  letter-spacing:2px;
+  color:var(--text-dim);
+  padding:14px 18px;
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--line);
+  border-radius:6px;
+  margin:18px 0;
+}
+.wizard-status.connected { color:var(--green); border-color:rgba(80,205,80,0.4); background:rgba(80,205,80,0.05); }
+.wizard-status.waiting   { color:#ffb959; border-color:rgba(230,154,57,0.4); background:rgba(230,154,57,0.05); }
+.wizard-url {
+  display:block;
+  background:#0a0a0a;
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:12px 16px;
+  font-family:'JetBrains Mono', monospace;
+  font-size:14px;
+  color:white;
+  margin:14px 0;
+  user-select:all;
+}
+.wizard-actions {
+  display:flex; gap:8px;
+  justify-content:flex-end;
+  margin-top:22px;
+}
 h1, h2, h3 {
   font-family:'Bebas Neue', sans-serif;
   letter-spacing:2px;
@@ -520,18 +705,23 @@ h1, h2, h3 {
 </div>
 
 <div class="app-body">
-<div class="app">
-  <div class="header">
-    <div>
-      <h1>ERA STREAMER</h1>
-      <div class="tag">BROADCAST CONTROL</div>
+  <aside class="sidebar">
+    <div class="side-tag">NAVIGATION</div>
+    <div class="side-nav">
+      <button class="side-link active" data-tab="main"><span class="ico">▦</span><span>Main</span></button>
+      <button class="side-link"        data-tab="archive"><span class="ico">▤</span><span>Archive</span></button>
+      <button class="side-link"        data-tab="settings"><span class="ico">⚙</span><span>Settings</span></button>
     </div>
-    <div class="grow"></div>
-    <div class="pills">
+    <div class="side-spacer"></div>
+    <div class="side-tag" style="margin-top:10px">STATUS</div>
+    <div class="side-status">
       <span class="pill" id="pillRl"><span class="dot"></span>RL</span>
       <span class="pill" id="pillIni"><span class="dot"></span>INI</span>
     </div>
-  </div>
+  </aside>
+
+  <div class="main-content">
+<div class="app">
 
   <!-- Inline help banner that shows when RL isn't reachable. The bridge
        retries every ~1.5s; this just tells the producer in plain English
@@ -555,13 +745,12 @@ h1, h2, h3 {
     <button class="btn" id="updateBtn">CHECK FOR UPDATES</button>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="main">MAIN</button>
-    <button class="tab" data-tab="archive">ARCHIVE</button>
-    <button class="tab" data-tab="settings">SETTINGS</button>
-  </div>
-
   <div class="tab-pane active" data-pane="main">
+
+  <div class="panel" id="recentPanel" style="display:none">
+    <h2>RECENT MATCHUPS <span style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;">— click to load</span></h2>
+    <div class="recent-list" id="recentList"></div>
+  </div>
 
   <div class="panel match-panel">
     <h2>MATCH</h2>
@@ -685,6 +874,21 @@ h1, h2, h3 {
       </div>
     </div>
     <div class="panel">
+      <h2>STARTUP</h2>
+      <div class="row">
+        <div class="field" style="flex:0 0 auto">
+          <div class="label">Launch on Windows startup</div>
+          <button class="btn btn-toggle off" id="autoLaunchBtn" data-on="false">AUTO-LAUNCH: OFF</button>
+        </div>
+        <div class="field" style="flex:1;min-width:240px">
+          <div class="label">&nbsp;</div>
+          <div style="font-size:13px;color:var(--text-dim);padding:10px 0;line-height:1.5;">
+            When ON, ERA Streamer starts automatically with Windows and waits in the system tray. Click the tray icon to bring up the control window.
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
       <h2>ARCHIVE</h2>
       <div class="row">
         <div class="field" style="flex:0 0 auto">
@@ -708,7 +912,53 @@ h1, h2, h3 {
   </div>
 
 </div>
+  </div><!-- end main-content -->
 </div><!-- end app-body -->
+
+<!-- First-run setup wizard. Covers the app body. Dismissed when
+     /api/prefs/first-run-complete is POSTed. -->
+<div class="wizard" id="wizard" style="display:none">
+  <div class="wizard-card">
+    <button class="wizard-close" id="wizardSkip" type="button" title="Skip — I'll do this later">×</button>
+    <div class="wizard-progress">
+      <span class="wp-step" data-wp="1"></span>
+      <span class="wp-step" data-wp="2"></span>
+      <span class="wp-step" data-wp="3"></span>
+    </div>
+    <div class="wizard-step" data-step="1">
+      <div class="wizard-eyebrow">STEP 1 OF 3 · WELCOME</div>
+      <h2>Welcome to ERA Streamer</h2>
+      <p>This is the broadcast app for Rocket League — overlay, live stats, session recording, all in one place. Three quick steps to get you live.</p>
+      <p>First, make sure Rocket League is running. The app needs the in-game stats feed to push boost and score data to the overlay.</p>
+      <div class="wizard-status" id="wizRlStatus">Checking…</div>
+      <div class="wizard-actions">
+        <button class="btn btn-primary" data-wiz-next="2">Continue</button>
+      </div>
+    </div>
+    <div class="wizard-step" data-step="2" style="display:none">
+      <div class="wizard-eyebrow">STEP 2 OF 3 · OBS SETUP</div>
+      <h2>Add the overlay to OBS</h2>
+      <p>In OBS Studio, add a new <strong>Browser Source</strong> at 1920×1080 pointing to:</p>
+      <code class="wizard-url">http://127.0.0.1:49124/match.html</code>
+      <p style="font-size:13px;color:var(--text-dim)">It'll be transparent — drop it on top of your Rocket League scene.</p>
+      <div class="wizard-actions">
+        <button class="btn" data-wiz-next="1">Back</button>
+        <button class="btn btn-gold" id="wizCopyUrl">Copy URL</button>
+        <button class="btn btn-primary" data-wiz-next="3">Continue</button>
+      </div>
+    </div>
+    <div class="wizard-step" data-step="3" style="display:none">
+      <div class="wizard-eyebrow">STEP 3 OF 3 · YOU'RE READY</div>
+      <h2>You're set</h2>
+      <p>Pick teams, hit <strong>PUSH TO OVERLAY</strong>, and start streaming. Every match you play gets recorded automatically — at the end of the session click <strong>SAVE SESSION</strong> on the MAIN tab to keep it.</p>
+      <p style="font-size:13px;color:var(--text-dim)">Closing the window keeps the bridge running in the system tray. Quit from the tray menu when you're really done.</p>
+      <div class="wizard-actions">
+        <button class="btn" data-wiz-next="2">Back</button>
+        <button class="btn btn-primary" id="wizFinish">Get started</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -862,6 +1112,15 @@ $('pushBtn').addEventListener('click', async () => {
     right: { league: state.league, slot: state.rightSlot },
     title: String(state.title || '').trim(),
   });
+  // Track this matchup in the recent-matchups list so the producer can
+  // re-pick it with one click next time.
+  fetch(API + '/api/prefs/recent-matchups/add', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      league: state.league, leftSlot: state.leftSlot, rightSlot: state.rightSlot,
+      title: state.title || '',
+    }),
+  }).then(loadRecentMatchups).catch(() => {});
   btn.disabled = false;
   showToast('PUSHED — overlay updates in ~2s');
 });
@@ -1001,15 +1260,15 @@ $('winMin').addEventListener('click',   () => fetch(API + '/api/window/minimize'
 $('winMax').addEventListener('click',   () => fetch(API + '/api/window/maximize', { method: 'POST' }));
 $('winClose').addEventListener('click', () => fetch(API + '/api/window/close',    { method: 'POST' }));
 
-// ── Tabs ─────────────────────────────────────────────────────────────
-document.querySelectorAll('.tab').forEach((btn) => {
-  btn.addEventListener('click', () => {
-    const tab = btn.dataset.tab;
-    document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('active', b === btn));
-    document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === tab));
-    if (tab === 'archive') loadArchive();
-    if (tab === 'settings') loadSettings();
-  });
+// ── Sidebar nav ──────────────────────────────────────────────────────
+function activateTab(tab) {
+  document.querySelectorAll('.side-link').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
+  document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === tab));
+  if (tab === 'archive') loadArchive();
+  if (tab === 'settings') loadSettings();
+}
+document.querySelectorAll('.side-link').forEach((btn) => {
+  btn.addEventListener('click', () => activateTab(btn.dataset.tab));
 });
 
 // ── Local archive ────────────────────────────────────────────────────
@@ -1154,6 +1413,7 @@ async function loadSettings() {
     btn.classList.toggle('on',  enabled);
     btn.classList.toggle('off', !enabled);
   } catch (e) {}
+  loadAutoLaunch();
 }
 $('capacitySaveBtn').addEventListener('click', async () => {
   const cap = parseInt($('capacityInput').value, 10);
@@ -1164,6 +1424,72 @@ $('capacitySaveBtn').addEventListener('click', async () => {
   });
   showToast('CAPACITY SAVED · keeping ' + cap + ' most recent');
 });
+// ── Recent matchups ──────────────────────────────────────────────────
+async function loadRecentMatchups() {
+  try {
+    const r = await fetch(API + '/api/prefs');
+    const d = await r.json();
+    renderRecent(d.recentMatchups || []);
+  } catch (e) {}
+}
+function renderRecent(list) {
+  const panel = $('recentPanel');
+  const wrap  = $('recentList');
+  if (!list.length) { panel.style.display = 'none'; return; }
+  panel.style.display = '';
+  wrap.innerHTML = '';
+  list.forEach((m) => {
+    const left  = teamFor(m.leftSlot,  m.league);
+    const right = teamFor(m.rightSlot, m.league);
+    if (!left || !right) return;
+    const row = document.createElement('div');
+    row.className = 'recent-row';
+    const when = m.savedAt ? new Date(m.savedAt) : null;
+    const whenStr = when ? when.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+    row.innerHTML =
+      '<span class="league-tag ' + m.league + '">' + (teamData.leagueLabels[m.league] || m.league).toUpperCase() + '</span>' +
+      '<div class="matchup">' + escapeText(left.name) + ' vs ' + escapeText(right.name) + '</div>' +
+      '<span class="when">' + escapeText(whenStr).toUpperCase() + '</span>';
+    row.addEventListener('click', () => {
+      state.league    = m.league;
+      state.leftSlot  = m.leftSlot;
+      state.rightSlot = m.rightSlot;
+      state.title     = m.title || state.title;
+      $('leagueSel').value = m.league;
+      fillTeamSelect('leftSel',  m.leftSlot);
+      fillTeamSelect('rightSel', m.rightSlot);
+      $('titleInput').value = state.title || '';
+      renderPreview('left'); renderPreview('right');
+      renderSeriesUI();
+      showToast('LOADED — ' + left.name + ' vs ' + right.name);
+    });
+    wrap.appendChild(row);
+  });
+}
+
+// ── Auto-launch toggle ──────────────────────────────────────────────
+async function loadAutoLaunch() {
+  try {
+    const r = await fetch(API + '/api/auto-launch');
+    const d = await r.json();
+    const btn = $('autoLaunchBtn');
+    btn.dataset.on = String(!!d.enabled);
+    btn.textContent = d.enabled ? 'AUTO-LAUNCH: ON' : 'AUTO-LAUNCH: OFF';
+    btn.classList.toggle('on',  !!d.enabled);
+    btn.classList.toggle('off', !d.enabled);
+  } catch (e) {}
+}
+$('autoLaunchBtn').addEventListener('click', async () => {
+  const cur = $('autoLaunchBtn').dataset.on === 'true';
+  const next = !cur;
+  await fetch(API + '/api/auto-launch', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: next }),
+  });
+  showToast('AUTO-LAUNCH ' + (next ? 'ENABLED — starts with Windows' : 'DISABLED'));
+  loadAutoLaunch();
+});
+
 $('recordingToggleBtn').addEventListener('click', async () => {
   const cur = $('recordingToggleBtn').dataset.on === 'true';
   const next = !cur;
@@ -1176,6 +1502,56 @@ $('recordingToggleBtn').addEventListener('click', async () => {
   pollRecording();
 });
 
+// ── First-run wizard ────────────────────────────────────────────────
+function showWizardStep(n) {
+  document.querySelectorAll('.wizard-step').forEach((el) => {
+    el.style.display = parseInt(el.dataset.step, 10) === n ? '' : 'none';
+  });
+  document.querySelectorAll('.wp-step').forEach((el) => {
+    const wp = parseInt(el.dataset.wp, 10);
+    el.classList.toggle('active', wp === n);
+    el.classList.toggle('done',   wp <  n);
+  });
+  // Live RL status on step 1.
+  if (n === 1) updateWizardRlStatus();
+}
+async function updateWizardRlStatus() {
+  try {
+    const s = await (await fetch(API + '/api/status')).json();
+    const el = $('wizRlStatus');
+    if (!el) return;
+    if (s.rlConnected) {
+      el.textContent = '✓ Rocket League detected — bridge connected';
+      el.classList.add('connected'); el.classList.remove('waiting');
+    } else {
+      el.textContent = 'Waiting for Rocket League… launch the game and the bridge will catch on automatically.';
+      el.classList.remove('connected'); el.classList.add('waiting');
+    }
+  } catch (e) {}
+}
+async function maybeShowWizard() {
+  try {
+    const r = await fetch(API + '/api/prefs');
+    const d = await r.json();
+    if (!d.firstRunComplete) {
+      $('wizard').style.display = 'flex';
+      showWizardStep(1);
+    }
+  } catch (e) {}
+}
+async function dismissWizard() {
+  $('wizard').style.display = 'none';
+  await fetch(API + '/api/prefs/first-run-complete', { method: 'POST' });
+}
+document.querySelectorAll('[data-wiz-next]').forEach((btn) => {
+  btn.addEventListener('click', () => showWizardStep(parseInt(btn.dataset.wizNext, 10)));
+});
+$('wizSkip').addEventListener('click', dismissWizard);
+$('wizFinish').addEventListener('click', dismissWizard);
+$('wizCopyUrl').addEventListener('click', () => {
+  navigator.clipboard.writeText('http://127.0.0.1:49124/match.html').then(() => showToast('OBS URL COPIED'));
+});
+
 (async () => {
   await loadTeams();
   await loadState();
@@ -1184,12 +1560,15 @@ $('recordingToggleBtn').addEventListener('click', async () => {
   $('titleInput').value = state.title || '';
   renderPreview('left'); renderPreview('right');
   renderSeriesUI();
+  loadRecentMatchups();
+  maybeShowWizard();
   pollStatus();
   pollUpdate();
   pollRecording();
   setInterval(pollStatus, 2000);
   setInterval(pollUpdate, 1500);
   setInterval(pollRecording, 2000);
+  setInterval(updateWizardRlStatus, 1500); // refresh wizard status while open
 })();
 </script>
 </body>

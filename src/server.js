@@ -44,7 +44,7 @@ const MIME = {
 const ERA_SUPABASE_URL = 'https://qamonwkxafbzvyrlisjv.supabase.co';
 const ERA_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhbW9ud2t4YWZienZ5cmxpc2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ3NjcsImV4cCI6MjA5MTUxMDc2N30.AOKN9Ioz5m8Om2CutdlTownmoEbZ3DFVcAHovhhj7wM';
 
-function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck, onUpdateInstall, onWindowMinimize, onWindowMaximize, onWindowClose }) {
+function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck, onUpdateInstall, onWindowMinimize, onWindowMaximize, onWindowClose, onAutoLaunchGet, onAutoLaunchSet }) {
   // ── Persisted state (match config, series, overlay flags) ────────────
   const defaultState = {
     stream_match:           { value: {}, updated_at: new Date().toISOString() },
@@ -59,6 +59,10 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     // recent; older ones drop off automatically. `recordingEnabled` lets
     // the producer turn off auto-capture entirely from the Settings tab.
     local_archive:          { value: { capacity: 25, recordingEnabled: true, series: [] }, updated_at: new Date().toISOString() },
+    // First-run wizard completion flag and recent-matchups list (most-
+    // recent first, capped at 5). Together they make the daily flow
+    // smoother for repeat users.
+    app_prefs:              { value: { firstRunComplete: false, recentMatchups: [] }, updated_at: new Date().toISOString() },
   };
   let state = { ...defaultState };
   try {
@@ -335,6 +339,59 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
         setTimeout(() => onUpdateInstall(), 200);
       }
       return sendJson(res, 200, { ok: true });
+    }
+
+    // App preferences — first-run wizard flag, recent matchups list.
+    if (req.method === 'GET' && pathname === '/api/prefs') {
+      const prefs = state.app_prefs.value || {};
+      return sendJson(res, 200, {
+        firstRunComplete: !!prefs.firstRunComplete,
+        recentMatchups:   Array.isArray(prefs.recentMatchups) ? prefs.recentMatchups : [],
+      });
+    }
+    if (req.method === 'POST' && pathname === '/api/prefs/first-run-complete') {
+      const prefs = state.app_prefs.value || {};
+      prefs.firstRunComplete = true;
+      state.app_prefs.value = prefs;
+      state.app_prefs.updated_at = new Date().toISOString();
+      saveState();
+      return sendJson(res, 200, { ok: true });
+    }
+    if (req.method === 'POST' && pathname === '/api/prefs/recent-matchups/add') {
+      let body;
+      try { body = await readBody(req); } catch { return sendJson(res, 400, { error: 'invalid json' }); }
+      if (!body || !body.league || body.leftSlot == null || body.rightSlot == null) {
+        return sendJson(res, 400, { error: 'missing league/leftSlot/rightSlot' });
+      }
+      const prefs = state.app_prefs.value || {};
+      const list = Array.isArray(prefs.recentMatchups) ? prefs.recentMatchups : [];
+      const sig = body.league + '|' + body.leftSlot + '|' + body.rightSlot;
+      const filtered = list.filter((m) => (m.league + '|' + m.leftSlot + '|' + m.rightSlot) !== sig);
+      filtered.unshift({
+        league: body.league,
+        leftSlot: body.leftSlot,
+        rightSlot: body.rightSlot,
+        title: body.title || '',
+        savedAt: new Date().toISOString(),
+      });
+      prefs.recentMatchups = filtered.slice(0, 5);
+      state.app_prefs.value = prefs;
+      state.app_prefs.updated_at = new Date().toISOString();
+      saveState();
+      return sendJson(res, 200, { ok: true, recentMatchups: prefs.recentMatchups });
+    }
+
+    // Auto-launch toggle (Windows login item).
+    if (req.method === 'GET' && pathname === '/api/auto-launch') {
+      const enabled = typeof onAutoLaunchGet === 'function' ? !!onAutoLaunchGet() : false;
+      return sendJson(res, 200, { enabled });
+    }
+    if (req.method === 'POST' && pathname === '/api/auto-launch') {
+      let body;
+      try { body = await readBody(req); } catch { return sendJson(res, 400, { error: 'invalid json' }); }
+      const enabled = !!body.enabled;
+      if (typeof onAutoLaunchSet === 'function') onAutoLaunchSet(enabled);
+      return sendJson(res, 200, { ok: true, enabled });
     }
 
     // Custom titlebar wiring — frameless window in main.js, controls

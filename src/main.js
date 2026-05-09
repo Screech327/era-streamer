@@ -55,6 +55,14 @@ if (!gotLock) {
         else mainWindow.maximize();
       },
       onWindowClose:    () => mainWindow && mainWindow.close(),
+      // Auto-launch on Windows boot. Default OFF — producer flips it from
+      // the Settings tab.
+      onAutoLaunchGet: () => app.getLoginItemSettings().openAtLogin,
+      onAutoLaunchSet: (on) => app.setLoginItemSettings({
+        openAtLogin: !!on,
+        // Start hidden so the tray runs without popping the window.
+        args: ['--hidden-launch'],
+      }),
     });
 
     const iniResult = autoConfigure();
@@ -139,6 +147,9 @@ if (!gotLock) {
     });
     serverHandle.setStatus({ bridgeStarted: true });
 
+    // Auto-launch passes `--hidden-launch` so the window starts in the
+    // tray without popping. User-initiated launches show normally.
+    const hiddenLaunch = process.argv.includes('--hidden-launch');
     mainWindow = new BrowserWindow({
       width: 1100,
       height: 820,
@@ -146,6 +157,7 @@ if (!gotLock) {
       minHeight: 700,
       backgroundColor: '#0a0a0a',
       title: 'ERA Streamer',
+      show: !hiddenLaunch,
       // Frameless — replaced with the custom titlebar in control.html. Drops
       // the generic Windows chrome so the app reads as a polished tool
       // rather than a browser window.
