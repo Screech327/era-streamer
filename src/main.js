@@ -63,6 +63,10 @@ if (!gotLock) {
         // Start hidden so the tray runs without popping the window.
         args: ['--hidden-launch'],
       }),
+      // Bridge "Retry connection" button — drops the current socket so the
+      // auto-reconnect loop in bridge.js immediately attempts a fresh
+      // connection without waiting out the 1.5s backoff.
+      onBridgeReconnect: () => bridgeHandle && bridgeHandle.reconnect(),
     });
 
     const iniResult = autoConfigure();

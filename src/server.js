@@ -44,7 +44,7 @@ const MIME = {
 const ERA_SUPABASE_URL = 'https://qamonwkxafbzvyrlisjv.supabase.co';
 const ERA_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhbW9ud2t4YWZienZ5cmxpc2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ3NjcsImV4cCI6MjA5MTUxMDc2N30.AOKN9Ioz5m8Om2CutdlTownmoEbZ3DFVcAHovhhj7wM';
 
-function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck, onUpdateInstall, onWindowMinimize, onWindowMaximize, onWindowClose, onAutoLaunchGet, onAutoLaunchSet }) {
+function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck, onUpdateInstall, onWindowMinimize, onWindowMaximize, onWindowClose, onAutoLaunchGet, onAutoLaunchSet, onBridgeReconnect }) {
   // ── Persisted state (match config, series, overlay flags) ────────────
   const defaultState = {
     stream_match:           { value: {}, updated_at: new Date().toISOString() },
@@ -469,6 +469,38 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
       try { body = await readBody(req); } catch { return sendJson(res, 400, { error: 'invalid json' }); }
       const cap = setArchiveCapacity(body.capacity);
       return sendJson(res, 200, { ok: true, capacity: cap });
+    }
+    // Notes — applied to a session as a whole, or to a specific game
+    // within that session (matched by matchGuid). Body shape:
+    //   { id: <sessionId>, note: "..." }                    → session note
+    //   { id: <sessionId>, matchGuid: "...", note: "..." }  → per-game note
+    if (req.method === 'POST' && pathname === '/api/local-archive/note') {
+      let body;
+      try { body = await readBody(req); } catch { return sendJson(res, 400, { error: 'invalid json' }); }
+      if (!body.id) return sendJson(res, 400, { error: 'missing id' });
+      const note = String(body.note == null ? '' : body.note).slice(0, 2000);
+      const arc = state.local_archive.value || {};
+      const list = arc.series || [];
+      const session = list.find((s) => s.id === body.id);
+      if (!session) return sendJson(res, 404, { error: 'session not found' });
+      if (body.matchGuid) {
+        const game = (session.games || []).find((g) => g.matchGuid === body.matchGuid);
+        if (!game) return sendJson(res, 404, { error: 'game not found' });
+        game.note = note;
+      } else {
+        session.note = note;
+      }
+      state.local_archive.value = arc;
+      state.local_archive.updated_at = new Date().toISOString();
+      saveState();
+      return sendJson(res, 200, { ok: true });
+    }
+
+    // Bridge reconnect — drops the current TCP socket; bridge.js auto-
+    // retries every 1.5s, so the producer doesn't have to wait it out.
+    if (req.method === 'POST' && pathname === '/api/bridge/reconnect') {
+      if (typeof onBridgeReconnect === 'function') onBridgeReconnect();
+      return sendJson(res, 200, { ok: true });
     }
 
     return send(res, 404, 'not found');

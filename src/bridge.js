@@ -86,6 +86,10 @@ function startBridge({ onUpdate, onConnect, onDisconnect }) {
   return {
     getLastUpdate: () => lastUpdate,
     stop: () => { try { if (sock) sock.destroy(); } catch (_) {} },
+    // Force-close the current socket so the on-close handler kicks the
+    // auto-reconnect immediately. Used by the "Retry connection" button
+    // in the control panel.
+    reconnect: () => { try { if (sock) sock.destroy(); } catch (_) {} },
   };
 }
 

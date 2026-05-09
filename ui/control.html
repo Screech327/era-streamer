@@ -64,16 +64,10 @@ body { padding:0; }
   color:#fff;
 }
 .titlebar-brand .mark {
-  width:22px; height:22px;
-  display:flex; align-items:center; justify-content:center;
-  background:#0a0a0a;
-  border:1.5px solid var(--red);
-  border-radius:4px;
-  font-family:'Bebas Neue', sans-serif;
-  font-size:11px;
-  letter-spacing:1px;
-  color:var(--red);
-  box-shadow:0 0 6px rgba(230,57,70,0.35);
+  width:24px; height:24px;
+  display:block;
+  object-fit:contain;
+  border-radius:3px;
 }
 .titlebar-brand .name { color:white; }
 .titlebar-brand .name .accent { color:var(--red); }
@@ -334,6 +328,7 @@ h1, h2, h3 {
 .pill.error { color:var(--red);    border-color:rgba(230,57,70,0.35); }
 /* RL-not-detected hint banner — slots between header and OBS URL bar. */
 .rl-hint{
+  display:flex; align-items:center; gap:14px;
   background:rgba(230,57,70,0.08);
   border:1px solid rgba(230,57,70,0.4);
   border-radius:8px;
@@ -342,7 +337,9 @@ h1, h2, h3 {
   color:#ffb3b8;
   line-height:1.5;
 }
+.rl-hint .rl-hint-text { flex:1; }
 .rl-hint strong{color:white;letter-spacing:0.5px;}
+.rl-hint .btn { flex:0 0 auto; }
 .pill.error .dot { background:var(--red); }
 
 /* OBS URL bar */
@@ -678,6 +675,38 @@ h1, h2, h3 {
 .arc-stat-grid .h.left { text-align:left; }
 .arc-stat-grid .pn { font-weight:600; color:white; }
 .arc-stat-grid .v { text-align:center; font-family:'Bebas Neue',sans-serif; font-size:14px; }
+/* Notes — session-level sits at the top of an expanded session, per-game
+   sits inside each game card. Auto-saves on blur via /api/local-archive/note. */
+.arc-note-block {
+  margin: 0 0 14px;
+  display:flex; flex-direction:column; gap:6px;
+}
+.arc-note-block.compact { margin: 10px 0 0; }
+.arc-note-label {
+  display:flex; justify-content:space-between; align-items:center;
+  font-family:'Orbitron', monospace;
+  font-size:9px; letter-spacing:2px;
+  color:#777;
+}
+.arc-note-saved {
+  color:var(--green);
+  font-size:9px; letter-spacing:1.5px;
+  opacity:0; transition:opacity 0.2s;
+}
+.arc-note-saved.show { opacity:1; }
+.arc-note-input {
+  width:100%;
+  background:rgba(0,0,0,0.4);
+  border:1px solid var(--line);
+  border-radius:5px;
+  padding:8px 10px;
+  color:white;
+  font-family:'Rajdhani', sans-serif;
+  font-size:13px;
+  resize:vertical;
+  min-height:40px;
+}
+.arc-note-input:focus { outline:none; border-color:rgba(230,57,70,0.5); }
 </style>
 </head>
 <body>
@@ -687,7 +716,7 @@ h1, h2, h3 {
      clickable. -->
 <div class="titlebar">
   <div class="titlebar-brand">
-    <div class="mark">E</div>
+    <img class="mark" src="/ui/logo.jpg" alt="ERA">
     <div class="name"><span class="accent">ERA</span> STREAMER</div>
   </div>
   <div class="titlebar-spacer"></div>
@@ -727,7 +756,8 @@ h1, h2, h3 {
        retries every ~1.5s; this just tells the producer in plain English
        what to check rather than letting them stare at a red pill. -->
   <div class="rl-hint" id="rlHint" style="display:none">
-    <strong>Rocket League is not detected</strong> — Check that Rocket League is running.
+    <div class="rl-hint-text"><strong>Rocket League is not detected</strong> — Check that Rocket League is running.</div>
+    <button class="btn" id="bridgeReconnectBtn" type="button">RETRY CONNECTION</button>
   </div>
 
   <div class="obs-bar">
@@ -1260,6 +1290,17 @@ $('winMin').addEventListener('click',   () => fetch(API + '/api/window/minimize'
 $('winMax').addEventListener('click',   () => fetch(API + '/api/window/maximize', { method: 'POST' }));
 $('winClose').addEventListener('click', () => fetch(API + '/api/window/close',    { method: 'POST' }));
 
+// Bridge reconnect — drops the current TCP socket so the auto-retry in
+// bridge.js immediately reattempts. Disabled while the request flies.
+$('bridgeReconnectBtn').addEventListener('click', async () => {
+  const btn = $('bridgeReconnectBtn');
+  btn.disabled = true;
+  btn.textContent = 'RETRYING…';
+  try { await fetch(API + '/api/bridge/reconnect', { method: 'POST' }); } catch (_) {}
+  showToast('RETRYING CONNECTION');
+  setTimeout(() => { btn.disabled = false; btn.textContent = 'RETRY CONNECTION'; }, 1500);
+});
+
 // ── Sidebar nav ──────────────────────────────────────────────────────
 function activateTab(tab) {
   document.querySelectorAll('.side-link').forEach((b) => b.classList.toggle('active', b.dataset.tab === tab));
@@ -1317,9 +1358,10 @@ function buildArchiveRow(s) {
   row.querySelector('[data-toggle]').addEventListener('click', (e) => {
     if (e.target.closest('[data-delete]')) return; // delete button has its own handler
     if (detail.style.display === 'none') {
-      detail.innerHTML = renderSeriesGames(s);
+      detail.innerHTML = renderSeriesDetail(s);
       detail.style.display = 'block';
       toggleBtn.textContent = 'HIDE';
+      wireNoteInputs(detail, s);
     } else {
       detail.style.display = 'none';
       toggleBtn.textContent = 'VIEW';
@@ -1351,6 +1393,62 @@ function computeWins(s) {
   return wins;
 }
 
+function renderSeriesDetail(s) {
+  // Session-level note sits above the games list; per-game notes sit
+  // beneath each game's stat tables. Both auto-save on blur.
+  return renderNoteBlock({
+    label: 'SESSION NOTES',
+    placeholder: 'Notes for the whole session — matchup context, BC link, who reffed…',
+    value: s.note || '',
+    dataAttrs: 'data-note-session="1"',
+  }) + renderSeriesGames(s);
+}
+
+function renderNoteBlock({ label, placeholder, value, dataAttrs, compact }) {
+  return (
+    '<div class="arc-note-block' + (compact ? ' compact' : '') + '">' +
+      '<div class="arc-note-label">' +
+        '<span>' + escapeText(label) + '</span>' +
+        '<span class="arc-note-saved">SAVED</span>' +
+      '</div>' +
+      '<textarea class="arc-note-input" rows="2" placeholder="' + escapeText(placeholder) + '" ' + dataAttrs + '>' +
+        escapeText(value) +
+      '</textarea>' +
+    '</div>'
+  );
+}
+
+function wireNoteInputs(root, s) {
+  root.querySelectorAll('.arc-note-input').forEach((ta) => {
+    let lastSaved = ta.value;
+    ta.addEventListener('blur', async () => {
+      if (ta.value === lastSaved) return;
+      const body = { id: s.id, note: ta.value };
+      if (ta.dataset.noteGame) body.matchGuid = ta.dataset.noteGame;
+      try {
+        const r = await fetch(API + '/api/local-archive/note', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        });
+        if (!r.ok) throw new Error('save failed');
+        lastSaved = ta.value;
+        // Also reflect into the cached session so a re-expand shows latest
+        if (ta.dataset.noteSession) s.note = ta.value;
+        if (ta.dataset.noteGame) {
+          const g = (s.games || []).find((g) => g.matchGuid === ta.dataset.noteGame);
+          if (g) g.note = ta.value;
+        }
+        const saved = ta.parentElement.querySelector('.arc-note-saved');
+        if (saved) {
+          saved.classList.add('show');
+          clearTimeout(ta._savedTimer);
+          ta._savedTimer = setTimeout(() => saved.classList.remove('show'), 1400);
+        }
+      } catch (e) { showToast('Note save failed', true); }
+    });
+  });
+}
+
 function renderSeriesGames(s) {
   const left = (s.matchup && s.matchup.left)  || { name: 'BLUE' };
   const right = (s.matchup && s.matchup.right) || { name: 'ORANGE' };
@@ -1377,6 +1475,13 @@ function renderSeriesGames(s) {
       h += '</div></div>';
       return h;
     }
+    const noteHtml = g.matchGuid ? renderNoteBlock({
+      label: 'GAME ' + (i + 1) + ' NOTES',
+      placeholder: 'Notes for this game — comeback story, BC link, OT bangers…',
+      value: g.note || '',
+      dataAttrs: 'data-note-game="' + escapeText(g.matchGuid) + '"',
+      compact: true,
+    }) : '';
     return (
       '<div class="arc-game">' +
         '<div class="arc-game-head">' +
@@ -1391,6 +1496,7 @@ function renderSeriesGames(s) {
           sideHtml(left.name,  team0, '#7da7e8') +
           sideHtml(right.name, team1, '#ffb959') +
         '</div>' +
+        noteHtml +
       '</div>'
     );
   }).join('');
