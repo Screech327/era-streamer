@@ -65,12 +65,26 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     app_prefs:              { value: { firstRunComplete: false, recentMatchups: [] }, updated_at: new Date().toISOString() },
   };
   let state = { ...defaultState };
+  let stateLoaded = false;
   try {
     if (statePath && fs.existsSync(statePath)) {
       const loaded = JSON.parse(fs.readFileSync(statePath, 'utf8'));
       state = { ...defaultState, ...loaded };
+      stateLoaded = true;
     }
   } catch (_) {}
+
+  // Upgrading-user fix: if state.json was already on disk but had no
+  // app_prefs (because it predates v0.11.0), they've used the app before
+  // — don't show the first-run wizard at them.
+  if (stateLoaded) {
+    const prefs = state.app_prefs && state.app_prefs.value;
+    if (!prefs || prefs.firstRunComplete !== true) {
+      state.app_prefs = state.app_prefs || { value: {}, updated_at: new Date().toISOString() };
+      state.app_prefs.value = Object.assign({}, prefs || {}, { firstRunComplete: true });
+      state.app_prefs.updated_at = new Date().toISOString();
+    }
+  }
 
   function saveState() {
     if (!statePath) return;
