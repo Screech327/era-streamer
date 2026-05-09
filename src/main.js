@@ -155,10 +155,10 @@ if (!gotLock) {
     // tray without popping. User-initiated launches show normally.
     const hiddenLaunch = process.argv.includes('--hidden-launch');
     mainWindow = new BrowserWindow({
-      width: 1100,
-      height: 820,
-      minWidth: 920,
-      minHeight: 700,
+      width: 1360,
+      height: 940,
+      minWidth: 1080,
+      minHeight: 760,
       backgroundColor: '#0a0a0a',
       title: 'ERA Streamer',
       show: !hiddenLaunch,
@@ -255,7 +255,7 @@ if (!gotLock) {
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0 && serverHandle) {
         mainWindow = new BrowserWindow({
-          width: 1100, height: 820, autoHideMenuBar: true,
+          width: 1360, height: 940, autoHideMenuBar: true,
           webPreferences: { contextIsolation: true, nodeIntegration: false },
         });
         mainWindow.loadURL(`http://127.0.0.1:${serverHandle.port}/control`);
