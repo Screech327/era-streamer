@@ -262,6 +262,151 @@ h1, h2, h3 {
   letter-spacing:2px;
   color:var(--text-dim);
 }
+
+/* === Tabs === */
+.tabs {
+  display:flex;
+  gap:4px;
+  margin-top:6px;
+  border-bottom:1px solid var(--line);
+}
+.tab {
+  background:transparent;
+  border:1px solid transparent;
+  border-bottom:none;
+  border-radius:6px 6px 0 0;
+  padding:9px 18px;
+  font-family:'Orbitron', monospace;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:2px;
+  color:var(--text-dim);
+  cursor:pointer;
+  margin-bottom:-1px;
+  transition:all 0.15s;
+}
+.tab:hover { color:var(--text); }
+.tab.active {
+  background:var(--panel);
+  border-color:var(--line);
+  color:var(--gold);
+}
+.tab-pane { display:none; flex-direction:column; gap:18px; }
+.tab-pane.active { display:flex; }
+
+/* === Archive list === */
+.archive-list { display:flex; flex-direction:column; gap:8px; }
+.archive-empty {
+  padding:30px 0;
+  text-align:center;
+  color:var(--text-dim);
+  font-style:italic;
+  font-family:'Rajdhani', sans-serif;
+  letter-spacing:1px;
+}
+.arc-row {
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:8px;
+  overflow:hidden;
+  transition:border-color 0.15s;
+}
+.arc-row:hover { border-color:#333; }
+.arc-head {
+  display:grid;
+  grid-template-columns:1fr auto auto auto;
+  gap:14px;
+  align-items:center;
+  padding:11px 16px;
+  cursor:pointer;
+}
+.arc-name { font-family:'Bebas Neue', sans-serif; font-size:18px; letter-spacing:2px; color:white; }
+.arc-meta { font-family:'Orbitron', monospace; font-size:10px; letter-spacing:1.5px; color:var(--text-dim); }
+.arc-score {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:20px;
+  letter-spacing:1px;
+  color:white;
+  min-width:60px;
+  text-align:center;
+}
+.arc-score-loss { color:#555; }
+.arc-toggle, .arc-delete {
+  background:#1a1a1a;
+  border:1px solid var(--line);
+  border-radius:4px;
+  padding:6px 12px;
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  font-weight:700;
+  letter-spacing:1.5px;
+  color:var(--text-dim);
+  cursor:pointer;
+}
+.arc-toggle:hover { border-color:var(--gold); color:var(--gold); }
+.arc-delete:hover { border-color:var(--red); color:var(--red); }
+.arc-detail {
+  border-top:1px solid var(--line);
+  padding:14px 16px;
+  background:rgba(0,0,0,0.3);
+}
+.arc-game {
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:10px 12px;
+  margin-bottom:10px;
+}
+.arc-game-head {
+  display:flex;
+  align-items:center;
+  gap:14px;
+  margin-bottom:10px;
+}
+.arc-game-num {
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  color:var(--gold);
+}
+.arc-game-score {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:18px;
+  letter-spacing:1px;
+}
+.arc-sides { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.arc-side {
+  background:rgba(0,0,0,0.35);
+  border:1px solid var(--line);
+  border-radius:5px;
+  padding:8px 10px;
+}
+.arc-side-name {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:13px;
+  letter-spacing:2px;
+  margin-bottom:6px;
+}
+.arc-stat-grid {
+  display:grid;
+  grid-template-columns:1fr repeat(6, 38px);
+  gap:4px;
+  font-family:'Rajdhani', sans-serif;
+  font-size:13px;
+}
+.arc-stat-grid .h {
+  font-family:'Orbitron', monospace;
+  font-size:8px;
+  letter-spacing:1.5px;
+  color:#666;
+  padding-bottom:4px;
+  border-bottom:1px solid rgba(255,255,255,0.05);
+  margin-bottom:3px;
+  text-align:center;
+}
+.arc-stat-grid .h.left { text-align:left; }
+.arc-stat-grid .pn { font-weight:600; color:white; }
+.arc-stat-grid .v { text-align:center; font-family:'Bebas Neue',sans-serif; font-size:14px; }
 </style>
 </head>
 <body>
@@ -299,6 +444,14 @@ h1, h2, h3 {
     <span id="updateStatus" style="flex:1;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--text-dim)">—</span>
     <button class="btn" id="updateBtn">CHECK FOR UPDATES</button>
   </div>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="main">MAIN</button>
+    <button class="tab" data-tab="archive">ARCHIVE</button>
+    <button class="tab" data-tab="settings">SETTINGS</button>
+  </div>
+
+  <div class="tab-pane active" data-pane="main">
 
   <div class="panel">
     <h2>MATCH</h2>
@@ -385,6 +538,41 @@ h1, h2, h3 {
     <div class="actions">
       <button class="btn btn-primary" id="saveSeriesBtn">SAVE SERIES STATS</button>
       <button class="btn btn-danger" id="resetRecBtn">DISCARD</button>
+    </div>
+  </div>
+
+  </div><!-- end main pane -->
+
+  <div class="tab-pane" data-pane="archive">
+    <div class="panel">
+      <h2>SAVED SERIES <span id="archiveCountLabel" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;"></span></h2>
+      <div id="archiveList" class="archive-list">
+        <div class="archive-empty">Nothing saved yet. Run a series — every match the bridge sees gets captured automatically. Hit SAVE SERIES STATS in MAIN at the end and it'll show up here.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane" data-pane="settings">
+    <div class="panel">
+      <h2>ARCHIVE</h2>
+      <div class="row">
+        <div class="field" style="flex:0 0 auto">
+          <div class="label">Keep most recent</div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <input type="number" min="1" max="500" class="input" id="capacityInput" style="width:90px;">
+            <span style="color:var(--text-dim);font-size:13px;">series</span>
+          </div>
+        </div>
+        <div class="field" style="flex:1;min-width:240px">
+          <div class="label">&nbsp;</div>
+          <div style="font-size:13px;color:var(--text-dim);padding:10px 0;line-height:1.5;">
+            Older series fall off automatically once you exceed this number. Default <strong>25</strong>.
+          </div>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary" id="capacitySaveBtn">SAVE</button>
+      </div>
     </div>
   </div>
 
@@ -632,7 +820,7 @@ async function pollRecording() {
   } catch (e) {}
 }
 $('saveSeriesBtn').addEventListener('click', async () => {
-  if (!confirm('Save the recorded series to the public archive?\n\nIt will appear on the website\'s Stats Hub immediately.')) return;
+  if (!confirm('Save the recorded series to the local archive?\n\nView it on the ARCHIVE tab.')) return;
   const btn = $('saveSeriesBtn');
   btn.disabled = true; btn.textContent = 'SAVING…';
   try {
@@ -641,6 +829,7 @@ $('saveSeriesBtn').addEventListener('click', async () => {
     if (!d.ok) throw new Error(d.error || 'Save failed');
     showToast('SAVED · ' + (d.series && d.series.gameCount ? d.series.gameCount + ' games' : 'archived'));
     pollRecording();
+    loadArchive();
   } catch (e) {
     showToast('Save failed: ' + (e.message || String(e)), true);
   } finally {
@@ -666,6 +855,164 @@ $('updateBtn').addEventListener('click', async () => {
     await fetch(API + '/api/update/check', { method: 'POST' });
     setTimeout(pollUpdate, 500);
   }
+});
+
+// ── Tabs ─────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const tab = btn.dataset.tab;
+    document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('active', b === btn));
+    document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === tab));
+    if (tab === 'archive') loadArchive();
+    if (tab === 'settings') loadCapacity();
+  });
+});
+
+// ── Local archive ────────────────────────────────────────────────────
+async function loadArchive() {
+  try {
+    const r = await fetch(API + '/api/local-archive');
+    const d = await r.json();
+    renderArchive(d.series || [], d.capacity || 25);
+  } catch (e) { showToast('Failed to load archive', true); }
+}
+
+function renderArchive(series, capacity) {
+  const list = $('archiveList');
+  $('archiveCountLabel').textContent = '· ' + series.length + ' / ' + capacity;
+  if (!series.length) {
+    list.innerHTML = '<div class="archive-empty">Nothing saved yet. Run a series — every match the bridge sees gets captured automatically. Hit SAVE SERIES STATS in MAIN at the end and it\'ll show up here.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  series.forEach((s) => list.appendChild(buildArchiveRow(s)));
+}
+
+function buildArchiveRow(s) {
+  const wins = computeWins(s);
+  const dateStr = s.savedAt ? new Date(s.savedAt).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  const row = document.createElement('div');
+  row.className = 'arc-row';
+  row.innerHTML = `
+    <div class="arc-head" data-toggle>
+      <div>
+        <div class="arc-name">${escapeText(s.name || 'Series')}</div>
+        <div class="arc-meta">${escapeText(dateStr)} · ${escapeText(s.format || 'BO5')} · ${(s.games || []).length} GAMES</div>
+      </div>
+      <div class="arc-score">
+        <span class="${wins[0] > wins[1] ? '' : 'arc-score-loss'}">${wins[0]}</span>
+        <span style="color:#444"> — </span>
+        <span class="${wins[1] > wins[0] ? '' : 'arc-score-loss'}">${wins[1]}</span>
+      </div>
+      <button class="arc-toggle" type="button">VIEW</button>
+      <button class="arc-delete" type="button" data-delete>DELETE</button>
+    </div>
+    <div class="arc-detail" style="display:none"></div>
+  `;
+  const detail = row.querySelector('.arc-detail');
+  const toggleBtn = row.querySelector('.arc-toggle');
+  row.querySelector('[data-toggle]').addEventListener('click', (e) => {
+    if (e.target.closest('[data-delete]')) return; // delete button has its own handler
+    if (detail.style.display === 'none') {
+      detail.innerHTML = renderSeriesGames(s);
+      detail.style.display = 'block';
+      toggleBtn.textContent = 'HIDE';
+    } else {
+      detail.style.display = 'none';
+      toggleBtn.textContent = 'VIEW';
+    }
+  });
+  row.querySelector('[data-delete]').addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if (!confirm('Delete "' + (s.name || 'this series') + '" from the local archive?')) return;
+    await fetch(API + '/api/local-archive/delete', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: s.id }),
+    });
+    showToast('DELETED');
+    loadArchive();
+  });
+  return row;
+}
+
+function computeWins(s) {
+  const wins = { 0: 0, 1: 0 };
+  (s.games || []).forEach((g) => {
+    if (g.winnerTeamNum === 0 || g.winnerTeamNum === 1) wins[g.winnerTeamNum]++;
+    else {
+      const s0 = (g.teamScores && g.teamScores[0]) || 0;
+      const s1 = (g.teamScores && g.teamScores[1]) || 0;
+      if (s0 > s1) wins[0]++; else if (s1 > s0) wins[1]++;
+    }
+  });
+  return wins;
+}
+
+function renderSeriesGames(s) {
+  const left = (s.matchup && s.matchup.left)  || { name: 'BLUE' };
+  const right = (s.matchup && s.matchup.right) || { name: 'ORANGE' };
+  return (s.games || []).map((g, i) => {
+    const s0 = (g.teamScores && g.teamScores[0]) || 0;
+    const s1 = (g.teamScores && g.teamScores[1]) || 0;
+    const players = Object.values(g.players || {});
+    const team0 = players.filter((p) => p.teamNum === 0).sort((a, b) => (b.score || 0) - (a.score || 0));
+    const team1 = players.filter((p) => p.teamNum === 1).sort((a, b) => (b.score || 0) - (a.score || 0));
+    function sideHtml(name, list, accent) {
+      let h = '<div class="arc-side"><div class="arc-side-name" style="color:' + accent + '">' + escapeText(name).toUpperCase() + '</div>';
+      h += '<div class="arc-stat-grid">';
+      h += '<div class="h left">PLAYER</div><div class="h">SCORE</div><div class="h">G</div><div class="h">A</div><div class="h">SV</div><div class="h">SH</div><div class="h">D</div>';
+      list.forEach((p) => {
+        h += '<div class="pn">' + escapeText(p.name || '—') + '</div>';
+        h += '<div class="v">' + (p.score || 0) + '</div>';
+        h += '<div class="v">' + (p.goals || 0) + '</div>';
+        h += '<div class="v">' + (p.assists || 0) + '</div>';
+        h += '<div class="v">' + (p.saves || 0) + '</div>';
+        h += '<div class="v">' + (p.shots || 0) + '</div>';
+        h += '<div class="v">' + (p.demos || 0) + '</div>';
+      });
+      if (!list.length) h += '<div style="grid-column:1/-1;color:#666;font-style:italic;text-align:center;padding:6px 0;">No players captured</div>';
+      h += '</div></div>';
+      return h;
+    }
+    return (
+      '<div class="arc-game">' +
+        '<div class="arc-game-head">' +
+          '<div class="arc-game-num">GAME ' + (i + 1) + '</div>' +
+          '<div class="arc-game-score">' +
+            '<span style="color:' + (s0 > s1 ? 'white' : '#555') + '">' + s0 + '</span>' +
+            '<span style="color:#444"> — </span>' +
+            '<span style="color:' + (s1 > s0 ? 'white' : '#555') + '">' + s1 + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<div class="arc-sides">' +
+          sideHtml(left.name,  team0, '#7da7e8') +
+          sideHtml(right.name, team1, '#ffb959') +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
+
+function escapeText(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c]);
+}
+
+// ── Settings ─────────────────────────────────────────────────────────
+async function loadCapacity() {
+  try {
+    const r = await fetch(API + '/api/local-archive');
+    const d = await r.json();
+    $('capacityInput').value = d.capacity || 25;
+  } catch (e) {}
+}
+$('capacitySaveBtn').addEventListener('click', async () => {
+  const cap = parseInt($('capacityInput').value, 10);
+  if (!cap || cap < 1) { showToast('Capacity must be at least 1', true); return; }
+  await fetch(API + '/api/local-archive/capacity', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ capacity: cap }),
+  });
+  showToast('CAPACITY SAVED · keeping ' + cap + ' most recent');
 });
 
 (async () => {

@@ -53,8 +53,12 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     player_aliases:         { value: {}, updated_at: new Date().toISOString() },
     // Series recording is always-on for era-streamer — every match end gets
     // captured automatically. The producer hits SAVE SERIES STATS at the
-    // end of the series to push it up to the ERA archive.
+    // end of the series to move it into the local archive.
     stream_recording:       { value: { active: true, games: [] }, updated_at: new Date().toISOString() },
+    // Local-only archive. Capped at `capacity` most recent series; older
+    // ones drop off automatically. Settings tab in the control window
+    // adjusts the cap.
+    local_archive:          { value: { capacity: 25, series: [] }, updated_at: new Date().toISOString() },
   };
   let state = { ...defaultState };
   try {
@@ -106,10 +110,10 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     if (onLog) onLog(`recording: captured match ${rec.games.length} (${game.matchGuid.slice(0, 8)})`);
   }
 
-  // Push the current recording up to ERA's Supabase archive, then clear it
-  // locally so the next series starts fresh. Resolves matchup metadata
-  // (team names, codes, leagues) from the active stream_match selection.
-  async function saveSeries() {
+  // Save the current recording to the local archive (state.json). Capped
+  // at the configured capacity — oldest series falls off when full.
+  // Resolves matchup metadata from the active stream_match selection.
+  function saveSeries() {
     const rec = state.stream_recording.value || {};
     const games = rec.games || [];
     if (!games.length) throw new Error('No games captured yet — record a series first.');
@@ -126,7 +130,7 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
 
     const series = {
       id: (require('crypto').randomUUID && require('crypto').randomUUID()) || ('es_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8)),
-      name: `${leftTm.fullName} vs ${rightTm.fullName} — ${new Date().toLocaleDateString()}`,
+      name: `${leftTm.fullName} vs ${rightTm.fullName}`,
       savedAt: new Date().toISOString(),
       format: fmt,
       games,
@@ -137,29 +141,40 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
       source: 'era-streamer',
     };
 
-    // Read existing archive, append, upsert. Done in two HTTP hops — same
-    // pattern the website's overlay uses for the same Supabase table.
-    const headers = { apikey: ERA_SUPABASE_KEY, Authorization: 'Bearer ' + ERA_SUPABASE_KEY };
-    const readRes = await fetch(`${ERA_SUPABASE_URL}/rest/v1/settings?key=eq.series_archive&select=value`, { headers });
-    if (!readRes.ok) throw new Error(`Archive read failed: ${readRes.status}`);
-    const rows = await readRes.json();
-    const existing = rows[0] && Array.isArray(rows[0].value) ? rows[0].value : [];
-    existing.push(series);
-    const writeRes = await fetch(`${ERA_SUPABASE_URL}/rest/v1/settings?on_conflict=key`, {
-      method: 'POST',
-      headers: Object.assign({ 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates' }, headers),
-      body: JSON.stringify({ key: 'series_archive', value: existing, updated_at: new Date().toISOString() }),
-    });
-    if (!writeRes.ok) {
-      const detail = await writeRes.text().catch(() => '');
-      throw new Error(`Archive upsert failed: ${writeRes.status} ${detail.slice(0, 200)}`);
-    }
+    // Append to local archive and trim to capacity (newest first).
+    const arc = state.local_archive.value || { capacity: 25, series: [] };
+    arc.series = [series, ...(arc.series || [])];
+    const cap = Math.max(1, arc.capacity || 25);
+    if (arc.series.length > cap) arc.series = arc.series.slice(0, cap);
+    state.local_archive.value = arc;
+    state.local_archive.updated_at = new Date().toISOString();
 
-    // Clear the recording locally — next series captures fresh.
+    // Clear the recording — next series captures fresh.
     state.stream_recording.value = { active: true, games: [] };
     state.stream_recording.updated_at = new Date().toISOString();
     saveState();
     return series;
+  }
+
+  function deleteLocalSeries(id) {
+    const arc = state.local_archive.value || { capacity: 25, series: [] };
+    const before = (arc.series || []).length;
+    arc.series = (arc.series || []).filter((s) => s.id !== id);
+    state.local_archive.value = arc;
+    state.local_archive.updated_at = new Date().toISOString();
+    saveState();
+    return before !== arc.series.length;
+  }
+
+  function setArchiveCapacity(n) {
+    const cap = Math.max(1, Math.min(500, parseInt(n, 10) || 25));
+    const arc = state.local_archive.value || { capacity: 25, series: [] };
+    arc.capacity = cap;
+    if ((arc.series || []).length > cap) arc.series = arc.series.slice(0, cap);
+    state.local_archive.value = arc;
+    state.local_archive.updated_at = new Date().toISOString();
+    saveState();
+    return cap;
   }
 
   function resetRecording() {
@@ -312,7 +327,7 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     }
     if (req.method === 'POST' && pathname === '/api/series/save') {
       try {
-        const series = await saveSeries();
+        const series = saveSeries();
         return sendJson(res, 200, { ok: true, series: { id: series.id, name: series.name, gameCount: series.games.length } });
       } catch (e) {
         return sendJson(res, 400, { ok: false, error: (e && e.message) || String(e) });
@@ -321,6 +336,24 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     if (req.method === 'POST' && pathname === '/api/series/reset') {
       resetRecording();
       return sendJson(res, 200, { ok: true });
+    }
+
+    if (req.method === 'GET' && pathname === '/api/local-archive') {
+      const arc = state.local_archive.value || { capacity: 25, series: [] };
+      return sendJson(res, 200, { capacity: arc.capacity || 25, series: arc.series || [] });
+    }
+    if (req.method === 'POST' && pathname === '/api/local-archive/delete') {
+      let body;
+      try { body = await readBody(req); } catch { return sendJson(res, 400, { error: 'invalid json' }); }
+      if (!body.id) return sendJson(res, 400, { error: 'missing id' });
+      const removed = deleteLocalSeries(body.id);
+      return sendJson(res, 200, { ok: true, removed });
+    }
+    if (req.method === 'POST' && pathname === '/api/local-archive/capacity') {
+      let body;
+      try { body = await readBody(req); } catch { return sendJson(res, 400, { error: 'invalid json' }); }
+      const cap = setArchiveCapacity(body.capacity);
+      return sendJson(res, 200, { ok: true, capacity: cap });
     }
 
     return send(res, 404, 'not found');
