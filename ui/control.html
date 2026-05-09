@@ -714,6 +714,46 @@ h1, h2, h3 {
 .arc-stat-grid .h.left { text-align:left; }
 .arc-stat-grid .pn { font-weight:600; color:white; }
 .arc-stat-grid .v { text-align:center; font-family:'Bebas Neue',sans-serif; font-size:14px; }
+/* Overlay preview — iframe of /match.html at native 1920×1080 scaled to
+   fit the panel width. Checkerboard background reads as "transparent"
+   the way design tools do, so the overlay's edges are visible against
+   it without a fake gameplay backdrop. */
+.preview-panel .panel-head {
+  display:flex; align-items:center; justify-content:space-between;
+  margin-bottom:12px;
+}
+.preview-panel .panel-head h2 { margin:0; }
+.preview-stage {
+  position:relative;
+  width:100%;
+  /* 16:9 with a tiny extra cushion so dropshadows aren't clipped. */
+  aspect-ratio:16 / 9;
+  background:
+    linear-gradient(45deg, #161616 25%, transparent 25%),
+    linear-gradient(-45deg, #161616 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #161616 75%),
+    linear-gradient(-45deg, transparent 75%, #161616 75%);
+  background-size:24px 24px;
+  background-position:0 0, 0 12px, 12px -12px, -12px 0;
+  background-color:#0d0d0d;
+  border:1px solid var(--line);
+  border-radius:8px;
+  overflow:hidden;
+}
+.preview-frame {
+  position:absolute;
+  top:0; left:0;
+  width:100%; height:100%;
+  border:0;
+  background:transparent;
+  /* Reduce the iframe's interactivity — this is a preview, not a control. */
+  pointer-events:none;
+}
+.btn.btn-small {
+  font-size:10px;
+  letter-spacing:1.5px;
+  padding:6px 12px;
+}
 /* Notes — session-level sits at the top of an expanded session, per-game
    sits inside each game card. Auto-saves on blur via /api/local-archive/note. */
 .arc-note-block {
@@ -885,6 +925,20 @@ h1, h2, h3 {
           <button class="bump-btn" data-side="right" data-delta="1">+</button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <div class="panel preview-panel">
+    <div class="panel-head">
+      <h2>OVERLAY PREVIEW</h2>
+      <button class="btn btn-small" id="previewRefreshBtn" type="button">REFRESH</button>
+    </div>
+    <!-- 16:9 stage at 1920x1080 internally (the overlay's design size).
+         CSS transform scales it down to whatever width is available so
+         the producer can confirm scoreboards/banners line up before
+         hitting the OBS browser source. -->
+    <div class="preview-stage" id="previewStage">
+      <iframe class="preview-frame" id="previewFrame" src="/match.html" title="Match overlay preview"></iframe>
     </div>
   </div>
 
@@ -1329,6 +1383,15 @@ $('updateBtn').addEventListener('click', async () => {
 $('winMin').addEventListener('click',   () => fetch(API + '/api/window/minimize', { method: 'POST' }));
 $('winMax').addEventListener('click',   () => fetch(API + '/api/window/maximize', { method: 'POST' }));
 $('winClose').addEventListener('click', () => fetch(API + '/api/window/close',    { method: 'POST' }));
+
+// Reload the preview iframe — useful if the overlay state appears stale
+// or if the producer wants to re-trigger animations (e.g., banner fade).
+$('previewRefreshBtn').addEventListener('click', () => {
+  const f = $('previewFrame');
+  // Re-set the src to bust any cached state. Add a cache-buster so the
+  // browser doesn't short-circuit the reload.
+  f.src = '/match.html?t=' + Date.now();
+});
 
 // Bridge reconnect — drops the current TCP socket so the auto-retry in
 // bridge.js immediately reattempts. Disabled while the request flies.
