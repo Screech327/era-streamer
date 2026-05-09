@@ -24,7 +24,61 @@ html, body {
   font-family:'Rajdhani',sans-serif;
   min-height:100vh;
 }
-body { padding:24px; }
+body { padding:0; }
+
+/* === Custom titlebar — replaces the default Windows chrome ============
+   The whole bar is a drag region (`-webkit-app-region:drag`) except the
+   right-side buttons, which need `no-drag` to stay clickable. Mirrors
+   the Discord/Slack pattern: dark bar, app brand on the left, window
+   controls flush right. */
+.titlebar {
+  -webkit-app-region:drag;
+  display:flex;
+  align-items:center;
+  height:38px;
+  padding:0 0 0 14px;
+  background:#080808;
+  border-bottom:1px solid rgba(255,255,255,0.04);
+  user-select:none;
+}
+.titlebar-brand {
+  display:flex; align-items:center; gap:10px;
+  font-family:'Bebas Neue', sans-serif;
+  font-size:15px;
+  letter-spacing:3px;
+  color:#fff;
+}
+.titlebar-brand .mark {
+  width:22px; height:22px;
+  display:flex; align-items:center; justify-content:center;
+  background:#0a0a0a;
+  border:1.5px solid var(--red);
+  border-radius:4px;
+  font-family:'Bebas Neue', sans-serif;
+  font-size:11px;
+  letter-spacing:1px;
+  color:var(--red);
+  box-shadow:0 0 6px rgba(230,57,70,0.35);
+}
+.titlebar-brand .name { color:white; }
+.titlebar-brand .name .accent { color:var(--red); }
+.titlebar-spacer { flex:1; }
+.titlebar-buttons { display:flex; -webkit-app-region:no-drag; }
+.titlebar-btn {
+  width:46px; height:38px;
+  display:inline-flex; align-items:center; justify-content:center;
+  background:transparent;
+  border:none;
+  color:#aaa;
+  cursor:pointer;
+  transition:background 0.12s, color 0.12s;
+}
+.titlebar-btn:hover { background:rgba(255,255,255,0.06); color:white; }
+.titlebar-btn.close:hover { background:#e63946; color:white; }
+.titlebar-btn svg { width:11px; height:11px; }
+
+/* App content sits below the titlebar */
+.app-body { padding:24px; }
 h1, h2, h3 {
   font-family:'Bebas Neue', sans-serif;
   letter-spacing:2px;
@@ -427,6 +481,30 @@ h1, h2, h3 {
 </style>
 </head>
 <body>
+
+<!-- Custom titlebar — replaces the default Windows chrome. Drag region
+     covers most of the bar; the right-side buttons opt out so they stay
+     clickable. -->
+<div class="titlebar">
+  <div class="titlebar-brand">
+    <div class="mark">E</div>
+    <div class="name"><span class="accent">ERA</span> STREAMER</div>
+  </div>
+  <div class="titlebar-spacer"></div>
+  <div class="titlebar-buttons">
+    <button class="titlebar-btn" id="winMin" title="Minimize" type="button">
+      <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><line x1="1" y1="5" x2="9" y2="5"/></svg>
+    </button>
+    <button class="titlebar-btn" id="winMax" title="Maximize / Restore" type="button">
+      <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1" y="1" width="8" height="8"/></svg>
+    </button>
+    <button class="titlebar-btn close" id="winClose" title="Close" type="button">
+      <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="app-body">
 <div class="app">
   <div class="header">
     <div>
@@ -615,6 +693,7 @@ h1, h2, h3 {
   </div>
 
 </div>
+</div><!-- end app-body -->
 
 <div class="toast" id="toast"></div>
 
@@ -901,6 +980,11 @@ $('updateBtn').addEventListener('click', async () => {
     setTimeout(pollUpdate, 500);
   }
 });
+
+// ── Custom titlebar buttons ──────────────────────────────────────────
+$('winMin').addEventListener('click',   () => fetch(API + '/api/window/minimize', { method: 'POST' }));
+$('winMax').addEventListener('click',   () => fetch(API + '/api/window/maximize', { method: 'POST' }));
+$('winClose').addEventListener('click', () => fetch(API + '/api/window/close',    { method: 'POST' }));
 
 // ── Tabs ─────────────────────────────────────────────────────────────
 document.querySelectorAll('.tab').forEach((btn) => {

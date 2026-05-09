@@ -44,7 +44,7 @@ const MIME = {
 const ERA_SUPABASE_URL = 'https://qamonwkxafbzvyrlisjv.supabase.co';
 const ERA_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhbW9ud2t4YWZienZ5cmxpc2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ3NjcsImV4cCI6MjA5MTUxMDc2N30.AOKN9Ioz5m8Om2CutdlTownmoEbZ3DFVcAHovhhj7wM';
 
-function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck, onUpdateInstall }) {
+function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck, onUpdateInstall, onWindowMinimize, onWindowMaximize, onWindowClose }) {
   // ── Persisted state (match config, series, overlay flags) ────────────
   const defaultState = {
     stream_match:           { value: {}, updated_at: new Date().toISOString() },
@@ -334,6 +334,21 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
         // Defer slightly so the response can flush before the app quits.
         setTimeout(() => onUpdateInstall(), 200);
       }
+      return sendJson(res, 200, { ok: true });
+    }
+
+    // Custom titlebar wiring — frameless window in main.js, controls
+    // driven from control.html via these endpoints.
+    if (req.method === 'POST' && pathname === '/api/window/minimize') {
+      if (typeof onWindowMinimize === 'function') onWindowMinimize();
+      return sendJson(res, 200, { ok: true });
+    }
+    if (req.method === 'POST' && pathname === '/api/window/maximize') {
+      if (typeof onWindowMaximize === 'function') onWindowMaximize();
+      return sendJson(res, 200, { ok: true });
+    }
+    if (req.method === 'POST' && pathname === '/api/window/close') {
+      if (typeof onWindowClose === 'function') onWindowClose();
       return sendJson(res, 200, { ok: true });
     }
 

@@ -46,6 +46,15 @@ if (!gotLock) {
       // endpoints to drive the autoUpdater without a native dialog.
       onUpdateCheck:   () => autoUpdater.checkForUpdates().catch((e) => console.log('[updater]', e && e.message || e)),
       onUpdateInstall: () => autoUpdater.quitAndInstall(true, true), // (isSilent=true, isForceRunAfter=true)
+      // Window controls — the custom titlebar's min/max/close buttons
+      // fetch these to drive the BrowserWindow.
+      onWindowMinimize: () => mainWindow && mainWindow.minimize(),
+      onWindowMaximize: () => {
+        if (!mainWindow) return;
+        if (mainWindow.isMaximized()) mainWindow.unmaximize();
+        else mainWindow.maximize();
+      },
+      onWindowClose:    () => mainWindow && mainWindow.close(),
     });
 
     const iniResult = autoConfigure();
@@ -137,6 +146,10 @@ if (!gotLock) {
       minHeight: 700,
       backgroundColor: '#0a0a0a',
       title: 'ERA Streamer',
+      // Frameless — replaced with the custom titlebar in control.html. Drops
+      // the generic Windows chrome so the app reads as a polished tool
+      // rather than a browser window.
+      frame: false,
       autoHideMenuBar: true,
       webPreferences: { contextIsolation: true, nodeIntegration: false },
     });
