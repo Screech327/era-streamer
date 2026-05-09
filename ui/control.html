@@ -26,6 +26,21 @@ html, body {
 }
 body { padding:0; }
 
+/* === Custom scrollbar — replaces the chunky default Windows bars with
+   a slim dark thumb that matches the rest of the chrome. Applies to
+   the main page scroll + any nested scroll containers. */
+::-webkit-scrollbar           { width:10px; height:10px; }
+::-webkit-scrollbar-track     { background:rgba(0,0,0,0.35); }
+::-webkit-scrollbar-thumb {
+  background:rgba(255,255,255,0.10);
+  border:2px solid #0a0a0a;
+  border-radius:6px;
+  transition:background 0.15s;
+}
+::-webkit-scrollbar-thumb:hover   { background:rgba(230,57,70,0.45); }
+::-webkit-scrollbar-thumb:active  { background:var(--red); }
+::-webkit-scrollbar-corner    { background:transparent; }
+
 /* === Custom titlebar — replaces the default Windows chrome ============
    The whole bar is a drag region (`-webkit-app-region:drag`) except the
    right-side buttons, which need `no-drag` to stay clickable. Mirrors
