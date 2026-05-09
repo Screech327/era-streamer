@@ -166,6 +166,20 @@ if (!gotLock) {
       webPreferences: { contextIsolation: true, nodeIntegration: false },
     });
     mainWindow.setMenu(null);
+    // App menu is disabled, so the default DevTools accelerators don't fire.
+    // Listen on the window instead — Ctrl+Shift+I or F12 toggles devtools
+    // (window-scoped, doesn't steal the shortcut from other apps).
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown') return;
+      const isToggle =
+        (input.key === 'F12') ||
+        (input.control && input.shift && (input.key === 'I' || input.key === 'i'));
+      if (!isToggle) return;
+      event.preventDefault();
+      const wc = mainWindow.webContents;
+      if (wc.isDevToolsOpened()) wc.closeDevTools();
+      else wc.openDevTools({ mode: 'detach' });
+    });
     mainWindow.loadURL(`http://127.0.0.1:${serverHandle.port}/control`);
     // External links open in the user's browser, not inside the app.
     mainWindow.webContents.setWindowOpenHandler(({ url }) => {
