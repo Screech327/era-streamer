@@ -72,6 +72,14 @@ html, body {
           mask-image:linear-gradient(270deg, rgba(0,0,0,0) 0%, rgba(0,0,0,1) 28%, rgba(0,0,0,1) 100%);
 }
 
+.banner-name-stack {
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  line-height:1;
+}
+.banner-left  .banner-name-stack { align-items:flex-end; }
+.banner-right .banner-name-stack { align-items:flex-start; }
 .banner-name {
   font-family:'Bebas Neue', sans-serif;
   font-size:28px;
@@ -81,6 +89,30 @@ html, body {
   overflow:hidden;
   text-overflow:ellipsis;
   text-shadow:0 2px 6px rgba(0,0,0,0.75);
+}
+/* Series winner — appears under the team name once they hit 3 (BO5) or
+   4 (BO7) wins. Pulses gold so the eye lands on it immediately. */
+.banner-winner {
+  font-family:'Orbitron', monospace;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:3px;
+  color:#dcc174;
+  margin-top:2px;
+  text-shadow:0 0 4px rgba(220,193,116,0.6), 0 1px 2px rgba(0,0,0,0.7);
+  height:0;
+  opacity:0;
+  overflow:hidden;
+  transition:opacity 0.3s ease, height 0.3s ease;
+}
+.banner-winner.visible {
+  height:14px;
+  opacity:1;
+  animation:winnerPulse 1.6s ease-in-out infinite;
+}
+@keyframes winnerPulse {
+  0%, 100% { text-shadow:0 0 4px rgba(220,193,116,0.5), 0 1px 2px rgba(0,0,0,0.7); }
+  50%      { text-shadow:0 0 14px rgba(220,193,116,0.9), 0 1px 2px rgba(0,0,0,0.7); }
 }
 .banner-logo {
   width:48px; height:48px;
@@ -607,12 +639,18 @@ body.no-bridge .player-row { gap:0; }
 
     <!-- Top-center banners (team name + logo, flanking the in-game scoreboard) -->
     <div id="leftBanner" class="banner banner-left">
-      <div class="banner-name" id="leftName">—</div>
+      <div class="banner-name-stack">
+        <div class="banner-name" id="leftName">—</div>
+        <div class="banner-winner" id="leftWinner">WINNER</div>
+      </div>
       <div class="banner-logo" id="leftLogo"></div>
     </div>
     <div id="rightBanner" class="banner banner-right">
       <div class="banner-logo" id="rightLogo"></div>
-      <div class="banner-name" id="rightName">—</div>
+      <div class="banner-name-stack">
+        <div class="banner-name" id="rightName">—</div>
+        <div class="banner-winner" id="rightWinner">WINNER</div>
+      </div>
     </div>
 
     <!-- Top-corner player lists -->
@@ -1011,20 +1049,32 @@ function applySeries(value) {
   const row = document.getElementById('seriesRow');
   if (!value || !value.format) {
     if (row) row.classList.remove('visible');
+    const lEl = document.getElementById('leftWinner');
+    const rEl = document.getElementById('rightWinner');
+    if (lEl) lEl.classList.remove('visible');
+    if (rEl) rEl.classList.remove('visible');
     return;
   }
   const lw = value.leftWins  || 0;
   const rw = value.rightWins || 0;
   renderSeriesSide('left',  value.format, lw);
   renderSeriesSide('right', value.format, rw);
-  // Cap the displayed game number at the series win threshold. Once one
-  // side has reached the threshold (3 in BO5, 4 in BO7), the series is over
-  // — there's no Game N+1, so the label should freeze on the final game.
+  // Once one side hits the win threshold the series is over; freeze on
+  // the final game number. Also hard-clamp at maxGames (5 for BO5, 7
+  // for BO7) so producer over-bumping or stale data never shows the
+  // impossible GAME 6 / GAME 8.
   const winsToWin = value.format === 'BO7' ? 4 : 3;
+  const maxGames  = winsToWin * 2 - 1;
   const seriesOver = lw >= winsToWin || rw >= winsToWin;
-  const game = seriesOver ? (lw + rw) : (lw + rw + 1);
+  const rawGame = seriesOver ? (lw + rw) : (lw + rw + 1);
+  const game = Math.max(1, Math.min(rawGame, maxGames));
   const boEl = document.getElementById('seriesBo');
   if (boEl) boEl.textContent = 'GAME ' + game + ' · ' + value.format;
+  // Toggle WINNER label under each team's name when they hit the threshold.
+  const lEl = document.getElementById('leftWinner');
+  const rEl = document.getElementById('rightWinner');
+  if (lEl) lEl.classList.toggle('visible', lw >= winsToWin);
+  if (rEl) rEl.classList.toggle('visible', rw >= winsToWin);
   if (row) row.classList.add('visible');
 }
 
