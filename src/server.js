@@ -38,7 +38,7 @@ const MIME = {
   '.ico':'image/x-icon',
 };
 
-function start({ overlayDir, uiDir, statePath, onLog }) {
+function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck, onUpdateInstall }) {
   // ── Persisted state (match config, series, overlay flags) ────────────
   const defaultState = {
     stream_match:           { value: {}, updated_at: new Date().toISOString() },
@@ -74,6 +74,13 @@ function start({ overlayDir, uiDir, statePath, onLog }) {
   function setStatus(patch) {
     Object.assign(status, patch);
     broadcastJSON({ Event: 'StreamerStatus', Data: status });
+  }
+
+  // ── Update state (driven by main.js's autoUpdater event hooks) ───────
+  // status: 'idle' | 'checking' | 'downloading' | 'ready' | 'error'
+  const updateState = { status: 'idle', version: null, percent: 0, error: null, appVersion: appVersion || '0.0.0' };
+  function setUpdateState(patch) {
+    Object.assign(updateState, patch);
   }
 
   // ── HTTP server ──────────────────────────────────────────────────────
@@ -182,6 +189,20 @@ function start({ overlayDir, uiDir, statePath, onLog }) {
     if (req.method === 'GET' && pathname === '/api/status') {
       return sendJson(res, 200, status);
     }
+    if (req.method === 'GET' && pathname === '/api/update/state') {
+      return sendJson(res, 200, updateState);
+    }
+    if (req.method === 'POST' && pathname === '/api/update/check') {
+      if (typeof onUpdateCheck === 'function') onUpdateCheck();
+      return sendJson(res, 200, { ok: true });
+    }
+    if (req.method === 'POST' && pathname === '/api/update/install') {
+      if (typeof onUpdateInstall === 'function') {
+        // Defer slightly so the response can flush before the app quits.
+        setTimeout(() => onUpdateInstall(), 200);
+      }
+      return sendJson(res, 200, { ok: true });
+    }
 
     return send(res, 404, 'not found');
   });
@@ -222,6 +243,7 @@ function start({ overlayDir, uiDir, statePath, onLog }) {
         port: PORT,
         relayBridgeMessage,
         setStatus,
+        setUpdateState,
         getState: () => state,
         stop: () => { try { server.close(); } catch (_) {} },
       });

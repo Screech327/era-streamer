@@ -4,7 +4,7 @@
 //   3. The TCP→WS bridge that consumes RL's stats stream
 //   4. The control panel BrowserWindow
 
-const { app, BrowserWindow, shell, Menu, dialog } = require('electron');
+const { app, BrowserWindow, shell, Menu } = require('electron');
 const path = require('path');
 const { autoConfigure } = require('./rl-config');
 const { startBridge } = require('./bridge');
@@ -38,7 +38,12 @@ if (!gotLock) {
       overlayDir: OVERLAY_DIR,
       uiDir: UI_DIR,
       statePath,
+      appVersion: app.getVersion(),
       onLog: (m) => console.log('[server]', m),
+      // Renderer-driven update controls — control.html POSTs to these
+      // endpoints to drive the autoUpdater without a native dialog.
+      onUpdateCheck:   () => autoUpdater.checkForUpdates().catch((e) => console.log('[updater]', e && e.message || e)),
+      onUpdateInstall: () => autoUpdater.quitAndInstall(true, true), // (isSilent=true, isForceRunAfter=true)
     });
 
     const iniResult = autoConfigure();
@@ -71,36 +76,24 @@ if (!gotLock) {
     });
 
     // ── Auto-update ──────────────────────────────────────────────────
-    // Checks the GitHub Releases feed for a newer version on every
-    // launch; if found, downloads in the background and prompts the
-    // user to restart-and-install when the download finishes.
-    // Unsigned builds: Windows still pops a UAC prompt during install,
-    // but the app picks up new versions without manual re-download.
+    // Renderer (control window) polls /api/update/state and shows its
+    // own UI — no native Windows dialogs. Install is silent (`/S` flag
+    // passed to NSIS), so "restart now" closes + reinstalls + reopens
+    // without any installer wizard or UAC prompt (per-user install).
     autoUpdater.autoDownload = true;
     autoUpdater.autoInstallOnAppQuit = true;
-    autoUpdater.on('update-available', (info) => {
-      console.log('[updater] update available:', info.version);
-    });
-    autoUpdater.on('update-not-available', () => {
-      console.log('[updater] up to date');
-    });
-    autoUpdater.on('error', (err) => {
-      console.log('[updater] error:', err && err.message || err);
-    });
-    autoUpdater.on('update-downloaded', (info) => {
-      const choice = dialog.showMessageBoxSync(mainWindow, {
-        type: 'info',
-        buttons: ['Restart now', 'Later'],
-        defaultId: 0,
-        cancelId: 1,
-        title: 'Update ready',
-        message: `ERA Streamer ${info.version} is downloaded.`,
-        detail: 'Restart the app now to install. The new version will be used automatically next time you open ERA Streamer.',
-      });
-      if (choice === 0) autoUpdater.quitAndInstall();
-    });
-    // Skip the network check when the app is unpackaged (npm start) —
-    // electron-updater fails on dev runs and we don't need it there.
+
+    const setUpd = (patch) => serverHandle && serverHandle.setUpdateState(patch);
+    autoUpdater.on('checking-for-update', ()      => setUpd({ status: 'checking' }));
+    autoUpdater.on('update-available',    (info)  => setUpd({ status: 'downloading', version: info && info.version, percent: 0 }));
+    autoUpdater.on('update-not-available',()      => setUpd({ status: 'idle' }));
+    autoUpdater.on('error',               (err)   => setUpd({ status: 'error', error: (err && err.message) || String(err) }));
+    autoUpdater.on('download-progress',   (p)     => setUpd({ status: 'downloading', percent: Math.round(p.percent || 0) }));
+    autoUpdater.on('update-downloaded',   (info)  => setUpd({ status: 'ready', version: info && info.version }));
+
+    // Skip the network check when unpackaged (npm start) — electron-
+    // updater fails on dev runs and the buttons in the UI still let
+    // the producer trigger checks if they really want to.
     if (app.isPackaged) {
       setTimeout(() => {
         autoUpdater.checkForUpdates().catch((err) => {

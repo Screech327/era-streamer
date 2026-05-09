@@ -273,6 +273,15 @@ h1, h2, h3 {
     <button class="btn" id="copyObsBtn">COPY</button>
   </div>
 
+  <!-- App version + update controls. Polls /api/update/state so the
+       button re-labels itself as the autoUpdater progresses. -->
+  <div class="obs-bar" id="updateBar">
+    <div class="l">VERSION</div>
+    <code id="appVersion">—</code>
+    <span id="updateStatus" style="flex:1;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--text-dim)">—</span>
+    <button class="btn" id="updateBtn">CHECK FOR UPDATES</button>
+  </div>
+
   <div class="panel">
     <h2>MATCH</h2>
     <div class="row">
@@ -528,6 +537,61 @@ $('copyObsBtn').addEventListener('click', () => {
   navigator.clipboard.writeText(url).then(() => showToast('OBS URL COPIED'));
 });
 
+// ── Update controls ──────────────────────────────────────────────────
+// Polls /api/update/state every 1.5s so the button re-labels itself as
+// the autoUpdater walks through checking → downloading → ready.
+async function pollUpdate() {
+  try {
+    const r = await fetch(API + '/api/update/state');
+    const u = await r.json();
+    $('appVersion').textContent = 'v' + (u.appVersion || '?');
+    const btn = $('updateBtn');
+    const status = $('updateStatus');
+    switch (u.status) {
+      case 'checking':
+        status.textContent = 'CHECKING…';
+        btn.textContent = 'CHECKING…';
+        btn.disabled = true;
+        break;
+      case 'downloading':
+        status.textContent = 'DOWNLOADING' + (u.percent ? ' · ' + u.percent + '%' : '');
+        btn.textContent = 'DOWNLOADING' + (u.percent ? ' ' + u.percent + '%' : '');
+        btn.disabled = true;
+        break;
+      case 'ready':
+        status.textContent = 'v' + u.version + ' READY';
+        btn.textContent = 'RESTART & INSTALL';
+        btn.disabled = false;
+        btn.dataset.action = 'install';
+        return;
+      case 'error':
+        status.textContent = 'ERROR · ' + (u.error || 'check failed');
+        btn.textContent = 'RETRY';
+        btn.disabled = false;
+        btn.dataset.action = 'check';
+        return;
+      default: // idle
+        status.textContent = 'UP TO DATE';
+        btn.textContent = 'CHECK FOR UPDATES';
+        btn.disabled = false;
+        btn.dataset.action = 'check';
+    }
+  } catch (e) {}
+}
+$('updateBtn').addEventListener('click', async () => {
+  const action = $('updateBtn').dataset.action || 'check';
+  if (action === 'install') {
+    $('updateStatus').textContent = 'RESTARTING…';
+    $('updateBtn').disabled = true;
+    await fetch(API + '/api/update/install', { method: 'POST' });
+  } else {
+    $('updateStatus').textContent = 'CHECKING…';
+    $('updateBtn').disabled = true;
+    await fetch(API + '/api/update/check', { method: 'POST' });
+    setTimeout(pollUpdate, 500);
+  }
+});
+
 (async () => {
   await loadTeams();
   await loadState();
@@ -537,7 +601,9 @@ $('copyObsBtn').addEventListener('click', () => {
   renderPreview('left'); renderPreview('right');
   renderSeriesUI();
   pollStatus();
+  pollUpdate();
   setInterval(pollStatus, 2000);
+  setInterval(pollUpdate, 1500);
 })();
 </script>
 </body>
