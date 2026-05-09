@@ -78,6 +78,17 @@ h1, h2, h3 {
 .pill.warn  { color:var(--gold-2); border-color:rgba(220,193,116,0.35); }
 .pill.warn  .dot { background:var(--gold-2); }
 .pill.error { color:var(--red);    border-color:rgba(230,57,70,0.35); }
+/* RL-not-detected hint banner — slots between header and OBS URL bar. */
+.rl-hint{
+  background:rgba(230,57,70,0.08);
+  border:1px solid rgba(230,57,70,0.4);
+  border-radius:8px;
+  padding:11px 16px;
+  font-size:14px;
+  color:#ffb3b8;
+  line-height:1.5;
+}
+.rl-hint strong{color:white;letter-spacing:0.5px;}
 .pill.error .dot { background:var(--red); }
 
 /* OBS URL bar */
@@ -265,6 +276,13 @@ h1, h2, h3 {
       <span class="pill" id="pillRl"><span class="dot"></span>RL</span>
       <span class="pill" id="pillIni"><span class="dot"></span>INI</span>
     </div>
+  </div>
+
+  <!-- Inline help banner that shows when RL isn't reachable. The bridge
+       retries every ~1.5s; this just tells the producer in plain English
+       what to check rather than letting them stare at a red pill. -->
+  <div class="rl-hint" id="rlHint" style="display:none">
+    <strong>Rocket League is not detected</strong> — Check that Rocket League is running.
   </div>
 
   <div class="obs-bar">
@@ -487,6 +505,10 @@ async function pollStatus() {
     const iniGood = s.iniResult && s.iniResult.ok;
     $('pillIni').className = 'pill ' + (iniGood ? 'live' : 'warn');
     $('pillIni').innerHTML = '<span class="dot"></span>' + (iniGood ? 'RL CONFIG OK' : 'CONFIG NEEDED');
+    // Show plain-English hint when RL isn't detected. Hidden once
+    // bridge connects.
+    const hint = $('rlHint');
+    if (hint) hint.style.display = s.rlConnected ? 'none' : 'block';
   } catch (e) {}
 }
 function setPill(id, ok, okText, badText, badClass) {

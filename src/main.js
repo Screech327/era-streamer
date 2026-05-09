@@ -4,7 +4,7 @@
 //   3. The TCP→WS bridge that consumes RL's stats stream
 //   4. The control panel BrowserWindow
 
-const { app, BrowserWindow, shell, Menu } = require('electron');
+const { app, BrowserWindow, shell, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
 const { autoConfigure } = require('./rl-config');
 const { startBridge } = require('./bridge');
@@ -17,6 +17,8 @@ const UI_DIR      = path.join(__dirname, '..', 'ui');
 let mainWindow = null;
 let serverHandle = null;
 let bridgeHandle = null;
+let tray = null;
+let isQuitting = false;
 
 const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
@@ -145,6 +147,34 @@ if (!gotLock) {
       shell.openExternal(url);
       return { action: 'deny' };
     });
+    // Closing the window hides to the tray instead of quitting — the
+    // bridge keeps capturing matches in the background. Real quit only
+    // happens via the tray's Quit option (which sets isQuitting first).
+    mainWindow.on('close', (event) => {
+      if (!isQuitting) {
+        event.preventDefault();
+        mainWindow.hide();
+      }
+    });
+
+    // ── System tray ──────────────────────────────────────────────────
+    const trayIconPath = app.isPackaged
+      ? path.join(process.resourcesPath, 'tray.ico')
+      : path.join(__dirname, '..', 'build', 'icon.ico');
+    let trayImage;
+    try { trayImage = nativeImage.createFromPath(trayIconPath); } catch (_) { trayImage = nativeImage.createEmpty(); }
+    tray = new Tray(trayImage);
+    tray.setToolTip('ERA Streamer — bridge running');
+    tray.setContextMenu(Menu.buildFromTemplate([
+      { label: 'Show ERA Streamer', click: () => { if (mainWindow) { mainWindow.show(); mainWindow.focus(); } } },
+      { type: 'separator' },
+      { label: 'Quit', click: () => { isQuitting = true; app.quit(); } },
+    ]));
+    tray.on('click', () => {
+      if (!mainWindow) return;
+      if (mainWindow.isVisible() && !mainWindow.isMinimized()) mainWindow.hide();
+      else { mainWindow.show(); mainWindow.focus(); }
+    });
 
     // ── Auto-update ──────────────────────────────────────────────────
     // Renderer (control window) polls /api/update/state and shows its
@@ -190,9 +220,23 @@ if (!gotLock) {
     });
   });
 
+  app.on('before-quit', () => { isQuitting = true; });
+
   app.on('window-all-closed', () => {
+    // No-op on Windows — the tray keeps the app alive in the background
+    // so series recording / auto-update keep working when the producer
+    // closes the control window. Quit happens through the tray menu.
+    if (process.platform === 'darwin') return;
+    // If there's no tray for some reason (icon missing), fall back to
+    // the previous quit-on-last-window behavior so the app isn't stuck.
+    if (!tray) {
+      if (bridgeHandle) bridgeHandle.stop();
+      if (serverHandle) serverHandle.stop();
+      app.quit();
+    }
+  });
+  app.on('quit', () => {
     if (bridgeHandle) bridgeHandle.stop();
     if (serverHandle) serverHandle.stop();
-    if (process.platform !== 'darwin') app.quit();
   });
 }

@@ -233,6 +233,23 @@ body.no-bridge .now-watching {
 }
 body.no-bridge .player-row { gap:0; }
 
+/* === STREAMER-ONLY VERSION STAMP ===
+   Tiny app-version label in the top-left corner. Just visible enough that
+   the streamer can read it in OBS preview to confirm the build, dim
+   enough that on-stream viewers won't notice. */
+.overlay-version {
+  position:absolute;
+  top:6px;
+  left:8px;
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:1.5px;
+  color:rgba(255,255,255,0.32);
+  text-shadow:0 1px 2px rgba(0,0,0,0.85);
+  pointer-events:none;
+  z-index:1;
+}
+
 /* === MATCH TITLE BAR ===
    Tiny broadcaster line above the scoreboard ("ERA Week 2 — Yokais vs
    Cosmos", etc.). Hidden when no title is set. */
@@ -633,6 +650,10 @@ body.no-bridge .player-row { gap:0; }
 </head>
 <body>
   <div class="canvas">
+    <!-- Build version, dim — only visible enough for the streamer to
+         confirm the running build from their OBS preview. -->
+    <div id="overlayVersion" class="overlay-version"></div>
+
     <!-- Optional broadcaster title above the scoreboard. Set from the
          Stats Hub control panel; renders only when non-empty. -->
     <div id="matchTitle" class="match-title"></div>
@@ -1277,6 +1298,13 @@ fetchOverlayConfig().then(() => {
     connectStats();
   }
 });
+
+// Streamer-visible build version stamp — pulled from the local app's
+// /api/update/state so it always matches the running app.
+fetch('/api/update/state').then((r) => r.ok ? r.json() : null).then((s) => {
+  const el = document.getElementById('overlayVersion');
+  if (el && s && s.appVersion) el.textContent = 'v' + s.appVersion;
+}).catch(() => {});
 
 // ── Series recording (capture side) ────────────────────────────
 // The control page sets recording.active=true. The overlay (running on the
