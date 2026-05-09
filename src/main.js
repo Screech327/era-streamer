@@ -112,6 +112,12 @@ if (!gotLock) {
           players: { ...liveMatch.players },
         };
         if (serverHandle && serverHandle.appendRecordingGame) serverHandle.appendRecordingGame(game);
+        // Auto-progress the series counter for the winning side. Same
+        // dedupe set above ensures one advance per matchGuid even if
+        // both MatchEnded and PodiumStart fire.
+        if (game.winnerTeamNum === 0 || game.winnerTeamNum === 1) {
+          if (serverHandle && serverHandle.advanceSeriesWin) serverHandle.advanceSeriesWin(game.winnerTeamNum);
+        }
       }
     }
 

@@ -1326,19 +1326,12 @@ function trackMatchSnapshot(data) {
 const advancedSeriesGuids = new Set();
 
 function onMatchEnded(data) {
-  const winner = data && data.WinnerTeamNum != null ? data.WinnerTeamNum : null;
-  const guid = liveMatch.matchGuid;
-
-  if (recordingState && recordingState.active && guid) {
-    flushMatchToRecording(winner);
-  }
-
-  // Auto-advance the series counter on every match end, deduped per match.
-  // TeamNum 0 -> left, TeamNum 1 -> right (matches our banner convention).
-  if (winner != null && guid && !advancedSeriesGuids.has(guid)) {
-    advancedSeriesGuids.add(guid);
-    autoAdvanceSeries(winner);
-  }
+  // Series advancement + recording capture both happen server-side in
+  // era-streamer (main.js -> server) so they work even when OBS isn't
+  // open. The overlay's job here is to stay quiet — we used to also
+  // bump stream_series and write stream_recording from here, but that
+  // raced with the server-side path.
+  return;
 }
 
 async function autoAdvanceSeries(winnerTeamNum) {

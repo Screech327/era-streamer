@@ -168,6 +168,20 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     saveState();
   }
 
+  // Auto-advance the series counter when a match ends. Caps at the format's
+  // win threshold (3 for BO5, 4 for BO7) so over-firing PodiumStart events
+  // can't push it past the legal max.
+  function advanceSeriesWin(winnerTeamNum) {
+    if (winnerTeamNum !== 0 && winnerTeamNum !== 1) return;
+    const cur = state.stream_series.value || { format: 'BO5', leftWins: 0, rightWins: 0 };
+    const cap = cur.format === 'BO7' ? 4 : 3;
+    if (winnerTeamNum === 0) cur.leftWins  = Math.min(cap, (cur.leftWins  || 0) + 1);
+    else                     cur.rightWins = Math.min(cap, (cur.rightWins || 0) + 1);
+    state.stream_series.value = cur;
+    state.stream_series.updated_at = new Date().toISOString();
+    saveState();
+  }
+
   // ── HTTP server ──────────────────────────────────────────────────────
   function send(res, code, body, headers) {
     res.writeHead(code, Object.assign({ 'Cache-Control': 'no-store' }, headers || {}));
@@ -350,6 +364,7 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
         setStatus,
         setUpdateState,
         appendRecordingGame,
+        advanceSeriesWin,
         getState: () => state,
         stop: () => { try { server.close(); } catch (_) {} },
       });
