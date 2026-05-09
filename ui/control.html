@@ -854,11 +854,6 @@ h1, h2, h3 {
 
   <div class="tab-pane active" data-pane="main">
 
-  <div class="panel" id="recentPanel" style="display:none">
-    <h2>RECENT MATCHUPS <span style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;">— click to load</span></h2>
-    <div class="recent-list" id="recentList"></div>
-  </div>
-
   <div class="panel match-panel">
     <h2>MATCH</h2>
     <div class="row match-row-title">
@@ -965,6 +960,14 @@ h1, h2, h3 {
       <button class="btn btn-primary" id="saveSeriesBtn">SAVE SESSION</button>
       <button class="btn btn-danger" id="resetRecBtn">DISCARD</button>
     </div>
+  </div>
+
+  <!-- Recent matchups — useful for general use, but ERA teams only meet
+       once per season, so this lives at the bottom rather than dominating
+       the top of the page. -->
+  <div class="panel" id="recentPanel" style="display:none">
+    <h2>RECENT MATCHUPS <span style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;">— click to reload</span></h2>
+    <div class="recent-list" id="recentList"></div>
   </div>
 
   </div><!-- end main pane -->
