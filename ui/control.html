@@ -22,7 +22,8 @@ html, body {
   background:var(--bg);
   color:var(--text);
   font-family:'Rajdhani',sans-serif;
-  min-height:100vh;
+  height:100vh;
+  overflow:hidden;
 }
 body { padding:0; }
 
@@ -124,11 +125,13 @@ body { padding:0; }
 .titlebar-btn.close:hover { background:#e63946; color:white; }
 .titlebar-btn svg { width:11px; height:11px; }
 
-/* App content sits below the titlebar — split into sidebar + main */
+/* App content sits below the titlebar — split into sidebar + main.
+   Fixed at viewport-minus-titlebar height so the sidebar stays visible
+   and main scrolls internally (status pills lock to the bottom-left). */
 .app-body {
   display:grid;
   grid-template-columns:220px 1fr;
-  min-height:calc(100vh - 38px);
+  height:calc(100vh - 38px);
 }
 .sidebar {
   background:#0a0a0a;
