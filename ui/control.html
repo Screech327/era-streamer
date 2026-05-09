@@ -177,6 +177,23 @@ h1, h2, h3 {
 .btn-primary:hover { background:var(--gold-2); color:#000; border-color:var(--gold-2); }
 .btn-danger  { color:var(--red); border-color:rgba(230,57,70,0.4); }
 .btn-danger:hover  { background:rgba(230,57,70,0.1); }
+.btn-toggle{padding:9px 18px;border-radius:99px;}
+.btn-toggle.on  { background:rgba(45,211,111,0.15); border-color:rgba(45,211,111,0.55); color:var(--green); }
+.btn-toggle.off { background:rgba(230,57,70,0.10); border-color:rgba(230,57,70,0.45);  color:var(--red); }
+.btn-lg{padding:13px 24px;font-size:15px;}
+
+/* Roomier MATCH panel — gives the title field, dropdowns and previews
+   space to breathe instead of cramming everything into one wide row. */
+.match-panel{padding:24px 28px;}
+.match-panel .row{margin-bottom:18px;}
+.match-panel .row:last-child{margin-bottom:0;}
+.input-lg{padding:12px 14px;font-size:16px;}
+.select-lg{padding:12px 14px;font-size:16px;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;color:white;font-family:'Rajdhani',sans-serif;font-weight:600;outline:none;width:100%;}
+.select-lg:focus{border-color:var(--gold);}
+.preview-lg{padding:18px;gap:18px;}
+.preview-lg img{width:80px;height:80px;}
+.preview-lg .pname{font-size:24px;letter-spacing:2px;}
+.preview-lg .pmeta{font-size:10px;letter-spacing:2px;margin-top:4px;}
 
 /* Series */
 .series-row { display:flex; align-items:center; justify-content:space-between; gap:14px; margin-top:6px; }
@@ -453,34 +470,36 @@ h1, h2, h3 {
 
   <div class="tab-pane active" data-pane="main">
 
-  <div class="panel">
+  <div class="panel match-panel">
     <h2>MATCH</h2>
-    <div class="row">
+    <div class="row match-row-title">
       <div class="field" style="flex:1 1 100%">
         <div class="label">Match title <span style="color:var(--text-dim);font-weight:normal">(shown above the scoreboard — leave blank to hide)</span></div>
-        <input type="text" class="input" id="titleInput" placeholder="e.g. ERA Champion · Week 2 · Tides vs Supernova">
+        <input type="text" class="input input-lg" id="titleInput" placeholder="e.g. ERA Champion · Week 2 · Tides vs Supernova">
       </div>
     </div>
-    <div class="row">
-      <div class="field">
+    <div class="row match-row-league">
+      <div class="field" style="flex:1 1 100%">
         <div class="label">League</div>
-        <select class="select" id="leagueSel"></select>
+        <select class="select select-lg" id="leagueSel"></select>
       </div>
+    </div>
+    <div class="row match-row-teams">
       <div class="field">
         <div class="label">Left Team</div>
-        <select class="select" id="leftSel"></select>
+        <select class="select select-lg" id="leftSel"></select>
       </div>
       <div class="field">
         <div class="label">Right Team</div>
-        <select class="select" id="rightSel"></select>
+        <select class="select select-lg" id="rightSel"></select>
       </div>
     </div>
-    <div class="row">
-      <div class="field"><div class="preview" id="leftPreview"><img id="leftLogo"><div><div class="pname" id="leftName">—</div><div class="pmeta" id="leftMeta"></div></div></div></div>
-      <div class="field"><div class="preview" id="rightPreview"><img id="rightLogo"><div><div class="pname" id="rightName">—</div><div class="pmeta" id="rightMeta"></div></div></div></div>
+    <div class="row match-row-previews">
+      <div class="field"><div class="preview preview-lg" id="leftPreview"><img id="leftLogo"><div><div class="pname" id="leftName">—</div><div class="pmeta" id="leftMeta"></div></div></div></div>
+      <div class="field"><div class="preview preview-lg" id="rightPreview"><img id="rightLogo"><div><div class="pname" id="rightName">—</div><div class="pmeta" id="rightMeta"></div></div></div></div>
     </div>
     <div class="actions">
-      <button class="btn btn-primary" id="pushBtn">PUSH TO OVERLAY</button>
+      <button class="btn btn-primary btn-lg" id="pushBtn">PUSH TO OVERLAY</button>
       <button class="btn btn-danger" id="clearBtn">CLEAR OVERLAY</button>
     </div>
   </div>
@@ -520,23 +539,27 @@ h1, h2, h3 {
     </div>
   </div>
 
-  <div class="panel">
-    <h2>SERIES RECORDING</h2>
-    <div class="row">
+  <div class="panel" id="sessionPanel">
+    <h2>SESSION RECORDING</h2>
+    <div class="row" id="sessionActiveRow">
       <div class="field" style="flex:1">
         <div class="label">Auto-captured games</div>
         <div style="display:flex;align-items:center;gap:14px;">
           <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);min-width:50px;" id="recCount">0</div>
           <div style="flex:1;font-size:13px;color:var(--text-dim);line-height:1.5;">
             Every match the bridge sees gets snapshotted automatically. Hit
-            <strong>SAVE SERIES STATS</strong> at the end of the series to push it to
-            the public ERA archive (visible on the website's Stats Hub).
+            <strong>SAVE SESSION</strong> at the end to keep it in the local archive.
           </div>
         </div>
       </div>
     </div>
-    <div class="actions">
-      <button class="btn btn-primary" id="saveSeriesBtn">SAVE SERIES STATS</button>
+    <div class="row" id="sessionDisabledRow" style="display:none">
+      <div class="field" style="flex:1;font-size:13px;color:var(--text-dim);line-height:1.5;padding:10px 0;">
+        Recording is <strong style="color:var(--red)">OFF</strong>. Game stats won't be captured. Toggle it back on in <strong>SETTINGS</strong>.
+      </div>
+    </div>
+    <div class="actions" id="sessionActions">
+      <button class="btn btn-primary" id="saveSeriesBtn">SAVE SESSION</button>
       <button class="btn btn-danger" id="resetRecBtn">DISCARD</button>
     </div>
   </div>
@@ -545,14 +568,29 @@ h1, h2, h3 {
 
   <div class="tab-pane" data-pane="archive">
     <div class="panel">
-      <h2>SAVED SERIES <span id="archiveCountLabel" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;"></span></h2>
+      <h2>SAVED SESSIONS <span id="archiveCountLabel" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;"></span></h2>
       <div id="archiveList" class="archive-list">
-        <div class="archive-empty">Nothing saved yet. Run a series — every match the bridge sees gets captured automatically. Hit SAVE SERIES STATS in MAIN at the end and it'll show up here.</div>
+        <div class="archive-empty">Nothing saved yet. Run a session — every match the bridge sees gets captured automatically. Hit SAVE SESSION in MAIN at the end and it'll show up here.</div>
       </div>
     </div>
   </div>
 
   <div class="tab-pane" data-pane="settings">
+    <div class="panel">
+      <h2>SESSION RECORDING</h2>
+      <div class="row">
+        <div class="field" style="flex:0 0 auto">
+          <div class="label">Auto-record sessions</div>
+          <button class="btn btn-toggle" id="recordingToggleBtn" data-on="true">RECORDING: ON</button>
+        </div>
+        <div class="field" style="flex:1;min-width:240px">
+          <div class="label">&nbsp;</div>
+          <div style="font-size:13px;color:var(--text-dim);padding:10px 0;line-height:1.5;">
+            When OFF, game stats won't be captured at all. Already-saved sessions stay in the archive.
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="panel">
       <h2>ARCHIVE</h2>
       <div class="row">
@@ -560,13 +598,13 @@ h1, h2, h3 {
           <div class="label">Keep most recent</div>
           <div style="display:flex;align-items:center;gap:8px;">
             <input type="number" min="1" max="500" class="input" id="capacityInput" style="width:90px;">
-            <span style="color:var(--text-dim);font-size:13px;">series</span>
+            <span style="color:var(--text-dim);font-size:13px;">sessions</span>
           </div>
         </div>
         <div class="field" style="flex:1;min-width:240px">
           <div class="label">&nbsp;</div>
           <div style="font-size:13px;color:var(--text-dim);padding:10px 0;line-height:1.5;">
-            Older series fall off automatically once you exceed this number. Default <strong>25</strong>.
+            Older sessions fall off automatically once you exceed this number. Default <strong>25</strong>.
           </div>
         </div>
       </div>
@@ -811,12 +849,19 @@ async function pollUpdate() {
 }
 async function pollRecording() {
   try {
-    const r = await fetch(API + '/api/recording');
-    const d = await r.json();
-    const n = (d && d.gameCount) || 0;
+    const [recR, arcR] = await Promise.all([
+      fetch(API + '/api/recording').then((r) => r.json()),
+      fetch(API + '/api/local-archive').then((r) => r.json()),
+    ]);
+    const n = (recR && recR.gameCount) || 0;
+    const enabled = arcR && arcR.recordingEnabled !== false;
     $('recCount').textContent = n;
-    $('saveSeriesBtn').disabled = n === 0;
+    $('saveSeriesBtn').disabled = n === 0 || !enabled;
     $('resetRecBtn').disabled = n === 0;
+    // Toggle the panel between active and disabled states.
+    $('sessionActiveRow').style.display   = enabled ? '' : 'none';
+    $('sessionDisabledRow').style.display = enabled ? 'none' : '';
+    $('sessionActions').style.display     = enabled ? '' : 'none';
   } catch (e) {}
 }
 $('saveSeriesBtn').addEventListener('click', async () => {
@@ -864,7 +909,7 @@ document.querySelectorAll('.tab').forEach((btn) => {
     document.querySelectorAll('.tab').forEach((b) => b.classList.toggle('active', b === btn));
     document.querySelectorAll('.tab-pane').forEach((p) => p.classList.toggle('active', p.dataset.pane === tab));
     if (tab === 'archive') loadArchive();
-    if (tab === 'settings') loadCapacity();
+    if (tab === 'settings') loadSettings();
   });
 });
 
@@ -998,11 +1043,17 @@ function escapeText(s) {
 }
 
 // ── Settings ─────────────────────────────────────────────────────────
-async function loadCapacity() {
+async function loadSettings() {
   try {
     const r = await fetch(API + '/api/local-archive');
     const d = await r.json();
     $('capacityInput').value = d.capacity || 25;
+    const enabled = d.recordingEnabled !== false;
+    const btn = $('recordingToggleBtn');
+    btn.dataset.on = String(enabled);
+    btn.textContent = enabled ? 'RECORDING: ON' : 'RECORDING: OFF';
+    btn.classList.toggle('on',  enabled);
+    btn.classList.toggle('off', !enabled);
   } catch (e) {}
 }
 $('capacitySaveBtn').addEventListener('click', async () => {
@@ -1013,6 +1064,17 @@ $('capacitySaveBtn').addEventListener('click', async () => {
     body: JSON.stringify({ capacity: cap }),
   });
   showToast('CAPACITY SAVED · keeping ' + cap + ' most recent');
+});
+$('recordingToggleBtn').addEventListener('click', async () => {
+  const cur = $('recordingToggleBtn').dataset.on === 'true';
+  const next = !cur;
+  await fetch(API + '/api/local-archive/recording-enabled', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ enabled: next }),
+  });
+  showToast('RECORDING ' + (next ? 'ON — sessions will be captured' : 'OFF — no capture'));
+  loadSettings();
+  pollRecording();
 });
 
 (async () => {

@@ -55,10 +55,10 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     // captured automatically. The producer hits SAVE SERIES STATS at the
     // end of the series to move it into the local archive.
     stream_recording:       { value: { active: true, games: [] }, updated_at: new Date().toISOString() },
-    // Local-only archive. Capped at `capacity` most recent series; older
-    // ones drop off automatically. Settings tab in the control window
-    // adjusts the cap.
-    local_archive:          { value: { capacity: 25, series: [] }, updated_at: new Date().toISOString() },
+    // Local-only archive of saved sessions. Capped at `capacity` most
+    // recent; older ones drop off automatically. `recordingEnabled` lets
+    // the producer turn off auto-capture entirely from the Settings tab.
+    local_archive:          { value: { capacity: 25, recordingEnabled: true, series: [] }, updated_at: new Date().toISOString() },
   };
   let state = { ...defaultState };
   try {
@@ -97,9 +97,13 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     Object.assign(updateState, patch);
   }
 
-  // ── Series recording — main.js calls this on each match end ──────────
+  // ── Session recording — main.js calls this on each match end ─────────
   function appendRecordingGame(game) {
     if (!game || !game.matchGuid) return;
+    // Recording can be disabled from the Settings tab — when off, the
+    // bridge still flows through, we just don't accumulate.
+    const arc = state.local_archive.value || {};
+    if (arc.recordingEnabled === false) return;
     const rec = state.stream_recording.value || { active: true, games: [] };
     rec.games = rec.games || [];
     if (rec.games.some((g) => g.matchGuid === game.matchGuid)) return; // dedupe
@@ -175,6 +179,21 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     state.local_archive.updated_at = new Date().toISOString();
     saveState();
     return cap;
+  }
+
+  function setRecordingEnabled(on) {
+    const arc = state.local_archive.value || { capacity: 25, series: [] };
+    arc.recordingEnabled = !!on;
+    state.local_archive.value = arc;
+    state.local_archive.updated_at = new Date().toISOString();
+    // When turning OFF, also clear any games already accumulated so we
+    // don't accidentally save them later.
+    if (!on) {
+      state.stream_recording.value = { active: true, games: [] };
+      state.stream_recording.updated_at = new Date().toISOString();
+    }
+    saveState();
+    return arc.recordingEnabled;
   }
 
   function resetRecording() {
@@ -340,7 +359,17 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
 
     if (req.method === 'GET' && pathname === '/api/local-archive') {
       const arc = state.local_archive.value || { capacity: 25, series: [] };
-      return sendJson(res, 200, { capacity: arc.capacity || 25, series: arc.series || [] });
+      return sendJson(res, 200, {
+        capacity: arc.capacity || 25,
+        recordingEnabled: arc.recordingEnabled !== false,
+        series: arc.series || [],
+      });
+    }
+    if (req.method === 'POST' && pathname === '/api/local-archive/recording-enabled') {
+      let body;
+      try { body = await readBody(req); } catch { return sendJson(res, 400, { error: 'invalid json' }); }
+      const on = setRecordingEnabled(body.enabled);
+      return sendJson(res, 200, { ok: true, recordingEnabled: on });
     }
     if (req.method === 'POST' && pathname === '/api/local-archive/delete') {
       let body;
