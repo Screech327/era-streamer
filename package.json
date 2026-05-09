@@ -1,7 +1,7 @@
 {
   "name": "era-streamer",
   "productName": "ERA Streamer",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "ERA Rocket League broadcast overlay — desktop app",
   "private": true,
   "main": "src/main.js",
@@ -14,6 +14,7 @@
   "author": "Elite Rocket Association",
   "license": "UNLICENSED",
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "ws": "^8.18.0"
   },
   "devDependencies": {
@@ -36,7 +37,12 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icon.ico",
       "artifactName": "ERA-Streamer-Setup-${version}.${ext}",
@@ -49,6 +55,13 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "ERA Streamer"
-    }
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Screech327",
+        "repo": "era-streamer"
+      }
+    ]
   }
 }

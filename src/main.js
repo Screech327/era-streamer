@@ -4,11 +4,12 @@
 //   3. The TCP→WS bridge that consumes RL's stats stream
 //   4. The control panel BrowserWindow
 
-const { app, BrowserWindow, shell, Menu } = require('electron');
+const { app, BrowserWindow, shell, Menu, dialog } = require('electron');
 const path = require('path');
 const { autoConfigure } = require('./rl-config');
 const { startBridge } = require('./bridge');
 const { start: startServer } = require('./server');
+const { autoUpdater } = require('electron-updater');
 
 const OVERLAY_DIR = path.join(__dirname, '..', 'overlay');
 const UI_DIR      = path.join(__dirname, '..', 'ui');
@@ -68,6 +69,45 @@ if (!gotLock) {
       shell.openExternal(url);
       return { action: 'deny' };
     });
+
+    // ── Auto-update ──────────────────────────────────────────────────
+    // Checks the GitHub Releases feed for a newer version on every
+    // launch; if found, downloads in the background and prompts the
+    // user to restart-and-install when the download finishes.
+    // Unsigned builds: Windows still pops a UAC prompt during install,
+    // but the app picks up new versions without manual re-download.
+    autoUpdater.autoDownload = true;
+    autoUpdater.autoInstallOnAppQuit = true;
+    autoUpdater.on('update-available', (info) => {
+      console.log('[updater] update available:', info.version);
+    });
+    autoUpdater.on('update-not-available', () => {
+      console.log('[updater] up to date');
+    });
+    autoUpdater.on('error', (err) => {
+      console.log('[updater] error:', err && err.message || err);
+    });
+    autoUpdater.on('update-downloaded', (info) => {
+      const choice = dialog.showMessageBoxSync(mainWindow, {
+        type: 'info',
+        buttons: ['Restart now', 'Later'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'Update ready',
+        message: `ERA Streamer ${info.version} is downloaded.`,
+        detail: 'Restart the app now to install. The new version will be used automatically next time you open ERA Streamer.',
+      });
+      if (choice === 0) autoUpdater.quitAndInstall();
+    });
+    // Skip the network check when the app is unpackaged (npm start) —
+    // electron-updater fails on dev runs and we don't need it there.
+    if (app.isPackaged) {
+      setTimeout(() => {
+        autoUpdater.checkForUpdates().catch((err) => {
+          console.log('[updater] check failed:', err && err.message || err);
+        });
+      }, 4000);
+    }
 
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0 && serverHandle) {
