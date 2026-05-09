@@ -72,6 +72,44 @@ body { padding:0; }
 .titlebar-brand .name { color:white; }
 .titlebar-brand .name .accent { color:var(--red); }
 .titlebar-spacer { flex:1; }
+/* Version + update controls in the titlebar — replaces the bulky obs-bar
+   card on every page. Kept compact and no-drag so it doesn't fight the
+   drag region. */
+.titlebar-update {
+  -webkit-app-region:no-drag;
+  display:flex; align-items:center; gap:10px;
+  padding:0 14px;
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:1.5px;
+  color:#888;
+}
+.titlebar-update .tu-version { color:#aaa; }
+.titlebar-update .tu-status { color:var(--gold); min-width:0; }
+.titlebar-update .tu-status:empty { display:none; }
+.titlebar-update .tu-btn {
+  background:transparent;
+  border:1px solid rgba(255,255,255,0.1);
+  color:#bbb;
+  border-radius:4px;
+  padding:5px 10px;
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:1.5px;
+  cursor:pointer;
+  transition:border-color 0.12s, color 0.12s, background 0.12s;
+}
+.titlebar-update .tu-btn:hover:not(:disabled) {
+  border-color:var(--red);
+  color:white;
+}
+.titlebar-update .tu-btn:disabled { opacity:0.5; cursor:default; }
+.titlebar-update .tu-btn.ready {
+  background:var(--red);
+  border-color:var(--red);
+  color:white;
+  box-shadow:0 0 8px rgba(230,57,70,0.5);
+}
 .titlebar-buttons { display:flex; -webkit-app-region:no-drag; }
 .titlebar-btn {
   width:46px; height:38px;
@@ -337,6 +375,7 @@ h1, h2, h3 {
   color:#ffb3b8;
   line-height:1.5;
 }
+.rl-hint.hidden { display:none; }
 .rl-hint .rl-hint-text { flex:1; }
 .rl-hint strong{color:white;letter-spacing:0.5px;}
 .rl-hint .btn { flex:0 0 auto; }
@@ -720,6 +759,13 @@ h1, h2, h3 {
     <div class="name"><span class="accent">ERA</span> STREAMER</div>
   </div>
   <div class="titlebar-spacer"></div>
+  <!-- Version + update controls live in the titlebar. Keep it tiny and
+       no-drag so the buttons stay clickable. -->
+  <div class="titlebar-update" id="titlebarUpdate">
+    <span class="tu-version" id="appVersion">—</span>
+    <span class="tu-status" id="updateStatus"></span>
+    <button class="tu-btn" id="updateBtn" type="button">CHECK FOR UPDATES</button>
+  </div>
   <div class="titlebar-buttons">
     <button class="titlebar-btn" id="winMin" title="Minimize" type="button">
       <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.4"><line x1="1" y1="5" x2="9" y2="5"/></svg>
@@ -755,7 +801,7 @@ h1, h2, h3 {
   <!-- Inline help banner that shows when RL isn't reachable. The bridge
        retries every ~1.5s; this just tells the producer in plain English
        what to check rather than letting them stare at a red pill. -->
-  <div class="rl-hint" id="rlHint" style="display:none">
+  <div class="rl-hint hidden" id="rlHint">
     <div class="rl-hint-text"><strong>Rocket League is not detected</strong> — Check that Rocket League is running.</div>
     <button class="btn" id="bridgeReconnectBtn" type="button">RETRY CONNECTION</button>
   </div>
@@ -764,15 +810,6 @@ h1, h2, h3 {
     <div class="l">OBS BROWSER SOURCE</div>
     <code id="obsUrl">http://127.0.0.1:49124/match.html</code>
     <button class="btn" id="copyObsBtn">COPY</button>
-  </div>
-
-  <!-- App version + update controls. Polls /api/update/state so the
-       button re-labels itself as the autoUpdater progresses. -->
-  <div class="obs-bar" id="updateBar">
-    <div class="l">VERSION</div>
-    <code id="appVersion">—</code>
-    <span id="updateStatus" style="flex:1;font-family:'Orbitron',monospace;font-size:10px;letter-spacing:2px;color:var(--text-dim)">—</span>
-    <button class="btn" id="updateBtn">CHECK FOR UPDATES</button>
   </div>
 
   <div class="tab-pane active" data-pane="main">
@@ -1106,9 +1143,10 @@ async function pollStatus() {
     $('pillIni').className = 'pill ' + (iniGood ? 'live' : 'warn');
     $('pillIni').innerHTML = '<span class="dot"></span>' + (iniGood ? 'RL CONFIG OK' : 'CONFIG NEEDED');
     // Show plain-English hint when RL isn't detected. Hidden once
-    // bridge connects.
+    // bridge connects. Toggled via class so the rule's `display:flex`
+    // takes effect when shown.
     const hint = $('rlHint');
-    if (hint) hint.style.display = s.rlConnected ? 'none' : 'block';
+    if (hint) hint.classList.toggle('hidden', !!s.rlConnected);
   } catch (e) {}
 }
 function setPill(id, ok, okText, badText, badClass) {
@@ -1199,31 +1237,33 @@ async function pollUpdate() {
     $('appVersion').textContent = 'v' + (u.appVersion || '?');
     const btn = $('updateBtn');
     const status = $('updateStatus');
+    btn.classList.remove('ready');
     switch (u.status) {
       case 'checking':
-        status.textContent = 'CHECKING…';
+        status.textContent = '';
         btn.textContent = 'CHECKING…';
         btn.disabled = true;
         break;
       case 'downloading':
-        status.textContent = 'DOWNLOADING' + (u.percent ? ' · ' + u.percent + '%' : '');
-        btn.textContent = 'DOWNLOADING' + (u.percent ? ' ' + u.percent + '%' : '');
+        status.textContent = '';
+        btn.textContent = 'DOWNLOADING' + (u.percent ? ' ' + u.percent + '%' : '…');
         btn.disabled = true;
         break;
       case 'ready':
         status.textContent = 'v' + u.version + ' READY';
         btn.textContent = 'RESTART & INSTALL';
         btn.disabled = false;
+        btn.classList.add('ready');
         btn.dataset.action = 'install';
         return;
       case 'error':
-        status.textContent = 'ERROR · ' + (u.error || 'check failed');
-        btn.textContent = 'RETRY';
+        status.textContent = '';
+        btn.textContent = 'RETRY CHECK';
         btn.disabled = false;
         btn.dataset.action = 'check';
         return;
       default: // idle
-        status.textContent = 'UP TO DATE';
+        status.textContent = '';
         btn.textContent = 'CHECK FOR UPDATES';
         btn.disabled = false;
         btn.dataset.action = 'check';
