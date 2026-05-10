@@ -1009,6 +1009,13 @@ let statsConnectStarted = false;
 // skip the bridge WS connect entirely.
 const DEMO_MODE = new URLSearchParams(location.search).has('demo');
 
+// ERA team colors extracted from logos. Convention: left side = TeamNum 0,
+// right side = TeamNum 1. Used by the scoreboard, post-game card, and the
+// now-watching player card so accents reflect ERA brand instead of RL's
+// lobby palette. Declared up here so applyDemoNowWatching can safely
+// reference it during the initial render.
+const matchupTeamColors = { 0: null, 1: null };
+
 function applyOverlayConfig(cfg) {
   // Now-watching style — defaults to 'a' (the historical layout). Any of
   // a/b/c/d/e/f from the variants doc.
@@ -1279,11 +1286,8 @@ function loadLogoAndColor(path) {
 }
 
 // ── Render ────────────────────────────
-// ERA team colors extracted from logos. Convention: left side = TeamNum 0,
-// right side = TeamNum 1. Used by the scoreboard and post-game card so the
-// score-box backgrounds reflect ERA brand colors instead of whatever was
-// set in the RL lobby.
-const matchupTeamColors = { 0: null, 1: null };
+// matchupTeamColors is declared earlier (near DEMO_MODE) so the
+// now-watching code path can safely reference it at boot.
 
 // Cached most recent UpdateState from the bridge so we can re-render the
 // scoreboard when a team's logo color finishes loading after first paint.
