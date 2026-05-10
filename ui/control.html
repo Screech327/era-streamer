@@ -740,9 +740,49 @@ h1, h2, h3 {
    it without a fake gameplay backdrop. */
 .preview-panel .panel-head {
   display:flex; align-items:center; justify-content:space-between;
+  gap:14px;
   margin-bottom:12px;
 }
 .preview-panel .panel-head h2 { margin:0; }
+.panel-head-tools { display:flex; align-items:center; gap:14px; }
+/* Inline A–F picker for the now-watching style. The active tab shows
+   solid team-red so the producer can see at a glance which style the
+   preview/OBS is currently rendering. Hover reveals the long label via
+   the button's title attribute. */
+.nw-style-picker {
+  display:flex; align-items:center; gap:8px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:4px 8px 4px 10px;
+}
+.nw-style-label {
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:2px;
+  color:#888;
+}
+.nw-style-tabs { display:flex; gap:2px; }
+.nw-style-tab {
+  background:transparent;
+  border:1px solid transparent;
+  color:#888;
+  font-family:'Orbitron', monospace;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:1px;
+  padding:4px 9px;
+  border-radius:4px;
+  cursor:pointer;
+  transition:background 0.12s, color 0.12s, border-color 0.12s;
+}
+.nw-style-tab:hover { color:white; border-color:rgba(255,255,255,0.1); }
+.nw-style-tab.active {
+  background:var(--red);
+  border-color:var(--red);
+  color:white;
+  box-shadow:0 0 8px rgba(230,57,70,0.4);
+}
 .preview-stage {
   position:relative;
   width:100%;
@@ -980,7 +1020,20 @@ h1, h2, h3 {
   <div class="panel preview-panel">
     <div class="panel-head">
       <h2>OVERLAY PREVIEW</h2>
-      <button class="btn btn-small" id="previewRefreshBtn" type="button">REFRESH</button>
+      <div class="panel-head-tools">
+        <div class="nw-style-picker">
+          <span class="nw-style-label">PLAYER CARD</span>
+          <div class="nw-style-tabs" id="nwStyleTabs">
+            <button type="button" class="nw-style-tab" data-style="a" title="A · Current — dark slab, 6 stats grid">A</button>
+            <button type="button" class="nw-style-tab" data-style="b" title="B · Angular Blade — brutalist esports tab">B</button>
+            <button type="button" class="nw-style-tab" data-style="c" title="C · Team Shield — reserved logo slot">C</button>
+            <button type="button" class="nw-style-tab" data-style="d" title="D · Hero Statline — score is the headline">D</button>
+            <button type="button" class="nw-style-tab" data-style="e" title="E · Glass Bar — compact horizontal pill">E</button>
+            <button type="button" class="nw-style-tab" data-style="f" title="F · Stacked Metrics — quieter typography">F</button>
+          </div>
+        </div>
+        <button class="btn btn-small" id="previewRefreshBtn" type="button">REFRESH</button>
+      </div>
     </div>
     <!-- 16:9 stage at 1920x1080 internally (the overlay's design size).
          CSS transform scales it down to whatever width is available so
@@ -1758,16 +1811,17 @@ async function loadSettings() {
   loadOverlayConfig();
 }
 
-// Fetch the overlay config so the player-card style dropdown reflects
-// what's actually saved.
-async function loadOverlayConfig() {
-  try {
-    const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
-    const cfg = (arr[0] && arr[0].value) || {};
-    $('nwStyleSel').value = cfg.nowWatchingStyle || 'a';
-  } catch (e) {}
+// Now-watching style is shown in two places — the Settings dropdown and
+// the inline A–F tabs on the OVERLAY PREVIEW header. Both call into a
+// single setNwStyle() so they stay in sync.
+function reflectNwStyle(style) {
+  const sel = $('nwStyleSel'); if (sel) sel.value = style;
+  document.querySelectorAll('.nw-style-tab').forEach((b) => {
+    b.classList.toggle('active', b.dataset.style === style);
+  });
 }
-$('nwStyleSel').addEventListener('change', async () => {
+async function setNwStyle(style) {
+  reflectNwStyle(style);
   // Read existing config and merge — don't clobber sibling flags like
   // noBridge. The overlay's 2s poll picks up the change.
   let cfg = {};
@@ -1775,9 +1829,20 @@ $('nwStyleSel').addEventListener('change', async () => {
     const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
     cfg = (arr[0] && arr[0].value) || {};
   } catch (e) {}
-  cfg.nowWatchingStyle = $('nwStyleSel').value;
+  cfg.nowWatchingStyle = style;
   await upsert('stream_overlay_config', cfg);
-  showToast('PLAYER CARD STYLE · ' + $('nwStyleSel').value.toUpperCase());
+  showToast('PLAYER CARD · ' + style.toUpperCase());
+}
+async function loadOverlayConfig() {
+  try {
+    const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
+    const cfg = (arr[0] && arr[0].value) || {};
+    reflectNwStyle(cfg.nowWatchingStyle || 'a');
+  } catch (e) {}
+}
+$('nwStyleSel').addEventListener('change', () => setNwStyle($('nwStyleSel').value));
+document.querySelectorAll('.nw-style-tab').forEach((btn) => {
+  btn.addEventListener('click', () => setNwStyle(btn.dataset.style));
 });
 $('capacitySaveBtn').addEventListener('click', async () => {
   const cap = parseInt($('capacityInput').value, 10);
@@ -1925,6 +1990,7 @@ $('wizCopyUrl').addEventListener('click', () => {
   renderPreview('left'); renderPreview('right');
   renderSeriesUI();
   loadRecentMatchups();
+  loadOverlayConfig(); // sync the now-watching style picker on boot
   maybeShowWizard();
   pollStatus();
   pollUpdate();
