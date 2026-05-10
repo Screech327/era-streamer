@@ -1032,6 +1032,7 @@ h1, h2, h3 {
             <button type="button" class="nw-style-tab" data-style="f" title="F · Stacked Metrics — quieter typography">F</button>
           </div>
         </div>
+        <button class="btn btn-small" id="previewFlipColorBtn" type="button" title="Show the card in the other team's color">FLIP COLOR</button>
         <button class="btn btn-small" id="previewRefreshBtn" type="button">REFRESH</button>
       </div>
     </div>
@@ -1577,6 +1578,13 @@ $('previewRefreshBtn').addEventListener('click', () => {
   // browser doesn't short-circuit the reload. Keep ?demo=1 so the
   // now-watching card still renders with sample data.
   f.src = '/match.html?demo=1&t=' + Date.now();
+});
+// Flip which team's color the demo card uses. The overlay listens for
+// this postMessage and re-paints the now-watching with the other team.
+$('previewFlipColorBtn').addEventListener('click', () => {
+  const f = $('previewFrame');
+  if (!f || !f.contentWindow) return;
+  try { f.contentWindow.postMessage({ type: 'demo-flip-team' }, '*'); } catch (_) {}
 });
 
 // Bridge reconnect — drops the current TCP socket so the auto-retry in
