@@ -1040,7 +1040,7 @@ h1, h2, h3 {
          the producer can confirm scoreboards/banners line up before
          hitting the OBS browser source. -->
     <div class="preview-stage" id="previewStage">
-      <iframe class="preview-frame" id="previewFrame" src="/match.html" title="Match overlay preview"></iframe>
+      <iframe class="preview-frame" id="previewFrame" src="/match.html?demo=1" title="Match overlay preview"></iframe>
       <!-- Push confirmation badge — flashes when the overlay actually
            applied the producer's push (postMessage from the iframe). -->
       <div class="preview-badge" id="previewBadge"></div>
@@ -1574,8 +1574,9 @@ $('winClose').addEventListener('click', () => fetch(API + '/api/window/close',  
 $('previewRefreshBtn').addEventListener('click', () => {
   const f = $('previewFrame');
   // Re-set the src to bust any cached state. Add a cache-buster so the
-  // browser doesn't short-circuit the reload.
-  f.src = '/match.html?t=' + Date.now();
+  // browser doesn't short-circuit the reload. Keep ?demo=1 so the
+  // now-watching card still renders with sample data.
+  f.src = '/match.html?demo=1&t=' + Date.now();
 });
 
 // Bridge reconnect — drops the current TCP socket so the auto-retry in

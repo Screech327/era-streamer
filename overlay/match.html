@@ -1003,6 +1003,12 @@ function lookupTeam(slot, league) {
 let noBridgeMode = false;
 let statsConnectStarted = false;
 
+// `?demo=1` query flag — set by the control panel's preview iframe so the
+// producer can preview the now-watching card styles without an active
+// game/bridge. In demo mode we pin the card visible with sample data and
+// skip the bridge WS connect entirely.
+const DEMO_MODE = new URLSearchParams(location.search).has('demo');
+
 function applyOverlayConfig(cfg) {
   // Now-watching style — defaults to 'a' (the historical layout). Any of
   // a/b/c/d/e/f from the variants doc.
@@ -1012,7 +1018,10 @@ function applyOverlayConfig(cfg) {
   const next = !!(cfg && cfg.noBridge);
   if (next === noBridgeMode) return;
   noBridgeMode = next;
-  document.body.classList.toggle('no-bridge', noBridgeMode);
+  // In demo mode, never apply .no-bridge — we want the now-watching card
+  // visible regardless of the producer's bridge setting.
+  document.body.classList.toggle('no-bridge', noBridgeMode && !DEMO_MODE);
+  if (DEMO_MODE) return; // demo never touches the bridge WS
   if (noBridgeMode) {
     // Drop any active bridge connection so we stop trying to reach it.
     try { if (statsWs) statsWs.close(); } catch (e) {}
@@ -1024,6 +1033,22 @@ function applyOverlayConfig(cfg) {
     statsConnectStarted = true;
     connectStats();
   }
+}
+
+// Sample data shown in the preview iframe — gives the producer something
+// concrete to evaluate when picking a card style before going live.
+const DEMO_SNAPSHOT = {
+  name: 'PIPDOG',
+  score: 280, goals: 2, assists: 1, saves: 3, shots: 4, demos: 0,
+};
+function applyDemoNowWatching() {
+  if (!DEMO_MODE) return;
+  const el = document.getElementById('nowWatching');
+  if (!el) return;
+  el.style.setProperty('--team-color', '#1873FF');
+  lastNwSnapshot = DEMO_SNAPSHOT;
+  repaintNowWatching(DEMO_SNAPSHOT);
+  el.classList.add('visible');
 }
 
 // ── Now-watching style switcher ────────────────────────────────────
@@ -1045,8 +1070,10 @@ function applyNowWatchingStyle(style) {
   el.className = 'now-watching style-' + style + (el.classList.contains('visible') ? ' visible' : '');
   el.innerHTML = renderNowWatchingShell(style);
   // Restore the most recent stats so we don't blip back to zeros on
-  // style change mid-broadcast.
+  // style change mid-broadcast. In demo mode this re-applies the
+  // sample data so the preview shows the new style immediately.
   if (lastNwSnapshot) repaintNowWatching(lastNwSnapshot);
+  if (DEMO_MODE) applyDemoNowWatching();
 }
 
 function renderNowWatchingShell(style) {
@@ -1158,6 +1185,9 @@ function repaintNowWatching(snap) {
 
 // Initial shell render so the IDs exist before the first bridge tick.
 applyNowWatchingStyle('a');
+// In the control-panel preview iframe, pin the card to demo data so the
+// producer can evaluate styles before there's a live game to spectate.
+if (DEMO_MODE) applyDemoNowWatching();
 
 async function fetchOverlayConfig() {
   // When the producer hard-forces no-bridge via URL (?nobridge=1), skip the
