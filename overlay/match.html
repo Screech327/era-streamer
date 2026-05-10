@@ -577,75 +577,263 @@ body.no-bridge .player-row { gap:0; }
 /* === BOTTOM-LEFT "NOW WATCHING" CARD ===
    Populated from the local stats bridge. Always invisible until the bridge
    reports a spectator target, so the overlay still works for streamers who
-   haven't enabled the stats API. */
+   haven't enabled the stats API.
+
+   The shell .now-watching is just positioning + fade transition. Each
+   `.style-X` class below provides the visual treatment; the JS shell
+   renderer swaps the inner DOM to match. */
 .now-watching {
   position:absolute;
   bottom:24px;
   left:24px;
+  opacity:0;
+  transform:translateY(8px);
+  transition:opacity 0.3s ease, transform 0.3s ease;
+  pointer-events:none;
+  /* Width is set per-style — some are wider (E), some narrower (F). */
+}
+.now-watching.visible { opacity:1; transform:translateY(0); }
+
+/* Shared subutility — these labels/values share most fonts. Per-style
+   overrides come below. */
+.nw-name {
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* ───── A · CURRENT ─────────────────────────────────────────────── */
+.now-watching.style-a {
   width:380px;
   background:rgba(8,8,8,0.84);
   border-radius:8px;
   border-right:4px solid var(--team-color, #555);
   padding:14px 18px 16px;
-  opacity:0;
-  transform:translateY(8px);
-  transition:opacity 0.3s ease, transform 0.3s ease;
   box-shadow:0 4px 22px rgba(0,0,0,0.65);
   backdrop-filter:blur(6px);
   -webkit-backdrop-filter:blur(6px);
-  pointer-events:none;
 }
-.now-watching.visible { opacity:1; transform:translateY(0); }
-
-.nw-label {
+.style-a .nw-label {
   font-family:'Orbitron', monospace;
-  font-size:9px;
-  letter-spacing:3px;
+  font-size:9px; letter-spacing:3px;
   color:var(--team-color, #888);
   margin-bottom:5px;
   text-shadow:0 1px 3px rgba(0,0,0,0.7);
 }
-.nw-name {
+.style-a .nw-name {
   font-family:'Bebas Neue', sans-serif;
-  font-size:28px;
-  letter-spacing:2px;
+  font-size:28px; letter-spacing:2px;
   color:white;
   line-height:1.05;
   margin-bottom:11px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
   text-shadow:0 2px 4px rgba(0,0,0,0.7);
 }
-.nw-boost-num-deprecated {
-  /* boost bar removed; boost now shown next to player names in the
-     top-left and top-right cards instead */
-  display:none;
-}
-.nw-stats {
-  display:grid;
-  grid-template-columns:repeat(6, 1fr);
-  gap:6px;
-}
-.nw-stat {
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  gap:2px;
-}
-.nw-stat-l {
-  font-family:'Orbitron', monospace;
-  font-size:8px;
-  letter-spacing:1.5px;
-  color:#888;
-}
-.nw-stat-v {
-  font-family:'Bebas Neue', sans-serif;
-  font-size:24px;
+.style-a .nw-stats { display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; }
+.style-a .nw-stat { display:flex; flex-direction:column; align-items:center; gap:2px; }
+.style-a .nw-stat-l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1.5px; color:#888; }
+.style-a .nw-stat-v {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:24px; letter-spacing:1px;
   color:white;
-  letter-spacing:1px;
   text-shadow:0 1px 3px rgba(0,0,0,0.7);
 }
+
+/* ───── B · ANGULAR BLADE ──────────────────────────────────────── */
+.now-watching.style-b {
+  width:380px;
+  filter:drop-shadow(0 4px 16px rgba(0,0,0,0.6));
+}
+.style-b .nw-body {
+  background:rgba(8,8,8,0.92);
+  clip-path:polygon(0 14px, 22px 14px, 32px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+  padding:22px 18px 14px 22px;
+  border-left:3px solid var(--team-color, #555);
+}
+.style-b .nw-tab {
+  position:absolute; top:0; left:36px;
+  background:var(--team-color, #555);
+  color:#fff;
+  font-family:'Orbitron',monospace;
+  font-size:9px; letter-spacing:3px;
+  padding:3px 14px 4px;
+  clip-path:polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+}
+.style-b .nw-name {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:30px; letter-spacing:3px;
+  line-height:1; margin-bottom:12px;
+  text-transform:uppercase;
+  color:white;
+}
+.style-b .nw-stats { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; }
+.style-b .nw-stat {
+  display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+  border-left:2px solid var(--team-color, #555);
+  padding-left:6px;
+}
+.style-b .nw-stat-l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1.5px; color:#888; }
+.style-b .nw-stat-v { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px; color:white; }
+
+/* ───── C · TEAM SHIELD ────────────────────────────────────────── */
+.now-watching.style-c {
+  width:420px;
+  background:linear-gradient(180deg, rgba(14,14,14,0.92), rgba(8,8,8,0.88));
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,0.06);
+  padding:14px;
+  display:grid;
+  grid-template-columns:64px 1fr;
+  gap:14px;
+  align-items:center;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  box-shadow:0 8px 28px rgba(0,0,0,0.55);
+}
+.style-c .nw-logo {
+  width:64px; height:64px;
+  background:linear-gradient(135deg, var(--team-color, #555), color-mix(in srgb, var(--team-color, #555) 60%, #000));
+  border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue',sans-serif;
+  font-size:36px; letter-spacing:2px;
+  color:#fff;
+  box-shadow:0 2px 10px color-mix(in srgb, var(--team-color, #555) 40%, transparent);
+}
+.style-c .nw-right { min-width:0; }
+.style-c .nw-lbl-row { display:flex; align-items:center; gap:8px; margin-bottom:2px; }
+.style-c .nw-lbl-dot {
+  width:5px; height:5px; border-radius:50%;
+  background:var(--team-color, #555);
+  box-shadow:0 0 8px var(--team-color, #555);
+}
+.style-c .nw-label {
+  font-family:'Orbitron',monospace;
+  font-size:9px; letter-spacing:3px;
+  color:var(--team-color, #888);
+}
+.style-c .nw-name {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:28px; letter-spacing:2px;
+  line-height:1; margin-bottom:8px;
+  color:white;
+}
+.style-c .nw-stats { display:flex; gap:14px; flex-wrap:wrap; }
+.style-c .nw-stat { display:flex; align-items:baseline; gap:5px; }
+.style-c .nw-stat-l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1px; color:#777; }
+.style-c .nw-stat-v { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.5px; color:white; }
+
+/* ───── D · HERO STATLINE ──────────────────────────────────────── */
+.now-watching.style-d {
+  width:440px;
+  background:rgba(8,8,8,0.88);
+  border-radius:8px;
+  display:grid;
+  grid-template-columns:120px 1fr;
+  overflow:hidden;
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,0.04);
+  box-shadow:0 4px 22px rgba(0,0,0,0.6);
+}
+.style-d .nw-hero {
+  background:linear-gradient(135deg, var(--team-color, #555), color-mix(in srgb, var(--team-color, #555) 35%, #000));
+  padding:12px 12px 14px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:2px;
+  color:#fff;
+}
+.style-d .nw-hero-l { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:2px; opacity:0.85; }
+.style-d .nw-hero-v { font-family:'Bebas Neue',sans-serif; font-size:46px; letter-spacing:1px; line-height:1; }
+.style-d .nw-right { padding:12px 16px 14px; }
+.style-d .nw-label { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:2px; color:#888; margin-bottom:2px; }
+.style-d .nw-name {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:26px; letter-spacing:2px;
+  line-height:1; margin-bottom:9px;
+  color:white;
+}
+.style-d .nw-stats { display:flex; flex-wrap:wrap; gap:6px; }
+.style-d .nw-stat {
+  background:rgba(255,255,255,0.04);
+  border:1px solid rgba(255,255,255,0.07);
+  border-radius:4px;
+  padding:3px 8px;
+  display:flex; align-items:baseline; gap:5px;
+}
+.style-d .nw-stat-l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1px; color:#777; }
+.style-d .nw-stat-v { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:0.5px; color:white; }
+
+/* ───── E · GLASS BAR ──────────────────────────────────────────── */
+.now-watching.style-e {
+  width:560px;
+  background:rgba(12,12,12,0.6);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:60px;
+  padding:8px 18px;
+  display:flex; align-items:center; gap:14px;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  box-shadow:0 6px 22px rgba(0,0,0,0.6);
+}
+.style-e .nw-label {
+  background:var(--team-color, #555);
+  color:#fff;
+  font-family:'Orbitron',monospace;
+  font-size:8px; letter-spacing:2px;
+  padding:4px 10px;
+  border-radius:30px;
+}
+.style-e .nw-name {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:24px; letter-spacing:2px;
+  line-height:1;
+  color:white;
+}
+.style-e .nw-divider { width:1px; height:24px; background:rgba(255,255,255,0.1); }
+.style-e .nw-stats { display:flex; gap:14px; flex:1; }
+.style-e .nw-stat { display:flex; align-items:baseline; gap:4px; }
+.style-e .nw-stat-l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1px; color:#888; }
+.style-e .nw-stat-v { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:0.5px; color:white; }
+
+/* ───── F · STACKED METRICS ────────────────────────────────────── */
+.now-watching.style-f {
+  width:340px;
+  background:rgba(10,10,10,0.86);
+  border-radius:6px;
+  padding:14px 16px;
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border-top:2px solid var(--team-color, #555);
+  box-shadow:0 6px 20px rgba(0,0,0,0.65);
+}
+.style-f .nw-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px; }
+.style-f .nw-label {
+  font-family:'Orbitron', monospace;
+  font-weight:700;
+  font-size:9px; letter-spacing:3px;
+  color:var(--team-color, #888);
+}
+.style-f .nw-score-big {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:24px; letter-spacing:1px;
+  color:#fff;
+}
+.style-f .nw-score-big small { font-size:9px; color:#888; letter-spacing:2px; font-family:'Orbitron',monospace; font-weight:500; margin-right:4px; }
+.style-f .nw-name {
+  font-family:'Bebas Neue',sans-serif;
+  font-size:28px; letter-spacing:2px;
+  line-height:1; margin-bottom:11px;
+  color:white;
+}
+.style-f .nw-stats { display:grid; grid-template-columns:repeat(5, 1fr); gap:8px; }
+.style-f .nw-stat {
+  display:flex; flex-direction:column; align-items:center; gap:1px;
+  padding:5px 0;
+  background:rgba(255,255,255,0.03);
+  border-radius:4px;
+}
+.style-f .nw-stat-l { font-family:'Orbitron',monospace; font-weight:500; font-size:8px; letter-spacing:1.5px; color:#888; }
+.style-f .nw-stat-v { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.5px; color:white; }
 </style>
 </head>
 <body>
@@ -723,20 +911,10 @@ body.no-bridge .player-row { gap:0; }
     </div>
 
     <!-- Bottom-left "now watching" card. Populated from the local stats
-         bridge (ws://127.0.0.1:49124). Hides automatically if the bridge
-         isn't running, so the overlay degrades gracefully. -->
-    <div id="nowWatching" class="now-watching">
-      <div class="nw-label">WATCHING</div>
-      <div class="nw-name" id="nwName">—</div>
-      <div class="nw-stats">
-        <div class="nw-stat"><div class="nw-stat-l">SCORE</div><div class="nw-stat-v" id="nwScore">0</div></div>
-        <div class="nw-stat"><div class="nw-stat-l">GOALS</div><div class="nw-stat-v" id="nwGoals">0</div></div>
-        <div class="nw-stat"><div class="nw-stat-l">ASSISTS</div><div class="nw-stat-v" id="nwAssists">0</div></div>
-        <div class="nw-stat"><div class="nw-stat-l">SAVES</div><div class="nw-stat-v" id="nwSaves">0</div></div>
-        <div class="nw-stat"><div class="nw-stat-l">SHOTS</div><div class="nw-stat-v" id="nwShots">0</div></div>
-        <div class="nw-stat"><div class="nw-stat-l">DEMOS</div><div class="nw-stat-v" id="nwDemos">0</div></div>
-      </div>
-    </div>
+         bridge (ws://127.0.0.1:49124). The inner DOM is rendered by JS
+         based on the producer-selected style (stream_overlay_config.
+         nowWatchingStyle) so all six layouts share the same data path. -->
+    <div id="nowWatching" class="now-watching style-a"></div>
   </div>
 
 <script>
@@ -826,6 +1004,11 @@ let noBridgeMode = false;
 let statsConnectStarted = false;
 
 function applyOverlayConfig(cfg) {
+  // Now-watching style — defaults to 'a' (the historical layout). Any of
+  // a/b/c/d/e/f from the variants doc.
+  const style = (cfg && cfg.nowWatchingStyle) || 'a';
+  applyNowWatchingStyle(style);
+
   const next = !!(cfg && cfg.noBridge);
   if (next === noBridgeMode) return;
   noBridgeMode = next;
@@ -842,6 +1025,139 @@ function applyOverlayConfig(cfg) {
     connectStats();
   }
 }
+
+// ── Now-watching style switcher ────────────────────────────────────
+// Each variant has its own inner DOM (the chevron-tab on B, the team-
+// shield on C, the hero score on D, etc.). The IDs nwName/nwScore/
+// nwGoals/nwAssists/nwSaves/nwShots/nwDemos are preserved across all
+// styles so the bridge update logic doesn't need to care which is
+// active. setNowWatching/getElementById fishes them out as before.
+let currentNwStyle = 'a';
+let lastNwSnapshot = null; // {name, score, goals, assists, saves, shots, demos}
+const NW_STYLES = ['a', 'b', 'c', 'd', 'e', 'f'];
+
+function applyNowWatchingStyle(style) {
+  if (!NW_STYLES.includes(style)) style = 'a';
+  if (style === currentNwStyle && document.getElementById('nwName')) return;
+  currentNwStyle = style;
+  const el = document.getElementById('nowWatching');
+  if (!el) return;
+  el.className = 'now-watching style-' + style + (el.classList.contains('visible') ? ' visible' : '');
+  el.innerHTML = renderNowWatchingShell(style);
+  // Restore the most recent stats so we don't blip back to zeros on
+  // style change mid-broadcast.
+  if (lastNwSnapshot) repaintNowWatching(lastNwSnapshot);
+}
+
+function renderNowWatchingShell(style) {
+  // 6 stats always present, in the same order. Variants that "feature"
+  // the score (D and F) still keep id="nwScore" in the visible spot.
+  const cells = (mode) => {
+    if (mode === 'compact5') {
+      // D & F skip a dedicated SCORE cell because the score is already
+      // featured elsewhere in the layout.
+      return (
+        '<div class="nw-stat"><div class="nw-stat-l">G</div><div class="nw-stat-v" id="nwGoals">0</div></div>' +
+        '<div class="nw-stat"><div class="nw-stat-l">A</div><div class="nw-stat-v" id="nwAssists">0</div></div>' +
+        '<div class="nw-stat"><div class="nw-stat-l">SV</div><div class="nw-stat-v" id="nwSaves">0</div></div>' +
+        '<div class="nw-stat"><div class="nw-stat-l">SH</div><div class="nw-stat-v" id="nwShots">0</div></div>' +
+        '<div class="nw-stat"><div class="nw-stat-l">D</div><div class="nw-stat-v" id="nwDemos">0</div></div>'
+      );
+    }
+    if (mode === 'short6') {
+      return (
+        '<div class="nw-stat"><div class="nw-stat-l">SC</div><div class="nw-stat-v" id="nwScore">0</div></div>' +
+        '<div class="nw-stat"><div class="nw-stat-l">G</div><div class="nw-stat-v" id="nwGoals">0</div></div>' +
+        '<div class="nw-stat"><div class="nw-stat-l">A</div><div class="nw-stat-v" id="nwAssists">0</div></div>' +
+        '<div class="nw-stat"><div class="nw-stat-l">SV</div><div class="nw-stat-v" id="nwSaves">0</div></div>' +
+        '<div class="nw-stat"><div class="nw-stat-l">SH</div><div class="nw-stat-v" id="nwShots">0</div></div>' +
+        '<div class="nw-stat"><div class="nw-stat-l">D</div><div class="nw-stat-v" id="nwDemos">0</div></div>'
+      );
+    }
+    // full6
+    return (
+      '<div class="nw-stat"><div class="nw-stat-l">SCORE</div><div class="nw-stat-v" id="nwScore">0</div></div>' +
+      '<div class="nw-stat"><div class="nw-stat-l">GOALS</div><div class="nw-stat-v" id="nwGoals">0</div></div>' +
+      '<div class="nw-stat"><div class="nw-stat-l">ASSISTS</div><div class="nw-stat-v" id="nwAssists">0</div></div>' +
+      '<div class="nw-stat"><div class="nw-stat-l">SAVES</div><div class="nw-stat-v" id="nwSaves">0</div></div>' +
+      '<div class="nw-stat"><div class="nw-stat-l">SHOTS</div><div class="nw-stat-v" id="nwShots">0</div></div>' +
+      '<div class="nw-stat"><div class="nw-stat-l">DEMOS</div><div class="nw-stat-v" id="nwDemos">0</div></div>'
+    );
+  };
+  switch (style) {
+    case 'b':
+      return (
+        '<div class="nw-tab">WATCHING</div>' +
+        '<div class="nw-body">' +
+          '<div class="nw-name" id="nwName">—</div>' +
+          '<div class="nw-stats">' + cells('short6') + '</div>' +
+        '</div>'
+      );
+    case 'c':
+      return (
+        '<div class="nw-logo" id="nwLogo">—</div>' +
+        '<div class="nw-right">' +
+          '<div class="nw-lbl-row"><div class="nw-lbl-dot"></div><div class="nw-label">WATCHING</div></div>' +
+          '<div class="nw-name" id="nwName">—</div>' +
+          '<div class="nw-stats">' + cells('short6') + '</div>' +
+        '</div>'
+      );
+    case 'd':
+      return (
+        '<div class="nw-hero">' +
+          '<div class="nw-hero-l">SCORE</div>' +
+          '<div class="nw-hero-v" id="nwScore">0</div>' +
+        '</div>' +
+        '<div class="nw-right">' +
+          '<div class="nw-label">WATCHING</div>' +
+          '<div class="nw-name" id="nwName">—</div>' +
+          '<div class="nw-stats">' + cells('compact5') + '</div>' +
+        '</div>'
+      );
+    case 'e':
+      return (
+        '<div class="nw-label">WATCHING</div>' +
+        '<div class="nw-name" id="nwName">—</div>' +
+        '<div class="nw-divider"></div>' +
+        '<div class="nw-stats">' + cells('short6') + '</div>'
+      );
+    case 'f':
+      return (
+        '<div class="nw-head">' +
+          '<div class="nw-label">WATCHING</div>' +
+          '<div class="nw-score-big"><small>SCORE</small><span id="nwScore">0</span></div>' +
+        '</div>' +
+        '<div class="nw-name" id="nwName">—</div>' +
+        '<div class="nw-stats">' + cells('compact5') + '</div>'
+      );
+    case 'a':
+    default:
+      return (
+        '<div class="nw-label">WATCHING</div>' +
+        '<div class="nw-name" id="nwName">—</div>' +
+        '<div class="nw-stats">' + cells('full6') + '</div>'
+      );
+  }
+}
+
+// Repaint after a style swap so values don't blip. Bridge ticks fast
+// enough that this only matters for ~1 frame, but it's cheap.
+function repaintNowWatching(snap) {
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('nwName',    snap.name);
+  set('nwScore',   snap.score);
+  set('nwGoals',   snap.goals);
+  set('nwAssists', snap.assists);
+  set('nwSaves',   snap.saves);
+  set('nwShots',   snap.shots);
+  set('nwDemos',   snap.demos);
+  // Style C uses an initial-letter shield as a stand-in for a logo.
+  const logo = document.getElementById('nwLogo');
+  if (logo) logo.textContent = (snap.name || '?').trim()[0] || '?';
+}
+
+// Initial shell render so the IDs exist before the first bridge tick.
+applyNowWatchingStyle('a');
 
 async function fetchOverlayConfig() {
   // When the producer hard-forces no-bridge via URL (?nobridge=1), skip the
@@ -1249,13 +1565,17 @@ function renderNowWatching(data) {
 
   const el = document.getElementById('nowWatching');
   el.style.setProperty('--team-color', color);
-  document.getElementById('nwName').textContent = player.Name || '—';
-  document.getElementById('nwScore').textContent   = player.Score   || 0;
-  document.getElementById('nwGoals').textContent   = player.Goals   || 0;
-  document.getElementById('nwAssists').textContent = player.Assists || 0;
-  document.getElementById('nwSaves').textContent   = player.Saves   || 0;
-  document.getElementById('nwShots').textContent   = player.Shots   || 0;
-  document.getElementById('nwDemos').textContent   = player.Demos   || 0;
+  const snap = {
+    name:    player.Name || '—',
+    score:   player.Score   || 0,
+    goals:   player.Goals   || 0,
+    assists: player.Assists || 0,
+    saves:   player.Saves   || 0,
+    shots:   player.Shots   || 0,
+    demos:   player.Demos   || 0,
+  };
+  lastNwSnapshot = snap;
+  repaintNowWatching(snap);
   el.classList.add('visible');
 }
 

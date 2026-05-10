@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>NOW WATCHING — Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --team-color: #1873FF;
+    --team-color-2: #4d9bff;
+    --gold: #c9a84c;
+    --green: #5acb6a;
+    --red: #e63946;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    background:#0a0a0a;
+    color:#fff;
+    font-family:'Rajdhani',sans-serif;
+    min-height:100vh;
+    padding:40px;
+  }
+  h1 {
+    font-family:'Bebas Neue', sans-serif;
+    font-size:28px;
+    letter-spacing:3px;
+    margin-bottom:6px;
+  }
+  .lede {
+    color:#888;
+    font-size:14px;
+    max-width:760px;
+    margin-bottom:30px;
+    line-height:1.5;
+  }
+  .lede strong { color:#fff; }
+  .grid {
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:32px 28px;
+  }
+  .row {
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+  }
+  .row-head {
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:0 4px;
+  }
+  .row-head h2 {
+    font-family:'Bebas Neue', sans-serif;
+    font-size:18px;
+    letter-spacing:3px;
+    color:#fff;
+  }
+  .row-head .note {
+    font-family:'Orbitron', monospace;
+    font-size:9px;
+    letter-spacing:2px;
+    color:#888;
+  }
+  /* "Gameplay" backdrop — a faux-RL gradient so the cards aren't read against
+     a flat black; you can sanity-check legibility this way. */
+  .stage {
+    position:relative;
+    height:240px;
+    border-radius:8px;
+    overflow:hidden;
+    background:
+      radial-gradient(60% 80% at 30% 30%, rgba(60,140,255,0.18), transparent 60%),
+      radial-gradient(50% 70% at 80% 70%, rgba(255,120,30,0.18), transparent 60%),
+      linear-gradient(180deg, #1a1b1c, #0a0a0a);
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     A — CURRENT (reference)
+     ───────────────────────────────────────────────────────────────────── */
+  .v0 {
+    position:absolute; bottom:18px; left:18px;
+    width:360px;
+    background:rgba(8,8,8,0.84);
+    border-radius:8px;
+    border-right:4px solid var(--team-color);
+    padding:14px 18px 16px;
+    box-shadow:0 4px 22px rgba(0,0,0,0.65);
+    backdrop-filter:blur(6px);
+  }
+  .v0 .lbl { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:3px; color:var(--team-color); margin-bottom:5px; }
+  .v0 .name { font-family:'Bebas Neue',sans-serif; font-size:28px; letter-spacing:2px; line-height:1.05; margin-bottom:11px; }
+  .v0 .stats { display:grid; grid-template-columns:repeat(6, 1fr); gap:6px; }
+  .v0 .s { display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .v0 .s-l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1.5px; color:#888; }
+  .v0 .s-v { font-family:'Bebas Neue',sans-serif; font-size:24px; letter-spacing:1px; }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     B — ANGULAR BLADE
+     Slanted leading edge in team color, brutalist esports vibe. The
+     "WATCHING" label sits inside a chevron tab cut into the top edge.
+     ───────────────────────────────────────────────────────────────────── */
+  .vB {
+    position:absolute; bottom:18px; left:18px;
+    width:380px;
+    padding:0;
+    color:#fff;
+    filter:drop-shadow(0 4px 16px rgba(0,0,0,0.6));
+  }
+  .vB .body {
+    background:rgba(8,8,8,0.92);
+    clip-path:polygon(0 14px, 22px 14px, 32px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+    padding:22px 18px 14px 22px;
+    border-left:3px solid var(--team-color);
+  }
+  .vB .tab {
+    position:absolute; top:0; left:36px;
+    background:var(--team-color);
+    color:#fff;
+    font-family:'Orbitron',monospace;
+    font-size:9px;
+    letter-spacing:3px;
+    padding:3px 14px 4px;
+    clip-path:polygon(10px 0, 100% 0, calc(100% - 10px) 100%, 0 100%);
+  }
+  .vB .name {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:30px; letter-spacing:3px;
+    line-height:1; margin-bottom:12px;
+    text-transform:uppercase;
+  }
+  .vB .stats { display:grid; grid-template-columns:repeat(6, 1fr); gap:8px; }
+  .vB .s {
+    display:flex; flex-direction:column; align-items:flex-start; gap:1px;
+    border-left:2px solid var(--team-color);
+    padding-left:6px;
+  }
+  .vB .s-l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1.5px; color:#888; }
+  .vB .s-v { font-family:'Bebas Neue',sans-serif; font-size:22px; letter-spacing:1px; }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     C — TEAM SHIELD
+     Reserves a logo slot on the left. Cleaner broadcast-TV feel.
+     ───────────────────────────────────────────────────────────────────── */
+  .vC {
+    position:absolute; bottom:18px; left:18px;
+    width:420px;
+    background:linear-gradient(180deg, rgba(14,14,14,0.92), rgba(8,8,8,0.88));
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,0.06);
+    padding:14px;
+    display:grid;
+    grid-template-columns:64px 1fr;
+    gap:14px;
+    align-items:center;
+    backdrop-filter:blur(8px);
+    box-shadow:0 8px 28px rgba(0,0,0,0.55);
+  }
+  .vC .logo {
+    width:64px; height:64px;
+    background:linear-gradient(135deg, var(--team-color), color-mix(in srgb, var(--team-color) 60%, #000));
+    border-radius:10px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Bebas Neue',sans-serif;
+    font-size:36px;
+    letter-spacing:2px;
+    color:#fff;
+    box-shadow:0 2px 10px color-mix(in srgb, var(--team-color) 40%, transparent);
+  }
+  .vC .right { min-width:0; }
+  .vC .lbl-row {
+    display:flex; align-items:center; gap:8px;
+    margin-bottom:2px;
+  }
+  .vC .lbl {
+    font-family:'Orbitron',monospace;
+    font-size:9px;
+    letter-spacing:3px;
+    color:var(--team-color);
+  }
+  .vC .lbl-dot {
+    width:5px; height:5px; border-radius:50%;
+    background:var(--team-color);
+    box-shadow:0 0 8px var(--team-color);
+  }
+  .vC .name {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:28px; letter-spacing:2px;
+    line-height:1;
+    margin-bottom:8px;
+  }
+  .vC .stats { display:flex; gap:14px; flex-wrap:wrap; }
+  .vC .s {
+    display:flex; align-items:baseline; gap:5px;
+  }
+  .vC .s-l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1px; color:#777; }
+  .vC .s-v { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.5px; }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     D — HERO STATLINE
+     Featured stat on the left (the score), other stats as small chips
+     on the right. Scorebug feel.
+     ───────────────────────────────────────────────────────────────────── */
+  .vD {
+    position:absolute; bottom:18px; left:18px;
+    width:440px;
+    background:rgba(8,8,8,0.88);
+    border-radius:8px;
+    padding:0;
+    display:grid;
+    grid-template-columns:120px 1fr;
+    overflow:hidden;
+    backdrop-filter:blur(6px);
+    border:1px solid rgba(255,255,255,0.04);
+    box-shadow:0 4px 22px rgba(0,0,0,0.6);
+  }
+  .vD .hero {
+    background:linear-gradient(135deg, var(--team-color), color-mix(in srgb, var(--team-color) 35%, #000));
+    padding:12px 12px 14px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:2px;
+    color:#fff;
+  }
+  .vD .hero-l { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:2px; opacity:0.85; }
+  .vD .hero-v { font-family:'Bebas Neue',sans-serif; font-size:46px; letter-spacing:1px; line-height:1; }
+  .vD .right { padding:12px 16px 14px; }
+  .vD .lbl { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:2px; color:#888; margin-bottom:2px; }
+  .vD .name { font-family:'Bebas Neue',sans-serif; font-size:26px; letter-spacing:2px; line-height:1; margin-bottom:9px; }
+  .vD .chips { display:flex; flex-wrap:wrap; gap:6px; }
+  .vD .chip {
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.07);
+    border-radius:4px;
+    padding:3px 8px;
+    display:flex; align-items:baseline; gap:5px;
+  }
+  .vD .chip .l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1px; color:#777; }
+  .vD .chip .v { font-family:'Bebas Neue',sans-serif; font-size:16px; letter-spacing:0.5px; }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     E — GLASS BAR
+     Compact horizontal slab. Smaller footprint, all-in-one row.
+     ───────────────────────────────────────────────────────────────────── */
+  .vE {
+    position:absolute; bottom:18px; left:18px;
+    width:560px;
+    background:rgba(12,12,12,0.6);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:60px;
+    padding:8px 8px 8px 18px;
+    display:flex; align-items:center; gap:14px;
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 6px 22px rgba(0,0,0,0.6);
+  }
+  .vE .lbl {
+    background:var(--team-color);
+    color:#fff;
+    font-family:'Orbitron',monospace;
+    font-size:8px;
+    letter-spacing:2px;
+    padding:4px 10px;
+    border-radius:30px;
+  }
+  .vE .name {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:24px; letter-spacing:2px;
+    line-height:1;
+    white-space:nowrap;
+  }
+  .vE .divider {
+    width:1px; height:24px;
+    background:rgba(255,255,255,0.1);
+  }
+  .vE .stats { display:flex; gap:14px; flex:1; }
+  .vE .s { display:flex; align-items:baseline; gap:4px; }
+  .vE .s-l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:1px; color:#888; }
+  .vE .s-v { font-family:'Bebas Neue',sans-serif; font-size:18px; letter-spacing:0.5px; }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     F — STACKED METRICS
+     Score is upgraded to the headline. Other stats arranged in a tight
+     2x3 grid with subtle team-color borders. Modern, more Inter than
+     Orbitron — quieter typography.
+     ───────────────────────────────────────────────────────────────────── */
+  .vF {
+    position:absolute; bottom:18px; left:18px;
+    width:340px;
+    background:rgba(10,10,10,0.86);
+    border-radius:6px;
+    padding:14px 16px;
+    backdrop-filter:blur(8px);
+    border-top:2px solid var(--team-color);
+    box-shadow:0 6px 20px rgba(0,0,0,0.65);
+  }
+  .vF .head {
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:8px;
+  }
+  .vF .lbl {
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:9px;
+    letter-spacing:3px;
+    color:var(--team-color);
+  }
+  .vF .score-big {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:24px;
+    letter-spacing:1px;
+    color:#fff;
+  }
+  .vF .score-big small { font-size:9px; color:#888; letter-spacing:2px; font-family:'Inter',sans-serif; font-weight:600; margin-right:4px; }
+  .vF .name {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:28px;
+    letter-spacing:2px;
+    line-height:1;
+    margin-bottom:11px;
+  }
+  .vF .stats {
+    display:grid;
+    grid-template-columns:repeat(5, 1fr);
+    gap:8px;
+  }
+  .vF .s {
+    display:flex; flex-direction:column; align-items:center; gap:1px;
+    padding:5px 0;
+    background:rgba(255,255,255,0.03);
+    border-radius:4px;
+  }
+  .vF .s-l {
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:8px;
+    letter-spacing:1.5px;
+    color:#888;
+  }
+  .vF .s-v {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:20px;
+    letter-spacing:0.5px;
+  }
+
+  /* Theme switcher — change the accent color across all variants */
+  .controls {
+    display:flex; gap:8px; align-items:center;
+    margin-bottom:24px;
+  }
+  .controls label { font-family:'Orbitron',monospace; font-size:10px; letter-spacing:2px; color:#888; }
+  .swatch {
+    width:28px; height:28px; border-radius:50%;
+    border:2px solid rgba(255,255,255,0.1);
+    cursor:pointer;
+    transition:transform 0.12s, border-color 0.12s;
+  }
+  .swatch:hover { transform:scale(1.1); }
+  .swatch.active { border-color:#fff; }
+</style>
+</head>
+<body>
+
+  <h1>NOW WATCHING — VARIANTS</h1>
+  <div class="lede">
+    Six layouts to compare. Each sits on a faux-RL gradient so you can sanity-check legibility against gameplay. Switch the team color to see how each design handles different palettes. The current overlay is variant <strong>A</strong>; let me know which one (or which combination of ideas) you want for v1.
+  </div>
+
+  <div class="controls">
+    <label>TEAM COLOR</label>
+    <div class="swatch active" data-color="#1873FF" style="background:#1873FF"></div>
+    <div class="swatch" data-color="#C26418" style="background:#C26418"></div>
+    <div class="swatch" data-color="#E63946" style="background:#E63946"></div>
+    <div class="swatch" data-color="#5ACB6A" style="background:#5ACB6A"></div>
+    <div class="swatch" data-color="#C9A84C" style="background:#C9A84C"></div>
+    <div class="swatch" data-color="#9b59b6" style="background:#9b59b6"></div>
+  </div>
+
+  <div class="grid">
+
+    <!-- A · CURRENT -->
+    <div class="row">
+      <div class="row-head"><h2>A · CURRENT</h2><span class="note">reference — what's live now</span></div>
+      <div class="stage">
+        <div class="v0">
+          <div class="lbl">WATCHING</div>
+          <div class="name">PIPDOG</div>
+          <div class="stats">
+            <div class="s"><div class="s-l">SCORE</div><div class="s-v">280</div></div>
+            <div class="s"><div class="s-l">GOALS</div><div class="s-v">2</div></div>
+            <div class="s"><div class="s-l">ASSISTS</div><div class="s-v">1</div></div>
+            <div class="s"><div class="s-l">SAVES</div><div class="s-v">3</div></div>
+            <div class="s"><div class="s-l">SHOTS</div><div class="s-v">4</div></div>
+            <div class="s"><div class="s-l">DEMOS</div><div class="s-v">0</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B · ANGULAR BLADE -->
+    <div class="row">
+      <div class="row-head"><h2>B · ANGULAR BLADE</h2><span class="note">brutalist esports tab</span></div>
+      <div class="stage">
+        <div class="vB">
+          <div class="tab">WATCHING</div>
+          <div class="body">
+            <div class="name">PIPDOG</div>
+            <div class="stats">
+              <div class="s"><div class="s-l">SCORE</div><div class="s-v">280</div></div>
+              <div class="s"><div class="s-l">GOALS</div><div class="s-v">2</div></div>
+              <div class="s"><div class="s-l">AST</div><div class="s-v">1</div></div>
+              <div class="s"><div class="s-l">SAVE</div><div class="s-v">3</div></div>
+              <div class="s"><div class="s-l">SHOT</div><div class="s-v">4</div></div>
+              <div class="s"><div class="s-l">DEMO</div><div class="s-v">0</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C · TEAM SHIELD -->
+    <div class="row">
+      <div class="row-head"><h2>C · TEAM SHIELD</h2><span class="note">reserved logo slot</span></div>
+      <div class="stage">
+        <div class="vC">
+          <div class="logo">P</div>
+          <div class="right">
+            <div class="lbl-row"><div class="lbl-dot"></div><div class="lbl">WATCHING</div></div>
+            <div class="name">PIPDOG</div>
+            <div class="stats">
+              <div class="s"><div class="s-l">SC</div><div class="s-v">280</div></div>
+              <div class="s"><div class="s-l">G</div><div class="s-v">2</div></div>
+              <div class="s"><div class="s-l">A</div><div class="s-v">1</div></div>
+              <div class="s"><div class="s-l">SV</div><div class="s-v">3</div></div>
+              <div class="s"><div class="s-l">SH</div><div class="s-v">4</div></div>
+              <div class="s"><div class="s-l">D</div><div class="s-v">0</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D · HERO STATLINE -->
+    <div class="row">
+      <div class="row-head"><h2>D · HERO STATLINE</h2><span class="note">score is the headline</span></div>
+      <div class="stage">
+        <div class="vD">
+          <div class="hero">
+            <div class="hero-l">SCORE</div>
+            <div class="hero-v">280</div>
+          </div>
+          <div class="right">
+            <div class="lbl">WATCHING</div>
+            <div class="name">PIPDOG</div>
+            <div class="chips">
+              <div class="chip"><span class="l">G</span><span class="v">2</span></div>
+              <div class="chip"><span class="l">A</span><span class="v">1</span></div>
+              <div class="chip"><span class="l">SV</span><span class="v">3</span></div>
+              <div class="chip"><span class="l">SH</span><span class="v">4</span></div>
+              <div class="chip"><span class="l">D</span><span class="v">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- E · GLASS BAR -->
+    <div class="row">
+      <div class="row-head"><h2>E · GLASS BAR</h2><span class="note">compact horizontal slab</span></div>
+      <div class="stage">
+        <div class="vE">
+          <div class="lbl">WATCHING</div>
+          <div class="name">PIPDOG</div>
+          <div class="divider"></div>
+          <div class="stats">
+            <div class="s"><div class="s-l">SC</div><div class="s-v">280</div></div>
+            <div class="s"><div class="s-l">G</div><div class="s-v">2</div></div>
+            <div class="s"><div class="s-l">A</div><div class="s-v">1</div></div>
+            <div class="s"><div class="s-l">SV</div><div class="s-v">3</div></div>
+            <div class="s"><div class="s-l">SH</div><div class="s-v">4</div></div>
+            <div class="s"><div class="s-l">D</div><div class="s-v">0</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F · STACKED METRICS -->
+    <div class="row">
+      <div class="row-head"><h2>F · STACKED METRICS</h2><span class="note">quieter typography</span></div>
+      <div class="stage">
+        <div class="vF">
+          <div class="head">
+            <div class="lbl">WATCHING</div>
+            <div class="score-big"><small>SCORE</small>280</div>
+          </div>
+          <div class="name">PIPDOG</div>
+          <div class="stats">
+            <div class="s"><div class="s-l">G</div><div class="s-v">2</div></div>
+            <div class="s"><div class="s-l">A</div><div class="s-v">1</div></div>
+            <div class="s"><div class="s-l">SV</div><div class="s-v">3</div></div>
+            <div class="s"><div class="s-l">SH</div><div class="s-v">4</div></div>
+            <div class="s"><div class="s-l">D</div><div class="s-v">0</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+document.querySelectorAll('.swatch').forEach((sw) => {
+  sw.addEventListener('click', () => {
+    document.querySelectorAll('.swatch').forEach((s) => s.classList.remove('active'));
+    sw.classList.add('active');
+    document.documentElement.style.setProperty('--team-color', sw.dataset.color);
+  });
+});
+</script>
+
+</body></html>

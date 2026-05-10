@@ -1055,6 +1055,25 @@ h1, h2, h3 {
       </div>
     </div>
     <div class="panel">
+      <h2>OVERLAY</h2>
+      <div class="row">
+        <div class="field" style="flex:1">
+          <div class="label">Player card style</div>
+          <select class="select select-lg" id="nwStyleSel">
+            <option value="a">A · Current — dark slab, 6 stats grid</option>
+            <option value="b">B · Angular Blade — brutalist esports tab</option>
+            <option value="c">C · Team Shield — reserved logo slot</option>
+            <option value="d">D · Hero Statline — score is the headline</option>
+            <option value="e">E · Glass Bar — compact horizontal pill</option>
+            <option value="f">F · Stacked Metrics — quieter typography</option>
+          </select>
+        </div>
+      </div>
+      <div style="font-size:13px;color:var(--text-dim);padding:6px 0 0;line-height:1.5;">
+        The bottom-left now-watching card. Changes apply to the overlay live — preview reflects it within ~2s.
+      </div>
+    </div>
+    <div class="panel">
       <h2>STARTUP</h2>
       <div class="row">
         <div class="field" style="flex:0 0 auto">
@@ -1736,7 +1755,30 @@ async function loadSettings() {
     btn.classList.toggle('off', !enabled);
   } catch (e) {}
   loadAutoLaunch();
+  loadOverlayConfig();
 }
+
+// Fetch the overlay config so the player-card style dropdown reflects
+// what's actually saved.
+async function loadOverlayConfig() {
+  try {
+    const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
+    const cfg = (arr[0] && arr[0].value) || {};
+    $('nwStyleSel').value = cfg.nowWatchingStyle || 'a';
+  } catch (e) {}
+}
+$('nwStyleSel').addEventListener('change', async () => {
+  // Read existing config and merge — don't clobber sibling flags like
+  // noBridge. The overlay's 2s poll picks up the change.
+  let cfg = {};
+  try {
+    const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
+    cfg = (arr[0] && arr[0].value) || {};
+  } catch (e) {}
+  cfg.nowWatchingStyle = $('nwStyleSel').value;
+  await upsert('stream_overlay_config', cfg);
+  showToast('PLAYER CARD STYLE · ' + $('nwStyleSel').value.toUpperCase());
+});
 $('capacitySaveBtn').addEventListener('click', async () => {
   const cap = parseInt($('capacityInput').value, 10);
   if (!cap || cap < 1) { showToast('Capacity must be at least 1', true); return; }
