@@ -1609,10 +1609,14 @@ function renderNowWatching(data) {
     nwHide();
     return;
   }
+  // Prefer the matchup banner color (extracted from the team's ERA logo)
+  // so the card matches brand instead of whatever RL's lobby palette
+  // happened to be. Fall back to RL's ColorPrimary, then the generic
+  // blue/orange for streams running without ERA assets.
   const teamData = (data.Game.Teams || []).find(t => t.TeamNum === target.TeamNum);
-  const color = (teamData && teamData.ColorPrimary)
-    ? '#' + teamData.ColorPrimary
-    : (target.TeamNum === 0 ? '#6495ED' : '#ff8a3d');
+  const color = matchupTeamColors[target.TeamNum]
+    || ((teamData && teamData.ColorPrimary) ? '#' + teamData.ColorPrimary : null)
+    || (target.TeamNum === 0 ? '#6495ED' : '#ff8a3d');
 
   const el = document.getElementById('nowWatching');
   el.style.setProperty('--team-color', color);
