@@ -19,7 +19,8 @@
   },
   "devDependencies": {
     "electron": "^33.0.0",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "puppeteer": "^24.43.1"
   },
   "build": {
     "appId": "com.eliterocketassociation.streamer",
@@ -36,7 +37,10 @@
       "package.json"
     ],
     "extraResources": [
-      { "from": "build/icon.ico", "to": "tray.ico" }
+      {
+        "from": "build/icon.ico",
+        "to": "tray.ico"
+      }
     ],
     "win": {
       "target": [

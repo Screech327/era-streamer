@@ -24,7 +24,10 @@ const { URL } = require('url');
 const { WebSocketServer } = require('ws');
 const teams = require('./teams');
 
-const PORT = 49124;
+// PORT defaults to the canonical era-streamer port. Tests/dev override
+// it via ERA_STREAMER_PORT so a running app doesn't block the test
+// server from binding.
+const PORT = parseInt(process.env.ERA_STREAMER_PORT || '49124', 10);
 
 const MIME = {
   '.html':'text/html; charset=utf-8',
