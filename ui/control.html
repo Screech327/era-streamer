@@ -745,6 +745,86 @@ h1, h2, h3 {
 }
 .preview-panel .panel-head h2 { margin:0; }
 .panel-head-tools { display:flex; align-items:center; gap:14px; }
+/* Active-style badges on the MAIN preview header. Tiny indicators
+   showing which CARD + GOAL style the overlay is currently using. */
+.active-style-badges { display:flex; gap:8px; align-items:center; }
+.asb {
+  display:flex; align-items:center; gap:6px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:4px 10px;
+}
+.asb-l {
+  font-family:'Orbitron', monospace;
+  font-size:9px;
+  letter-spacing:1.5px;
+  color:#888;
+}
+.asb-v {
+  font-family:'Orbitron', monospace;
+  font-weight:700;
+  font-size:11px;
+  letter-spacing:1px;
+  color:white;
+  background:var(--red);
+  padding:2px 6px;
+  border-radius:3px;
+}
+/* Style picker cards on the Customize tab — bigger touch targets with
+   the A-F letter, the style name and a one-line description. */
+.style-picker-row {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:10px;
+}
+.style-card {
+  display:flex; flex-direction:column; align-items:flex-start; gap:3px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:7px;
+  padding:12px 14px;
+  cursor:pointer;
+  text-align:left;
+  transition:all 0.12s;
+}
+.style-card:hover {
+  border-color:rgba(255,255,255,0.18);
+  transform:translateY(-1px);
+}
+.style-card.active {
+  border-color:var(--red);
+  background:rgba(230,57,70,0.06);
+  box-shadow:0 0 0 1px var(--red), 0 2px 12px rgba(230,57,70,0.18);
+}
+.style-card .sc-letter {
+  font-family:'Orbitron', monospace;
+  font-weight:900;
+  font-size:11px;
+  letter-spacing:1px;
+  color:var(--red);
+  background:rgba(230,57,70,0.10);
+  border:1px solid rgba(230,57,70,0.35);
+  border-radius:3px;
+  padding:1px 6px;
+  margin-bottom:4px;
+}
+.style-card.active .sc-letter {
+  background:var(--red);
+  color:white;
+}
+.style-card .sc-name {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:18px; letter-spacing:2px;
+  color:white;
+  line-height:1;
+}
+.style-card .sc-desc {
+  font-family:'Rajdhani', sans-serif;
+  font-size:12px;
+  color:var(--text-dim);
+  line-height:1.4;
+}
 /* Inline A–F picker for the now-watching style. The active tab shows
    solid team-red so the producer can see at a glance which style the
    preview/OBS is currently rendering. Hover reveals the long label via
@@ -912,6 +992,7 @@ h1, h2, h3 {
     <div class="side-tag">NAVIGATION</div>
     <div class="side-nav">
       <button class="side-link active" data-tab="main"><span class="ico">▦</span><span>Main</span></button>
+      <button class="side-link"        data-tab="customize"><span class="ico">✦</span><span>Customize</span></button>
       <button class="side-link"        data-tab="archive"><span class="ico">▤</span><span>Archive</span></button>
       <button class="side-link"        data-tab="settings"><span class="ico">⚙</span><span>Settings</span></button>
     </div>
@@ -1021,16 +1102,9 @@ h1, h2, h3 {
     <div class="panel-head">
       <h2>OVERLAY PREVIEW</h2>
       <div class="panel-head-tools">
-        <div class="nw-style-picker">
-          <span class="nw-style-label">PLAYER CARD</span>
-          <div class="nw-style-tabs" id="nwStyleTabs">
-            <button type="button" class="nw-style-tab" data-style="a" title="A · Current — dark slab, 6 stats grid">A</button>
-            <button type="button" class="nw-style-tab" data-style="b" title="B · Angular Blade — brutalist esports tab">B</button>
-            <button type="button" class="nw-style-tab" data-style="c" title="C · Team Shield — reserved logo slot">C</button>
-            <button type="button" class="nw-style-tab" data-style="d" title="D · Hero Statline — score is the headline">D</button>
-            <button type="button" class="nw-style-tab" data-style="e" title="E · Glass Bar — compact horizontal pill">E</button>
-            <button type="button" class="nw-style-tab" data-style="f" title="F · Stacked Metrics — quieter typography">F</button>
-          </div>
+        <div class="active-style-badges" id="activeStyleBadges">
+          <span class="asb"><span class="asb-l">CARD</span><span class="asb-v" id="asbNwStyle">A</span></span>
+          <span class="asb"><span class="asb-l">GOAL</span><span class="asb-v" id="asbGoalStyle">A</span></span>
         </div>
         <button class="btn btn-small" id="previewFlipColorBtn" type="button" title="Show the card in the other team's color">FLIP COLOR</button>
         <button class="btn btn-small" id="previewRefreshBtn" type="button">REFRESH</button>
@@ -1082,6 +1156,104 @@ h1, h2, h3 {
   </div>
 
   </div><!-- end main pane -->
+
+  <div class="tab-pane" data-pane="customize">
+    <div class="panel">
+      <h2>OVERLAY CUSTOMIZATION</h2>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:6px;">
+        Pick which visual style the overlay uses for each broadcast element. Changes apply live — the previews below update in real time.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>PLAYER CARD <span id="nwStyleName" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;margin-left:8px;"></span></h2>
+      <div class="style-picker-row" id="nwStylePicker">
+        <button type="button" class="style-card" data-picker="nw" data-style="a">
+          <span class="sc-letter">A</span>
+          <span class="sc-name">CURRENT</span>
+          <span class="sc-desc">Dark slab, 6-stat grid</span>
+        </button>
+        <button type="button" class="style-card" data-picker="nw" data-style="b">
+          <span class="sc-letter">B</span>
+          <span class="sc-name">ANGULAR BLADE</span>
+          <span class="sc-desc">Brutalist chevron tab</span>
+        </button>
+        <button type="button" class="style-card" data-picker="nw" data-style="c">
+          <span class="sc-letter">C</span>
+          <span class="sc-name">TEAM SHIELD</span>
+          <span class="sc-desc">Reserved logo slot</span>
+        </button>
+        <button type="button" class="style-card" data-picker="nw" data-style="d">
+          <span class="sc-letter">D</span>
+          <span class="sc-name">HERO STATLINE</span>
+          <span class="sc-desc">Score is the headline</span>
+        </button>
+        <button type="button" class="style-card" data-picker="nw" data-style="e">
+          <span class="sc-letter">E</span>
+          <span class="sc-name">GLASS BAR</span>
+          <span class="sc-desc">Compact horizontal pill</span>
+        </button>
+        <button type="button" class="style-card" data-picker="nw" data-style="f">
+          <span class="sc-letter">F</span>
+          <span class="sc-name">STACKED METRICS</span>
+          <span class="sc-desc">Quieter typography</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>GOAL POPUP <span id="goalStyleName" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;margin-left:8px;"></span></h2>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;">
+        Bottom-center popup that fires when a goal is scored, showing the scorer and the assister. Stays visible for the entire RL replay.
+      </div>
+      <div class="style-picker-row" id="goalStylePicker">
+        <button type="button" class="style-card" data-picker="goal" data-style="a">
+          <span class="sc-letter">A</span>
+          <span class="sc-name">NEON HOLO BAR</span>
+          <span class="sc-desc">Esports broadcast energy</span>
+        </button>
+        <button type="button" class="style-card" data-picker="goal" data-style="b">
+          <span class="sc-letter">B</span>
+          <span class="sc-name">TILTED STRIKE</span>
+          <span class="sc-desc">Italic motion impact</span>
+        </button>
+        <button type="button" class="style-card" data-picker="goal" data-style="c">
+          <span class="sc-letter">C</span>
+          <span class="sc-name">DIAGONAL SPLIT</span>
+          <span class="sc-desc">Two-tone wedge + seam</span>
+        </button>
+        <button type="button" class="style-card" data-picker="goal" data-style="d">
+          <span class="sc-letter">D</span>
+          <span class="sc-name">STADIUM JUMBOTRON</span>
+          <span class="sc-desc">LED matrix, glowing pixels</span>
+        </button>
+        <button type="button" class="style-card" data-picker="goal" data-style="e">
+          <span class="sc-letter">E</span>
+          <span class="sc-name">LIGHT BURST</span>
+          <span class="sc-desc">Spotlight, animated rays</span>
+        </button>
+        <button type="button" class="style-card" data-picker="goal" data-style="f">
+          <span class="sc-letter">F</span>
+          <span class="sc-name">LAYERED DEPTH</span>
+          <span class="sc-desc">Stacked cards, sparks</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel preview-panel">
+      <div class="panel-head">
+        <h2>PREVIEW</h2>
+        <div class="panel-head-tools">
+          <button class="btn btn-small" id="cz_flipColorBtn" type="button" title="Show the card in the other team's color">FLIP COLOR</button>
+          <button class="btn btn-small" id="cz_replayGoalBtn" type="button" title="Re-trigger the goal popup">REPLAY GOAL</button>
+          <button class="btn btn-small" id="cz_refreshBtn" type="button">REFRESH</button>
+        </div>
+      </div>
+      <div class="preview-stage" id="cz_previewStage">
+        <iframe class="preview-frame" id="cz_previewFrame" src="/match.html?demo=1&goalDemo=1" title="Customization preview"></iframe>
+      </div>
+    </div>
+  </div>
 
   <div class="tab-pane" data-pane="archive">
     <div class="panel">
@@ -1586,6 +1758,25 @@ $('previewFlipColorBtn').addEventListener('click', () => {
   if (!f || !f.contentWindow) return;
   try { f.contentWindow.postMessage({ type: 'demo-flip-team' }, '*'); } catch (_) {}
 });
+// Customize-tab preview controls — mirror the Main preview controls but
+// target the cz_previewFrame iframe and also include a REPLAY GOAL.
+const _czRefresh = $('cz_refreshBtn');
+if (_czRefresh) _czRefresh.addEventListener('click', () => {
+  const f = $('cz_previewFrame');
+  if (f) f.src = '/match.html?demo=1&goalDemo=1&t=' + Date.now();
+});
+const _czFlip = $('cz_flipColorBtn');
+if (_czFlip) _czFlip.addEventListener('click', () => {
+  const f = $('cz_previewFrame');
+  if (!f || !f.contentWindow) return;
+  try { f.contentWindow.postMessage({ type: 'demo-flip-team' }, '*'); } catch (_) {}
+});
+const _czReplayGoal = $('cz_replayGoalBtn');
+if (_czReplayGoal) _czReplayGoal.addEventListener('click', () => {
+  const f = $('cz_previewFrame');
+  if (!f || !f.contentWindow) return;
+  try { f.contentWindow.postMessage({ type: 'demo-replay-goal' }, '*'); } catch (_) {}
+});
 
 // Bridge reconnect — drops the current TCP socket so the auto-retry in
 // bridge.js immediately reattempts. Disabled while the request flies.
@@ -1820,39 +2011,54 @@ async function loadSettings() {
   loadOverlayConfig();
 }
 
-// Now-watching style is shown in two places — the Settings dropdown and
-// the inline A–F tabs on the OVERLAY PREVIEW header. Both call into a
-// single setNwStyle() so they stay in sync.
-function reflectNwStyle(style) {
-  const sel = $('nwStyleSel'); if (sel) sel.value = style;
-  document.querySelectorAll('.nw-style-tab').forEach((b) => {
+// Overlay-style picker — two pickers (player card + goal popup) sit on
+// the Customize tab. Both share the stream_overlay_config row so the
+// overlay only has to poll one settings key.
+const NW_STYLE_NAMES   = { a:'A · CURRENT', b:'B · ANGULAR BLADE', c:'C · TEAM SHIELD', d:'D · HERO STATLINE', e:'E · GLASS BAR', f:'F · STACKED METRICS' };
+const GOAL_STYLE_NAMES = { a:'A · NEON HOLO BAR', b:'B · TILTED STRIKE', c:'C · DIAGONAL SPLIT', d:'D · STADIUM JUMBOTRON', e:'E · LIGHT BURST', f:'F · LAYERED DEPTH' };
+
+function reflectStyle(picker, style) {
+  // Settings dropdown (legacy — kept hidden for compat) + Customize cards
+  if (picker === 'nw') {
+    const sel = $('nwStyleSel'); if (sel) sel.value = style;
+    const name = $('nwStyleName'); if (name) name.textContent = NW_STYLE_NAMES[style] || '';
+    const asb = $('asbNwStyle'); if (asb) asb.textContent = String(style || '').toUpperCase();
+  } else if (picker === 'goal') {
+    const name = $('goalStyleName'); if (name) name.textContent = GOAL_STYLE_NAMES[style] || '';
+    const asb = $('asbGoalStyle'); if (asb) asb.textContent = String(style || '').toUpperCase();
+  }
+  document.querySelectorAll('.style-card[data-picker="' + picker + '"]').forEach((b) => {
     b.classList.toggle('active', b.dataset.style === style);
   });
 }
-async function setNwStyle(style) {
-  reflectNwStyle(style);
-  // Read existing config and merge — don't clobber sibling flags like
-  // noBridge. The overlay's 2s poll picks up the change.
+async function setStyle(picker, style) {
+  reflectStyle(picker, style);
   let cfg = {};
   try {
     const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
     cfg = (arr[0] && arr[0].value) || {};
   } catch (e) {}
-  cfg.nowWatchingStyle = style;
+  if (picker === 'nw')   cfg.nowWatchingStyle = style;
+  if (picker === 'goal') cfg.goalPopupStyle   = style;
   await upsert('stream_overlay_config', cfg);
-  showToast('PLAYER CARD · ' + style.toUpperCase());
+  const label = picker === 'nw' ? 'PLAYER CARD' : 'GOAL POPUP';
+  showToast(label + ' · ' + style.toUpperCase());
 }
 async function loadOverlayConfig() {
   try {
     const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
     const cfg = (arr[0] && arr[0].value) || {};
-    reflectNwStyle(cfg.nowWatchingStyle || 'a');
+    reflectStyle('nw',   cfg.nowWatchingStyle || 'a');
+    reflectStyle('goal', cfg.goalPopupStyle   || 'a');
   } catch (e) {}
 }
-$('nwStyleSel').addEventListener('change', () => setNwStyle($('nwStyleSel').value));
-document.querySelectorAll('.nw-style-tab').forEach((btn) => {
-  btn.addEventListener('click', () => setNwStyle(btn.dataset.style));
+// Wire all style cards (both pickers, via data-picker attr).
+document.querySelectorAll('.style-card').forEach((btn) => {
+  btn.addEventListener('click', () => setStyle(btn.dataset.picker, btn.dataset.style));
 });
+// Settings-tab dropdown still works for nw-style.
+const _nwSel = $('nwStyleSel');
+if (_nwSel) _nwSel.addEventListener('change', () => setStyle('nw', _nwSel.value));
 $('capacitySaveBtn').addEventListener('click', async () => {
   const cap = parseInt($('capacityInput').value, 10);
   if (!cap || cap < 1) { showToast('Capacity must be at least 1', true); return; }

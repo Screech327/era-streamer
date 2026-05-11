@@ -985,6 +985,161 @@ body.no-bridge .boost-indicator { display:none !important; }
 }
 .style-f .nw-stat-l { font-family:'Orbitron',monospace; font-weight:500; font-size:8px; letter-spacing:1.5px; color:#888; }
 .style-f .nw-stat-v { font-family:'Bebas Neue',sans-serif; font-size:20px; letter-spacing:0.5px; color:white; }
+
+/* === BOTTOM-CENTER GOAL POPUP ============================================
+   Fires on bridge Goal event, holds for the entire replay, fades out on
+   ReplayEnd. Six selectable visual styles — switch via stream_overlay_
+   config.goalPopupStyle. Holo accents derive from team-color so each
+   team's popup stays on-brand. */
+:root {
+  --accent-2: color-mix(in srgb, var(--team-color, #1873FF) 65%, #fff);
+  --accent-3: color-mix(in srgb, var(--team-color, #1873FF) 30%, #fff);
+  --tc-light: color-mix(in srgb, var(--team-color, #1873FF) 60%, #fff);
+  --tc-dark:  color-mix(in srgb, var(--team-color, #1873FF) 50%, #000);
+}
+.goal-popup {
+  position:absolute;
+  bottom:130px; left:50%;
+  transform:translateX(-50%) translateY(28px) scale(0.94);
+  opacity:0;
+  transition:transform 0.55s cubic-bezier(0.18, 0.9, 0.2, 1.05), opacity 0.35s ease;
+  pointer-events:none;
+  --team-color: #1873FF;
+}
+.goal-popup.show { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
+.goal-popup .gp-team-logo {
+  display:flex; align-items:center; justify-content:center;
+  background:linear-gradient(135deg, var(--team-color), var(--tc-dark));
+  color:white;
+  font-family:'Bebas Neue', sans-serif;
+  border-radius:50%; flex:0 0 auto;
+  overflow:hidden;
+  box-shadow:0 2px 12px color-mix(in srgb, var(--team-color) 50%, transparent);
+}
+.goal-popup .gp-team-logo img { width:100%; height:100%; object-fit:contain; }
+.goal-popup .gp-team-logo .gp-letter { display:flex; align-items:center; justify-content:center; }
+.goal-popup .gp-team-logo.has-img .gp-letter { display:none; }
+.gp-goal-icon, .gp-assist-icon {
+  display:inline-block; vertical-align:middle; flex:0 0 auto;
+  background-color:currentColor;
+  -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+  -webkit-mask-position:center;  mask-position:center;
+  -webkit-mask-size:contain;     mask-size:contain;
+}
+.gp-goal-icon {
+  -webkit-mask-image:url('icons/ball-inv.png'); mask-image:url('icons/ball-inv.png');
+  -webkit-mask-mode:luminance; mask-mode:luminance;
+}
+.gp-assist-icon {
+  -webkit-mask-image:url("data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M11 17l2 2a1 1 0 1 0 3-3%22/><path d=%22M14 14l2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4%22/><path d=%22M21 3l1 11h-2%22/><path d=%22M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3%22/><path d=%22M3 4h8%22/></svg>");
+  mask-image:url("data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22black%22 stroke-width=%222%22 stroke-linecap=%22round%22 stroke-linejoin=%22round%22><path d=%22M11 17l2 2a1 1 0 1 0 3-3%22/><path d=%22M14 14l2.5 2.5a1 1 0 1 0 3-3l-3.88-3.88a3 3 0 0 0-4.24 0l-.88.88a1 1 0 1 1-3-3l2.81-2.81a5.79 5.79 0 0 1 7.06-.87l.47.28a2 2 0 0 0 1.42.25L21 4%22/><path d=%22M21 3l1 11h-2%22/><path d=%22M3 3 2 14l6.5 6.5a1 1 0 1 0 3-3%22/><path d=%22M3 4h8%22/></svg>");
+}
+
+/* ─── A · NEON HOLO BAR ──────────────────────────────────────── */
+.goal-popup.gp-a { width:560px; }
+.goal-popup.gp-a .body {
+  position:relative;
+  background:linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+  border:1px solid color-mix(in srgb, var(--team-color) 35%, transparent);
+  border-radius:10px;
+  padding:18px 22px 16px 88px;
+  overflow:hidden;
+  box-shadow:0 0 0 1px rgba(255,255,255,0.04), 0 0 40px color-mix(in srgb, var(--team-color) 30%, transparent), 0 8px 30px rgba(0,0,0,0.7);
+}
+.goal-popup.gp-a .body::before { content:''; position:absolute; top:0; left:0; right:0; height:6px;
+  background:linear-gradient(90deg, var(--team-color) 0%, var(--accent-2) 50%, var(--accent-3) 100%);
+  box-shadow:0 0 18px color-mix(in srgb, var(--team-color) 80%, transparent); }
+.goal-popup.gp-a .gp-team-logo { position:absolute; left:18px; top:50%; transform:translateY(-50%); width:54px; height:54px; font-size:30px; }
+.goal-popup.gp-a .lbl { font-family:'Bebas Neue', sans-serif; font-size:14px; letter-spacing:5px; color:var(--team-color); line-height:1; margin-bottom:4px; text-shadow:0 0 10px color-mix(in srgb, var(--team-color) 70%, transparent); }
+.goal-popup.gp-a .scorer { font-family:'Bebas Neue', sans-serif; font-size:44px; letter-spacing:2.5px; line-height:1; color:white; display:flex; align-items:center; gap:10px; }
+.goal-popup.gp-a .scorer .gp-goal-icon { width:34px; height:34px; color:var(--team-color); }
+.goal-popup.gp-a .assist { margin-top:10px; font-family:'Orbitron', monospace; font-size:13px; font-weight:700; letter-spacing:2.5px; color:#aaa; display:flex; align-items:center; gap:8px; }
+.goal-popup.gp-a .assist .gp-assist-icon { width:18px; height:18px; color:var(--team-color); }
+.goal-popup.gp-a .assist .name { color:white; }
+
+/* ─── B · TILTED STRIKE ──────────────────────────────────────── */
+.goal-popup.gp-b { width:620px; }
+.goal-popup.gp-b .body { position:relative; height:120px; transform:skewX(-12deg); transform-origin:bottom center; filter:drop-shadow(0 6px 24px rgba(0,0,0,0.7)); }
+.goal-popup.gp-b .lyr-1 { position:absolute; inset:0; background:#000; }
+.goal-popup.gp-b .lyr-2 { position:absolute; top:0; bottom:0; left:0; width:200px; background:linear-gradient(135deg, var(--team-color), var(--tc-dark)); }
+.goal-popup.gp-b .lyr-3 { position:absolute; top:0; bottom:0; left:200px; width:8px; background:linear-gradient(180deg, var(--accent-3), var(--accent-2)); box-shadow:0 0 14px var(--accent-2); }
+.goal-popup.gp-b .trail { position:absolute; left:30px; top:50%; transform:translateY(-50%); width:160px; height:4px; background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 100%); border-radius:2px; opacity:0.6; }
+.goal-popup.gp-b .trail.t2 { top:32%; width:120px; }
+.goal-popup.gp-b .trail.t3 { top:68%; width:140px; }
+.goal-popup.gp-b .content { position:relative; height:100%; transform:skewX(12deg); display:flex; align-items:center; padding:0 30px; gap:24px; }
+.goal-popup.gp-b .lbl { font-family:'Bebas Neue', sans-serif; font-style:italic; font-size:72px; letter-spacing:3px; color:white; line-height:1; text-shadow:0 4px 0 rgba(0,0,0,0.4), 0 0 18px color-mix(in srgb, var(--team-color) 60%, transparent); }
+.goal-popup.gp-b .right { margin-left:auto; text-align:right; }
+.goal-popup.gp-b .scorer { font-family:'Bebas Neue', sans-serif; font-style:italic; font-size:40px; letter-spacing:2.5px; line-height:1; color:white; display:flex; align-items:center; justify-content:flex-end; gap:10px; }
+.goal-popup.gp-b .scorer .gp-goal-icon { width:32px; height:32px; color:var(--accent-3); }
+.goal-popup.gp-b .assist { margin-top:7px; font-family:'Orbitron', monospace; font-size:12px; letter-spacing:2px; color:#bbb; display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+.goal-popup.gp-b .assist .gp-assist-icon { width:17px; height:17px; color:var(--team-color); }
+.goal-popup.gp-b .assist .name { color:white; }
+
+/* ─── C · DIAGONAL SPLIT ────────────────────────────────────── */
+.goal-popup.gp-c { width:640px; height:140px; }
+.goal-popup.gp-c .body { position:relative; width:100%; height:100%; border-radius:10px; overflow:hidden; background:#0a0a0a; box-shadow:0 8px 30px rgba(0,0,0,0.7); }
+.goal-popup.gp-c .wedge { position:absolute; inset:0; background:linear-gradient(135deg, var(--team-color), var(--tc-dark)); clip-path:polygon(0 0, 62% 0, 38% 100%, 0 100%); box-shadow:inset -2px 0 0 var(--accent-3); }
+.goal-popup.gp-c .seam { position:absolute; top:-10%; bottom:-10%; left:50%; width:4px; background:linear-gradient(180deg, var(--accent-3), var(--accent-2)); transform:rotate(20deg) translateX(-50%); box-shadow:0 0 14px var(--accent-2); }
+.goal-popup.gp-c .gp-team-logo { position:absolute; left:24px; top:50%; transform:translateY(-50%); width:74px; height:74px; font-size:42px; background:rgba(0,0,0,0.2); border:2px solid rgba(255,255,255,0.55); box-shadow:none; }
+.goal-popup.gp-c .lbl { position:absolute; left:120px; top:18px; font-family:'Bebas Neue', sans-serif; font-size:58px; letter-spacing:3px; color:white; line-height:1; text-shadow:2px 2px 0 rgba(0,0,0,0.45); }
+.goal-popup.gp-c .right { position:absolute; right:24px; top:50%; transform:translateY(-50%); text-align:right; }
+.goal-popup.gp-c .scorer { font-family:'Bebas Neue', sans-serif; font-size:36px; letter-spacing:2.5px; line-height:1; color:white; display:flex; align-items:center; justify-content:flex-end; gap:10px; }
+.goal-popup.gp-c .scorer .gp-goal-icon { width:30px; height:30px; color:var(--team-color); }
+.goal-popup.gp-c .assist { margin-top:8px; font-family:'Orbitron', monospace; font-size:13px; font-weight:600; letter-spacing:2px; color:#bbb; display:flex; align-items:center; justify-content:flex-end; gap:8px; }
+.goal-popup.gp-c .assist .gp-assist-icon { width:17px; height:17px; color:var(--team-color); }
+.goal-popup.gp-c .assist .name { color:white; }
+
+/* ─── D · STADIUM JUMBOTRON ─────────────────────────────────── */
+.goal-popup.gp-d { width:600px; height:140px; }
+.goal-popup.gp-d .body { position:relative; width:100%; height:100%; background:#0a0a0a; border-radius:6px; overflow:hidden; box-shadow:0 0 0 1px rgba(255,255,255,0.06), 0 8px 30px rgba(0,0,0,0.7); }
+.goal-popup.gp-d .led { position:absolute; inset:0; background-image:radial-gradient(rgba(255,255,255,0.04) 1.2px, transparent 1.6px); background-size:8px 8px; pointer-events:none; }
+.goal-popup.gp-d .frame { position:absolute; inset:6px; border:2px solid color-mix(in srgb, var(--team-color) 70%, transparent); border-radius:4px; box-shadow:inset 0 0 18px color-mix(in srgb, var(--team-color) 30%, transparent), 0 0 22px color-mix(in srgb, var(--team-color) 35%, transparent); }
+.goal-popup.gp-d .gp-team-logo { position:absolute; left:22px; top:50%; transform:translateY(-50%); width:68px; height:68px; font-size:38px; background:rgba(0,0,0,0.45); border:2px solid color-mix(in srgb, var(--team-color) 75%, transparent); box-shadow:0 0 14px color-mix(in srgb, var(--team-color) 60%, transparent); }
+.goal-popup.gp-d .lbl { position:absolute; left:108px; top:50%; transform:translateY(-50%); font-family:'Orbitron', monospace; font-weight:900; font-size:52px; letter-spacing:6px; color:var(--team-color); line-height:1; text-shadow:0 0 12px color-mix(in srgb, var(--team-color) 80%, transparent), 0 0 22px color-mix(in srgb, var(--team-color) 60%, transparent); }
+.goal-popup.gp-d .right { position:absolute; right:22px; top:50%; transform:translateY(-50%); text-align:right; }
+.goal-popup.gp-d .scorer { font-family:'Orbitron', monospace; font-weight:900; font-size:26px; letter-spacing:3px; line-height:1; color:white; display:flex; align-items:center; justify-content:flex-end; gap:10px; text-shadow:0 0 8px rgba(255,255,255,0.25); }
+.goal-popup.gp-d .scorer .gp-goal-icon { width:24px; height:24px; color:var(--team-color); }
+.goal-popup.gp-d .assist { margin-top:8px; font-family:'Orbitron', monospace; font-weight:600; font-size:12px; letter-spacing:2px; color:color-mix(in srgb, var(--team-color) 70%, #888); display:flex; align-items:center; justify-content:flex-end; gap:6px; }
+.goal-popup.gp-d .assist .gp-assist-icon { width:15px; height:15px; color:var(--team-color); }
+.goal-popup.gp-d .assist .name { color:white; }
+
+/* ─── E · LIGHT BURST ───────────────────────────────────────── */
+.goal-popup.gp-e { width:600px; }
+.goal-popup.gp-e .body { position:relative; background:#0a0a0a; border-radius:10px; padding:18px 24px; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.7), 0 0 60px color-mix(in srgb, var(--team-color) 30%, transparent); }
+.goal-popup.gp-e .rays { position:absolute; inset:0; background:conic-gradient( from 0deg, color-mix(in srgb, var(--team-color) 35%, transparent) 0deg, transparent 12deg, transparent 30deg, color-mix(in srgb, var(--accent-3) 25%, transparent) 36deg, transparent 48deg, transparent 60deg, color-mix(in srgb, var(--team-color) 35%, transparent) 72deg, transparent 84deg, transparent 96deg, color-mix(in srgb, var(--accent-2) 25%, transparent) 108deg, transparent 120deg, transparent 132deg, color-mix(in srgb, var(--team-color) 35%, transparent) 144deg, transparent 156deg, transparent 180deg ); opacity:0.7; mask:radial-gradient(circle at 50% 60%, black 0%, transparent 75%); -webkit-mask:radial-gradient(circle at 50% 60%, black 0%, transparent 75%); transform-origin:50% 60%; animation:rayspin 12s linear infinite; }
+@keyframes rayspin { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+.goal-popup.gp-e .center { position:relative; display:flex; align-items:center; gap:18px; z-index:1; }
+.goal-popup.gp-e .gp-team-logo { width:74px; height:74px; font-size:42px; box-shadow:0 0 24px color-mix(in srgb, var(--team-color) 70%, transparent); }
+.goal-popup.gp-e .lbl { font-family:'Bebas Neue', sans-serif; font-size:62px; letter-spacing:4px; color:white; line-height:1; text-shadow:0 0 14px color-mix(in srgb, var(--team-color) 70%, transparent), 0 4px 0 rgba(0,0,0,0.35); }
+.goal-popup.gp-e .right { margin-left:auto; text-align:right; }
+.goal-popup.gp-e .scorer { font-family:'Bebas Neue', sans-serif; font-size:36px; letter-spacing:2.5px; line-height:1; color:white; display:flex; align-items:center; justify-content:flex-end; gap:10px; text-shadow:0 0 8px color-mix(in srgb, var(--team-color) 60%, transparent); }
+.goal-popup.gp-e .scorer .gp-goal-icon { width:30px; height:30px; color:var(--team-color); }
+.goal-popup.gp-e .assist { margin-top:8px; font-family:'Orbitron', monospace; font-size:13px; font-weight:600; letter-spacing:2px; color:#bbb; display:flex; align-items:center; justify-content:flex-end; gap:6px; }
+.goal-popup.gp-e .assist .gp-assist-icon { width:17px; height:17px; color:var(--team-color); }
+.goal-popup.gp-e .assist .name { color:white; }
+
+/* ─── F · LAYERED DEPTH ─────────────────────────────────────── */
+.goal-popup.gp-f { width:600px; height:148px; }
+.goal-popup.gp-f .back { position:absolute; inset:8px -10px 0 18px; background:linear-gradient(135deg, var(--team-color), var(--tc-dark)); border-radius:10px; transform:rotate(-2deg); box-shadow:0 8px 30px rgba(0,0,0,0.6); overflow:hidden; }
+.goal-popup.gp-f .back .big-logo { position:absolute; right:-30px; top:50%; transform:translateY(-50%); width:200px; height:200px; border-radius:50%; background:rgba(0,0,0,0.18); opacity:0.45; font-family:'Bebas Neue', sans-serif; color:rgba(255,255,255,0.6); font-size:140px; display:flex; align-items:center; justify-content:center; overflow:hidden; }
+.goal-popup.gp-f .back .big-logo img { width:100%; height:100%; object-fit:contain; opacity:0.6; }
+.goal-popup.gp-f .front { position:absolute; inset:0 30px 8px 0; background:linear-gradient(180deg, #0e0e0e, #0a0a0a); border:1px solid rgba(255,255,255,0.06); border-left:5px solid var(--team-color); border-radius:10px; padding:16px 22px; display:flex; align-items:center; gap:18px; box-shadow:0 12px 30px rgba(0,0,0,0.7); }
+.goal-popup.gp-f .spark { position:absolute; width:6px; height:6px; border-radius:50%; }
+.goal-popup.gp-f .spark.s1 { top:-10px; left:30%; background:var(--accent-2); box-shadow:0 0 8px var(--accent-2); }
+.goal-popup.gp-f .spark.s2 { top:8px;   left:55%; background:var(--accent-3); box-shadow:0 0 8px var(--accent-3); width:4px; height:4px; }
+.goal-popup.gp-f .spark.s3 { top:-6px;  left:78%; background:var(--tc-light); box-shadow:0 0 8px var(--tc-light); width:5px; height:5px; }
+.goal-popup.gp-f .spark.s4 { bottom:-6px; left:18%; background:var(--accent-3); box-shadow:0 0 8px var(--accent-3); width:4px; height:4px; }
+.goal-popup.gp-f .spark.s5 { bottom:8px;  left:42%; background:var(--team-color); box-shadow:0 0 8px var(--team-color); width:5px; height:5px; }
+.goal-popup.gp-f .lbl { font-family:'Bebas Neue', sans-serif; font-size:54px; letter-spacing:3px; color:white; line-height:1; text-shadow:0 0 16px color-mix(in srgb, var(--team-color) 70%, transparent); }
+.goal-popup.gp-f .lbl .ex { color:var(--team-color); }
+.goal-popup.gp-f .info { flex:1; }
+.goal-popup.gp-f .scorer { font-family:'Bebas Neue', sans-serif; font-size:34px; letter-spacing:2.5px; color:white; line-height:1; display:flex; align-items:center; gap:8px; }
+.goal-popup.gp-f .scorer .gp-goal-icon { width:28px; height:28px; color:var(--team-color); }
+.goal-popup.gp-f .assist { margin-top:8px; font-family:'Orbitron', monospace; font-size:12px; font-weight:600; letter-spacing:2px; color:#aaa; display:flex; align-items:center; gap:6px; }
+.goal-popup.gp-f .assist .gp-assist-icon { width:17px; height:17px; color:var(--team-color); }
+.goal-popup.gp-f .assist .name { color:white; }
+
+body.no-bridge .goal-popup { display:none !important; }
 </style>
 </head>
 <body>
@@ -1080,6 +1235,12 @@ body.no-bridge .boost-indicator { display:none !important; }
         <div class="boost-v" id="boostValue">0</div>
       </div>
     </div>
+
+    <!-- Bottom-center goal popup. Inner DOM is rendered by JS based on
+         the producer-selected style (stream_overlay_config.goalPopupStyle)
+         so all six layouts share the same data path. Shown on bridge
+         Goal event, hidden on ReplayEnd. -->
+    <div id="goalPopup" class="goal-popup gp-a"></div>
   </div>
 
 <script>
@@ -1190,6 +1351,9 @@ function applyOverlayConfig(cfg) {
   // a/b/c/d/e/f from the variants doc.
   const style = (cfg && cfg.nowWatchingStyle) || 'a';
   applyNowWatchingStyle(style);
+  // Goal-popup style — same a..f convention from the goal-variants doc.
+  const goalStyle = (cfg && cfg.goalPopupStyle) || 'a';
+  applyGoalPopupStyle(goalStyle);
 
   const next = !!(cfg && cfg.noBridge);
   if (next === noBridgeMode) return;
@@ -1409,6 +1573,182 @@ function repaintNowWatching(snap) {
 
 // Initial shell render so the IDs exist before the first bridge tick.
 applyNowWatchingStyle('a');
+
+// ── Goal popup ───────────────────────────────────────────────────
+// Six visual styles bundled in CSS (gp-a..f). The body markup is built
+// per-style here. Producer picks the active style on the Customize tab
+// (stream_overlay_config.goalPopupStyle).
+const GOAL_STYLES = ['a','b','c','d','e','f'];
+let currentGoalStyle = 'a';
+let goalReplayTimeoutId = null;
+const GOAL_REPLAY_FALLBACK_MS = 11000; // hide if no ReplayEnd within 11s
+
+function renderGoalPopupShell(style) {
+  const logo = '<div class="gp-team-logo"><span class="gp-letter" id="gpLogoLetter">—</span><img class="gp-team-img" id="gpLogoImg" alt="" style="display:none"></div>';
+  const scorer = '<div class="scorer"><span class="gp-goal-icon"></span><span id="gpScorer">—</span></div>';
+  const assist = '<div class="assist"><span class="gp-assist-icon"></span>ASSIST · <span class="name" id="gpAssist">—</span></div>';
+  switch (style) {
+    case 'b':
+      return (
+        '<div class="body"><div class="lyr-1"></div><div class="lyr-2"></div><div class="lyr-3"></div>' +
+          '<div class="trail"></div><div class="trail t2"></div><div class="trail t3"></div>' +
+          '<div class="content"><div class="lbl">GOAL!</div><div class="right">' + scorer + assist + '</div></div>' +
+        '</div>'
+      );
+    case 'c':
+      return (
+        '<div class="body"><div class="wedge"></div><div class="seam"></div>' +
+          logo + '<div class="lbl">GOAL!</div>' +
+          '<div class="right">' + scorer + assist + '</div>' +
+        '</div>'
+      );
+    case 'd':
+      return (
+        '<div class="body"><div class="led"></div><div class="frame"></div>' +
+          logo + '<div class="lbl">GOAL</div>' +
+          '<div class="right">' + scorer + assist + '</div>' +
+        '</div>'
+      );
+    case 'e':
+      return (
+        '<div class="body"><div class="rays"></div>' +
+          '<div class="center">' + logo + '<div class="lbl">GOAL</div>' +
+            '<div class="right">' + scorer + assist + '</div>' +
+          '</div>' +
+        '</div>'
+      );
+    case 'f':
+      return (
+        '<div class="back"><div class="big-logo" id="gpBigLogo">T</div></div>' +
+        '<div class="front">' +
+          '<div class="lbl">GOAL<span class="ex">!</span></div>' +
+          '<div class="info">' + scorer + assist + '</div>' +
+        '</div>' +
+        '<div class="spark s1"></div><div class="spark s2"></div><div class="spark s3"></div><div class="spark s4"></div><div class="spark s5"></div>'
+      );
+    case 'a':
+    default:
+      return (
+        '<div class="body">' +
+          logo + '<div class="lbl">GOAL · SCORED</div>' +
+          scorer + assist +
+        '</div>'
+      );
+  }
+}
+
+function applyGoalPopupStyle(style) {
+  if (!GOAL_STYLES.includes(style)) style = 'a';
+  const el = document.getElementById('goalPopup');
+  if (!el) return;
+  if (style === currentGoalStyle && el.querySelector('#gpScorer')) return;
+  currentGoalStyle = style;
+  el.className = 'goal-popup gp-' + style + (el.classList.contains('show') ? ' show' : '');
+  el.innerHTML = renderGoalPopupShell(style);
+}
+
+function showGoalPopup({ scorer, assist, teamIdx }) {
+  const el = document.getElementById('goalPopup');
+  if (!el) return;
+  // Set team color from the scoring team
+  const color = matchupTeamColors[teamIdx] || (teamIdx === 0 ? '#1873FF' : '#C26418');
+  el.style.setProperty('--team-color', color);
+  // Populate scorer/assist
+  const sc = document.getElementById('gpScorer'); if (sc) sc.textContent = (scorer || '—').toUpperCase();
+  const as = document.getElementById('gpAssist'); if (as) as.textContent = assist ? assist.toUpperCase() : '—';
+  // Hide the assist row if no assister
+  const asRow = el.querySelector('.assist');
+  if (asRow) asRow.style.display = assist ? '' : 'none';
+  // Team logo — use matchup logo if available, else letter fallback
+  const logoSrc = matchupTeamLogos[teamIdx];
+  const img = document.getElementById('gpLogoImg');
+  const letter = document.getElementById('gpLogoLetter');
+  if (img) {
+    if (logoSrc) { img.src = logoSrc; img.style.display = 'block'; }
+    else { img.removeAttribute('src'); img.style.display = 'none'; }
+  }
+  if (letter) {
+    letter.textContent = (scorer || '?').trim()[0] || '?';
+    const parent = letter.parentElement;
+    if (parent) parent.classList.toggle('has-img', !!logoSrc);
+  }
+  // Style F's big watermark logo
+  const big = document.getElementById('gpBigLogo');
+  if (big) {
+    if (logoSrc) big.innerHTML = '<img src="' + logoSrc + '" alt="">';
+    else big.textContent = (scorer || '?').trim()[0] || '?';
+  }
+  el.classList.add('show');
+  // Fallback hide — if ReplayEnd never arrives (bridge missed the event),
+  // make sure the popup doesn't stick on screen forever.
+  clearTimeout(goalReplayTimeoutId);
+  goalReplayTimeoutId = setTimeout(() => hideGoalPopup(), GOAL_REPLAY_FALLBACK_MS);
+}
+function hideGoalPopup() {
+  const el = document.getElementById('goalPopup');
+  if (el) el.classList.remove('show');
+  clearTimeout(goalReplayTimeoutId);
+}
+
+// Boot the goal popup shell.
+applyGoalPopupStyle('a');
+
+// Direct Goal event handler — RL SOS bridge may send the scorer/
+// assister in a few different shapes; pluck them defensively.
+function handleGoalEvent(data) {
+  if (!data) return;
+  const scorerObj = data.scorer || data.Scorer || null;
+  const assistObj = data.assister || data.Assister || null;
+  const scorerName = scorerObj && (scorerObj.name || scorerObj.Name);
+  const assistName = assistObj && (assistObj.name || assistObj.Name);
+  let teamIdx = null;
+  if (scorerObj) {
+    if (scorerObj.team_num != null)      teamIdx = scorerObj.team_num;
+    else if (scorerObj.TeamNum != null)  teamIdx = scorerObj.TeamNum;
+  }
+  if (scorerName) showGoalPopup({ scorer: scorerName, assist: assistName || null, teamIdx });
+}
+
+// Score-delta fallback — every UpdateState we diff team scores AND each
+// player's Goals/Assists since the last tick. If a team's score went up
+// AND a specific player's Goals incremented, that's our scorer. Same
+// tick's Assists increment on the same team = the assister. Belt-and-
+// suspenders so we don't miss goals if the bridge omits the Goal event.
+const _goalTrack = { teamScores:{0:0,1:0}, playerG:{}, playerA:{}, lastGoalAt:0 };
+function trackGoalsViaUpdateState(data) {
+  if (!data || !data.Game || !Array.isArray(data.Game.Teams) || !Array.isArray(data.Players)) return;
+  const t0 = data.Game.Teams[0] && data.Game.Teams[0].Score;
+  const t1 = data.Game.Teams[1] && data.Game.Teams[1].Score;
+  let scoredTeam = -1;
+  if (t0 != null && t0 > _goalTrack.teamScores[0]) scoredTeam = 0;
+  if (t1 != null && t1 > _goalTrack.teamScores[1]) scoredTeam = 1;
+  if (scoredTeam !== -1 && Date.now() - _goalTrack.lastGoalAt > 1500) {
+    let scorer = null, assister = null;
+    for (const p of data.Players) {
+      if (!p || !p.Name) continue;
+      const prevG = _goalTrack.playerG[p.Name] || 0;
+      const prevA = _goalTrack.playerA[p.Name] || 0;
+      if (p.TeamNum === scoredTeam && (p.Goals || 0)   > prevG) scorer   = p;
+      if (p.TeamNum === scoredTeam && (p.Assists || 0) > prevA) assister = p;
+    }
+    if (scorer) {
+      _goalTrack.lastGoalAt = Date.now();
+      showGoalPopup({
+        scorer: scorer.Name,
+        assist: assister && assister.Name !== scorer.Name ? assister.Name : null,
+        teamIdx: scoredTeam,
+      });
+    }
+  }
+  if (t0 != null) _goalTrack.teamScores[0] = t0;
+  if (t1 != null) _goalTrack.teamScores[1] = t1;
+  for (const p of data.Players) {
+    if (!p || !p.Name) continue;
+    _goalTrack.playerG[p.Name] = p.Goals   || 0;
+    _goalTrack.playerA[p.Name] = p.Assists || 0;
+  }
+}
+
 // In the control-panel preview iframe, pin the card to demo data so the
 // producer can evaluate styles before there's a live game to spectate.
 if (DEMO_MODE) {
@@ -1417,10 +1757,33 @@ if (DEMO_MODE) {
   // hits FLIP COLOR — toggle between team 0 and team 1's palette so
   // both sides of the matchup can be sanity-checked.
   window.addEventListener('message', (e) => {
-    if (!e || !e.data || e.data.type !== 'demo-flip-team') return;
-    demoTeamIdx = demoTeamIdx === 0 ? 1 : 0;
-    applyDemoNowWatching();
+    if (!e || !e.data) return;
+    if (e.data.type === 'demo-flip-team') {
+      demoTeamIdx = demoTeamIdx === 0 ? 1 : 0;
+      applyDemoNowWatching();
+      if (GOAL_DEMO_MODE) demoTriggerGoal();
+    } else if (e.data.type === 'demo-replay-goal') {
+      demoTriggerGoal();
+    }
   });
+}
+
+// Demo goal popup — auto-shows in the Customize preview so the producer
+// can evaluate styles without needing a live goal. Triggered by URL
+// param ?goalDemo=1.
+const GOAL_DEMO_MODE = new URLSearchParams(location.search).has('goalDemo');
+function demoTriggerGoal() {
+  if (!GOAL_DEMO_MODE) return;
+  showGoalPopup({ scorer: 'TIDESTORM', assist: 'HARRYHANGS', teamIdx: demoTeamIdx });
+}
+if (GOAL_DEMO_MODE) {
+  // First trigger after a beat so the entrance animation is visible.
+  setTimeout(demoTriggerGoal, 800);
+  // Loop the demo: hide → wait → show again, on a leisurely cycle.
+  setInterval(() => {
+    hideGoalPopup();
+    setTimeout(demoTriggerGoal, 1200);
+  }, 7000);
 }
 
 async function fetchOverlayConfig() {
@@ -1926,6 +2289,7 @@ function connectStats() {
       renderScoreboard(msg.Data);
       updatePlayerBoosts(msg.Data);
       trackMatchSnapshot(msg.Data);
+      trackGoalsViaUpdateState(msg.Data);
     } else if (msg.Event === 'MatchDestroyed') {
       nwHide();
       sbHide();
@@ -1936,6 +2300,13 @@ function connectStats() {
     } else if (msg.Event === 'PodiumStart') {
       // Podium fires reliably even when MatchEnded is missed
       onMatchEnded(msg.Data);
+    } else if (msg.Event === 'Goal') {
+      // Bridge fires this on goal_scored. Show the popup with scorer +
+      // assister + scoring team for the duration of the replay.
+      handleGoalEvent(msg.Data);
+    } else if (msg.Event === 'ReplayEnd' || msg.Event === 'ReplayWillEnd') {
+      // Replay is wrapping — fade the popup before play resumes.
+      hideGoalPopup();
     } else if (msg.Event === 'ServerHello') {
       // Sent on every WS connect. Compare against the server version we
       // saw on a prior connect — if it's different, this overlay is
@@ -1960,10 +2331,11 @@ function connectStats() {
       // didn't update for a while".
       const key = msg.Data && msg.Data.key;
       if (key === 'stream_overlay_config') {
-        // Clear the style guard so applyNowWatchingStyle is guaranteed to
-        // re-render the inner DOM even if the new style happens to match
-        // what was applied before some other tick (race-condition safe).
+        // Clear the style guards so apply* are guaranteed to re-render
+        // even if the new value happens to match what was applied before
+        // some other tick (race-condition safe).
         currentNwStyle = '';
+        currentGoalStyle = '';
         fetchOverlayConfig();
       } else if (key === 'stream_match')  { lastSig = ''; poll(); }
       else if (key === 'stream_series') { lastSeriesSig = ''; poll(); }
