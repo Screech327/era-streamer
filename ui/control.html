@@ -774,10 +774,20 @@ h1, h2, h3 {
   margin:0;
 }
 .cz-preview-wrap .preview-stage {
-  flex:1 1 auto;
-  aspect-ratio:auto;
+  /* Always render the preview at 16:9 — matches the OBS browser source
+     aspect ratio so the producer is seeing exactly what'll appear on
+     stream. The splitter resizes the WRAP but the stage shrinks to fit
+     within the available width × height while keeping its ratio.
+     Excess space inside the wrap becomes letterbox margin. */
+  aspect-ratio:16 / 9;
+  width:auto;
   height:auto;
+  max-width:100%;
+  max-height:100%;
+  margin:0 auto;
+  flex:0 1 auto;
   min-height:0;
+  align-self:center;
 }
 .cz-splitter {
   flex:0 0 10px;
