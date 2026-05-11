@@ -743,6 +743,16 @@ h1, h2, h3 {
   gap:14px;
   margin-bottom:12px;
 }
+/* Customize-tab preview stays pinned to the top of the scroll area
+   so the producer can keep watching the overlay while flipping through
+   pickers and toggles in the panels below. */
+.tab-pane[data-pane="customize"] > .preview-panel {
+  position:sticky;
+  top:0;
+  z-index:5;
+  /* Solid backdrop so panels scrolling beneath don't show through. */
+  background:var(--panel);
+}
 .preview-panel .panel-head h2 { margin:0; }
 .panel-head-tools { display:flex; align-items:center; gap:14px; }
 /* ─── Overlay-element toggles + stat checkboxes ─────────────────────── */
@@ -1081,9 +1091,10 @@ h1, h2, h3 {
   <div class="main-content">
 <div class="app">
 
-  <!-- Inline help banner that shows when RL isn't reachable. The bridge
-       retries every ~1.5s; this just tells the producer in plain English
-       what to check rather than letting them stare at a red pill. -->
+  <div class="tab-pane active" data-pane="main">
+
+  <!-- RL hint banner + OBS source bar live inside the Main tab so they
+       don't pollute the Customize/Archive/Settings views. -->
   <div class="rl-hint hidden" id="rlHint">
     <div class="rl-hint-text"><strong>Rocket League is not detected</strong> — Check that Rocket League is running.</div>
     <button class="btn" id="bridgeReconnectBtn" type="button">RETRY CONNECTION</button>
@@ -1094,8 +1105,6 @@ h1, h2, h3 {
     <code id="obsUrl">http://127.0.0.1:49124/match.html</code>
     <button class="btn" id="copyObsBtn">COPY</button>
   </div>
-
-  <div class="tab-pane active" data-pane="main">
 
   <div class="panel match-panel">
     <h2>MATCH</h2>
@@ -1232,10 +1241,25 @@ h1, h2, h3 {
   </div><!-- end main pane -->
 
   <div class="tab-pane" data-pane="customize">
+    <div class="panel preview-panel">
+      <div class="panel-head">
+        <h2>OVERLAY PREVIEW</h2>
+        <div class="panel-head-tools">
+          <button class="btn btn-small" id="cz_animateBtn" type="button" title="Animate boosts so you can see everything move">▶ ANIMATE</button>
+          <button class="btn btn-small" id="cz_flipColorBtn" type="button" title="Show the card in the other team's color">FLIP COLOR</button>
+          <button class="btn btn-small" id="cz_replayGoalBtn" type="button" title="Re-trigger the goal popup">REPLAY GOAL</button>
+          <button class="btn btn-small" id="cz_refreshBtn" type="button">REFRESH</button>
+        </div>
+      </div>
+      <div class="preview-stage" id="cz_previewStage">
+        <iframe class="preview-frame" id="cz_previewFrame" src="/match.html?demo=1&goalDemo=1" title="Customization preview"></iframe>
+      </div>
+    </div>
+
     <div class="panel">
       <h2>OVERLAY CUSTOMIZATION</h2>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:6px;">
-        Pick which visual style the overlay uses for each broadcast element, and what shows up. Changes apply live — the preview below updates in real time and propagates to OBS instantly.
+        Pick which visual style the overlay uses for each broadcast element, and what shows up. Changes apply live — the preview above updates in real time and propagates to OBS instantly.
       </div>
     </div>
 
@@ -1412,20 +1436,6 @@ h1, h2, h3 {
       </div>
     </div>
 
-    <div class="panel preview-panel">
-      <div class="panel-head">
-        <h2>PREVIEW</h2>
-        <div class="panel-head-tools">
-          <button class="btn btn-small" id="cz_animateBtn" type="button" title="Animate boosts so you can see everything move">▶ ANIMATE</button>
-          <button class="btn btn-small" id="cz_flipColorBtn" type="button" title="Show the card in the other team's color">FLIP COLOR</button>
-          <button class="btn btn-small" id="cz_replayGoalBtn" type="button" title="Re-trigger the goal popup">REPLAY GOAL</button>
-          <button class="btn btn-small" id="cz_refreshBtn" type="button">REFRESH</button>
-        </div>
-      </div>
-      <div class="preview-stage" id="cz_previewStage">
-        <iframe class="preview-frame" id="cz_previewFrame" src="/match.html?demo=1&goalDemo=1" title="Customization preview"></iframe>
-      </div>
-    </div>
   </div>
 
   <div class="tab-pane" data-pane="archive">
