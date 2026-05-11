@@ -222,31 +222,34 @@ html, body {
 .player-row.empty .player-boost { display:none; }
 
 /* === ACTIVE-SPECTATOR HIGHLIGHT ===
-   Marks the player currently being spectated so viewers can match the
-   in-game POV to a row at a glance. Subtle team-color glow across the
-   row plus a pulsing dot on the outside edge. */
-.player-row.is-target {
-  background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--team-color, #888) 18%, transparent));
-}
-.players-right .player-row.is-target {
-  background:linear-gradient(270deg, transparent, color-mix(in srgb, var(--team-color, #888) 18%, transparent));
-}
+   Marks the player currently being spectated. Bright red pulsing dot
+   sitting OUTSIDE the card edge (like a recording light) — always
+   readable regardless of team color. Name brightens slightly too. */
+.player-row { position:relative; }
 .player-row.is-target .player-name {
   color:white;
-  text-shadow:0 0 10px var(--team-color, #888), 0 1px 4px rgba(0,0,0,0.7);
+  text-shadow:0 0 8px rgba(255,255,255,0.35), 0 1px 4px rgba(0,0,0,0.7);
 }
 .player-row.is-target::before {
   content:'';
-  width:6px; height:6px;
+  position:absolute;
+  top:50%;
+  width:10px; height:10px;
+  margin-top:-5px;
   border-radius:50%;
-  background:var(--team-color, #fff);
-  box-shadow:0 0 10px var(--team-color, #fff);
-  flex:0 0 auto;
-  animation:targetPulse 1.4s ease-in-out infinite;
+  background:#ff2a2a;
+  box-shadow:0 0 8px #ff2a2a;
+  animation:targetPulse 1.2s ease-in-out infinite;
 }
+/* Inside edge of each card so the dot stays visible (the outside edge
+   of each card sits at the canvas boundary). Left players' dot hangs
+   to the right of the row, toward screen center; right players' dot
+   hangs to the left. */
+.players-left  .player-row.is-target::before { right:-22px; }
+.players-right .player-row.is-target::before { left:-22px;  }
 @keyframes targetPulse {
-  0%, 100% { opacity:0.55; transform:scale(0.85); }
-  50%      { opacity:1;    transform:scale(1.2);  }
+  0%, 100% { opacity:0.65; box-shadow:0 0 6px  #ff2a2a; }
+  50%      { opacity:1;    box-shadow:0 0 14px #ff2a2a, 0 0 4px #ff2a2a; }
 }
 
 /* === NO-BRIDGE MODE ===
@@ -1721,6 +1724,10 @@ async function poll() {
 // stays hidden — the rest of the overlay continues to work as before.
 let statsWs = null;
 let statsBackoff = 1500;
+// Tracks the server's appVersion seen on the most recent WS Hello. If
+// the server reports a different version on a later reconnect, this
+// overlay is running stale HTML and reloads itself.
+let lastServerVersion = null;
 
 function nwHide() {
   const el = document.getElementById('nowWatching');
@@ -1929,6 +1936,22 @@ function connectStats() {
     } else if (msg.Event === 'PodiumStart') {
       // Podium fires reliably even when MatchEnded is missed
       onMatchEnded(msg.Data);
+    } else if (msg.Event === 'ServerHello') {
+      // Sent on every WS connect. Compare against the server version we
+      // saw on a prior connect — if it's different, this overlay is
+      // running stale code (era-streamer was upgraded behind it) and
+      // needs to reload. First-ever connect just stashes the version.
+      const v = msg.Data && msg.Data.version;
+      if (v) {
+        if (lastServerVersion && lastServerVersion !== v) {
+          // Cache-bust so OBS's CEF actually refetches the new HTML.
+          const url = new URL(location.href);
+          url.searchParams.set('v', v);
+          location.replace(url.toString());
+          return;
+        }
+        lastServerVersion = v;
+      }
     } else if (msg.Event === 'SettingsChanged') {
       // Server broadcasts this when the producer upserts a settings row
       // (e.g. switches the player-card style). Re-fetch the relevant

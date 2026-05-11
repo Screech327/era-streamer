@@ -521,6 +521,11 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
   const wsClients = new Set();
   wss.on('connection', (ws) => {
     wsClients.add(ws);
+    // Send a hello with the current app version. The overlay uses this
+    // to detect that the server restarted on a newer build and reloads
+    // itself — no more "right-click → Refresh cache" in OBS after every
+    // era-streamer update.
+    try { ws.send(JSON.stringify({ Event: 'ServerHello', Data: { version: appVersion || '0.0.0' } })); } catch (_) {}
     // Replay the last known UpdateState to the new client so it doesn't have
     // to wait for the next RL tick to populate.
     if (lastUpdate) { try { ws.send(JSON.stringify(lastUpdate)); } catch (_) {} }
