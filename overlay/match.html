@@ -628,9 +628,11 @@ body.no-bridge .player-row { gap:0; }
      arc grows from a fixed start point — dashoffset-based fill made the
      gap rotate around the circle as boost changed. */
   stroke-dasharray:0 283;
-  transition:stroke-dasharray 0.25s ease;
+  opacity:0;
+  transition:stroke-dasharray 0.25s ease, opacity 0.15s ease;
   filter:drop-shadow(0 0 4px var(--team-color, #888));
 }
+.boost-fill.has-fill { opacity:1; }
 .boost-label {
   position:absolute; inset:0;
   display:flex; flex-direction:column;
@@ -1716,6 +1718,9 @@ function applyBoostIndicator(boost, color) {
   if (fill) {
     const visible = ARC * pct / 100;
     fill.style.strokeDasharray = visible + ' ' + (RING - visible);
+    // Hide the stroke at 0% so the rounded line cap doesn't render a
+    // tiny dot at the start of the arc.
+    fill.classList.toggle('has-fill', pct > 0);
   }
   if (valEl) valEl.textContent = Math.round(pct);
   el.classList.add('visible');
