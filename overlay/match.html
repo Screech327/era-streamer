@@ -601,6 +601,15 @@ body.no-bridge .player-row { gap:0; }
   overflow:hidden;
   text-overflow:ellipsis;
 }
+/* Team-logo placeholder shared by all styles. The renderer sets the
+   src; CSS positions/sizes it differently per style. The .empty class
+   is added when there's no logo (no matchup pushed) so we can hide it
+   gracefully. */
+.nw-logo-img {
+  display:block;
+  object-fit:contain;
+}
+.nw-logo-img.empty { display:none; }
 
 /* ───── A · CURRENT ─────────────────────────────────────────────── */
 .now-watching.style-a {
@@ -612,6 +621,13 @@ body.no-bridge .player-row { gap:0; }
   box-shadow:0 4px 22px rgba(0,0,0,0.65);
   backdrop-filter:blur(6px);
   -webkit-backdrop-filter:blur(6px);
+}
+.style-a .nw-logo-img {
+  position:absolute;
+  top:12px; right:14px;
+  width:34px; height:34px;
+  opacity:0.92;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));
 }
 .style-a .nw-label {
   font-family:'Orbitron', monospace;
@@ -644,10 +660,18 @@ body.no-bridge .player-row { gap:0; }
   filter:drop-shadow(0 4px 16px rgba(0,0,0,0.6));
 }
 .style-b .nw-body {
+  position:relative;
   background:rgba(8,8,8,0.92);
   clip-path:polygon(0 14px, 22px 14px, 32px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
   padding:22px 18px 14px 22px;
   border-left:3px solid var(--team-color, #555);
+}
+.style-b .nw-logo-img {
+  position:absolute;
+  top:16px; right:18px;
+  width:36px; height:36px;
+  opacity:0.92;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.6));
 }
 .style-b .nw-tab {
   position:absolute; top:0; left:36px;
@@ -698,7 +722,19 @@ body.no-bridge .player-row { gap:0; }
   font-size:36px; letter-spacing:2px;
   color:#fff;
   box-shadow:0 2px 10px color-mix(in srgb, var(--team-color, #555) 40%, transparent);
+  overflow:hidden;
+  position:relative;
 }
+.style-c .nw-logo-img {
+  position:absolute;
+  inset:6px;
+  width:auto; height:auto;
+  max-width:calc(100% - 12px); max-height:calc(100% - 12px);
+  margin:auto;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+/* Hide the letter fallback (in .nw-logo) when an actual image is present. */
+.style-c .nw-logo.has-img .nw-logo-letter { display:none; }
 .style-c .nw-right { min-width:0; }
 .style-c .nw-lbl-row { display:flex; align-items:center; gap:8px; margin-bottom:2px; }
 .style-c .nw-lbl-dot {
@@ -737,10 +773,15 @@ body.no-bridge .player-row { gap:0; }
 }
 .style-d .nw-hero {
   background:linear-gradient(135deg, var(--team-color, #555), color-mix(in srgb, var(--team-color, #555) 35%, #000));
-  padding:12px 12px 14px;
+  padding:8px 12px 10px;
   display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:2px;
+  gap:1px;
   color:#fff;
+}
+.style-d .nw-logo-img {
+  width:36px; height:36px;
+  margin-bottom:2px;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
 }
 .style-d .nw-hero-l { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:2px; opacity:0.85; }
 .style-d .nw-hero-v { font-family:'Bebas Neue',sans-serif; font-size:46px; letter-spacing:1px; line-height:1; }
@@ -775,6 +816,11 @@ body.no-bridge .player-row { gap:0; }
   -webkit-backdrop-filter:blur(14px);
   box-shadow:0 6px 22px rgba(0,0,0,0.6);
 }
+.style-e .nw-logo-img {
+  width:32px; height:32px;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+  flex:0 0 auto;
+}
 .style-e .nw-label {
   background:var(--team-color, #555);
   color:#fff;
@@ -806,7 +852,14 @@ body.no-bridge .player-row { gap:0; }
   border-top:2px solid var(--team-color, #555);
   box-shadow:0 6px 20px rgba(0,0,0,0.65);
 }
-.style-f .nw-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px; }
+.style-f { position:relative; }
+.style-f .nw-logo-img {
+  position:absolute;
+  top:10px; right:14px;
+  width:30px; height:30px;
+  filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));
+}
+.style-f .nw-head { display:flex; align-items:baseline; justify-content:space-between; margin-bottom:8px; padding-right:38px; }
 .style-f .nw-label {
   font-family:'Orbitron', monospace;
   font-weight:700;
@@ -1015,6 +1068,10 @@ const DEMO_MODE = new URLSearchParams(location.search).has('demo');
 // lobby palette. Declared up here so applyDemoNowWatching can safely
 // reference it during the initial render.
 const matchupTeamColors = { 0: null, 1: null };
+// Logo paths (same indexing) so the now-watching card can show the
+// spectated player's team logo. Populated by renderSide when the
+// matchup is pushed; consumed by repaintNowWatching / applyDemoNowWatching.
+const matchupTeamLogos = { 0: null, 1: null };
 
 function applyOverlayConfig(cfg) {
   // Now-watching style — defaults to 'a' (the historical layout). Any of
@@ -1060,8 +1117,10 @@ function applyDemoNowWatching() {
   const fallback = demoTeamIdx === 0 ? '#1873FF' : '#C26418';
   const color = matchupTeamColors[demoTeamIdx] || fallback;
   el.style.setProperty('--team-color', color);
-  lastNwSnapshot = DEMO_SNAPSHOT;
-  repaintNowWatching(DEMO_SNAPSHOT);
+  // Inject teamIdx so repaintNowWatching picks the matching team logo.
+  const snap = Object.assign({}, DEMO_SNAPSHOT, { teamIdx: demoTeamIdx });
+  lastNwSnapshot = snap;
+  repaintNowWatching(snap);
   el.classList.add('visible');
 }
 
@@ -1125,18 +1184,26 @@ function renderNowWatchingShell(style) {
       '<div class="nw-stat"><div class="nw-stat-l">DEMOS</div><div class="nw-stat-v" id="nwDemos">0</div></div>'
     );
   };
+  // Each style gets the same logo img with id="nwLogo" (or as a child of
+  // .nw-logo in style C). repaintNowWatching sets `src` later. Hidden via
+  // the `.empty` class when no matchup is pushed.
+  const logo = '<img class="nw-logo-img empty" id="nwLogo" alt="">';
   switch (style) {
     case 'b':
       return (
         '<div class="nw-tab">WATCHING</div>' +
         '<div class="nw-body">' +
+          logo +
           '<div class="nw-name" id="nwName">—</div>' +
           '<div class="nw-stats">' + cells('short6') + '</div>' +
         '</div>'
       );
     case 'c':
       return (
-        '<div class="nw-logo" id="nwLogo">—</div>' +
+        '<div class="nw-logo">' +
+          '<span class="nw-logo-letter" id="nwLogoLetter">—</span>' +
+          '<img class="nw-logo-img empty" id="nwLogo" alt="">' +
+        '</div>' +
         '<div class="nw-right">' +
           '<div class="nw-lbl-row"><div class="nw-lbl-dot"></div><div class="nw-label">WATCHING</div></div>' +
           '<div class="nw-name" id="nwName">—</div>' +
@@ -1146,6 +1213,7 @@ function renderNowWatchingShell(style) {
     case 'd':
       return (
         '<div class="nw-hero">' +
+          logo +
           '<div class="nw-hero-l">SCORE</div>' +
           '<div class="nw-hero-v" id="nwScore">0</div>' +
         '</div>' +
@@ -1157,6 +1225,7 @@ function renderNowWatchingShell(style) {
       );
     case 'e':
       return (
+        logo +
         '<div class="nw-label">WATCHING</div>' +
         '<div class="nw-name" id="nwName">—</div>' +
         '<div class="nw-divider"></div>' +
@@ -1164,6 +1233,7 @@ function renderNowWatchingShell(style) {
       );
     case 'f':
       return (
+        logo +
         '<div class="nw-head">' +
           '<div class="nw-label">WATCHING</div>' +
           '<div class="nw-score-big"><small>SCORE</small><span id="nwScore">0</span></div>' +
@@ -1174,6 +1244,7 @@ function renderNowWatchingShell(style) {
     case 'a':
     default:
       return (
+        logo +
         '<div class="nw-label">WATCHING</div>' +
         '<div class="nw-name" id="nwName">—</div>' +
         '<div class="nw-stats">' + cells('full6') + '</div>'
@@ -1192,9 +1263,33 @@ function repaintNowWatching(snap) {
   set('nwSaves',   snap.saves);
   set('nwShots',   snap.shots);
   set('nwDemos',   snap.demos);
-  // Style C uses an initial-letter shield as a stand-in for a logo.
-  const logo = document.getElementById('nwLogo');
-  if (logo) logo.textContent = (snap.name || '?').trim()[0] || '?';
+
+  // Team logo — pick from matchupTeamLogos by the spectated player's team
+  // (snap.teamIdx). Falls back to an empty img we hide via the .empty
+  // class so layout doesn't shift.
+  const logoEl = document.getElementById('nwLogo');
+  const letter = document.getElementById('nwLogoLetter');
+  const logoSrc = (snap.teamIdx === 0 || snap.teamIdx === 1) ? matchupTeamLogos[snap.teamIdx] : null;
+  if (logoEl) {
+    if (logoSrc) {
+      logoEl.src = logoSrc;
+      logoEl.classList.remove('empty');
+    } else {
+      logoEl.removeAttribute('src');
+      logoEl.classList.add('empty');
+    }
+  }
+  // Style C's shield: hide the letter fallback when a real logo is shown.
+  if (letter) {
+    if (logoSrc) {
+      const parent = letter.parentElement;
+      if (parent) parent.classList.add('has-img');
+    } else {
+      const parent = letter.parentElement;
+      if (parent) parent.classList.remove('has-img');
+      letter.textContent = (snap.name || '?').trim()[0] || '?';
+    }
+  }
 }
 
 // Initial shell render so the IDs exist before the first bridge tick.
@@ -1337,14 +1432,16 @@ async function renderSide(side, slot, league /*, playerOverrides — ignored */)
   document.getElementById(side + 'Series').style.setProperty('--team-color', color);
   nameBox.textContent = team.name;
 
-  // Remember the ERA color for this side so the live scoreboard + post-game
-  // card can use it. Re-render the scoreboard immediately if we already
-  // have bridge data so the new color is applied on the next paint.
+  // Remember the ERA color + logo path for this side so the live
+  // scoreboard, post-game card, and now-watching player card can pull
+  // them. Re-render the scoreboard immediately if we already have bridge
+  // data so the new color is applied on the next paint.
   matchupTeamColors[side === 'left' ? 0 : 1] = color;
+  matchupTeamLogos[side === 'left' ? 0 : 1]  = team.logo;
   if (lastBridgeUpdate) renderScoreboard(lastBridgeUpdate);
-  // In demo mode, the now-watching card uses the left team's ERA color so
-  // the producer can preview how the card looks against their actual
-  // matchup palette instead of a generic blue.
+  // In demo mode, the now-watching card uses the left team's ERA color
+  // and logo so the producer can preview how the card looks against
+  // their actual matchup palette instead of a generic blue.
   if (DEMO_MODE) applyDemoNowWatching();
 
   logoBox.innerHTML = '';
@@ -1632,6 +1729,7 @@ function renderNowWatching(data) {
     saves:   player.Saves   || 0,
     shots:   player.Shots   || 0,
     demos:   player.Demos   || 0,
+    teamIdx: target.TeamNum,
   };
   lastNwSnapshot = snap;
   repaintNowWatching(snap);
