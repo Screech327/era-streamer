@@ -2645,6 +2645,10 @@ $('wizCopyUrl').addEventListener('click', () => {
 (async () => {
   await loadTeams();
   await loadState();
+  // loadTeams populated leagueSel against the default state.league; loadState
+  // may have replaced it with the saved league, so re-sync the dropdown
+  // before painting the teams.
+  $('leagueSel').value = state.league;
   fillTeamSelect('leftSel',  state.leftSlot);
   fillTeamSelect('rightSel', state.rightSlot);
   $('titleInput').value = state.title || '';
