@@ -1004,7 +1004,15 @@ body.no-bridge .boost-indicator { display:none !important; }
   opacity:0;
   transition:transform 0.55s cubic-bezier(0.18, 0.9, 0.2, 1.05), opacity 0.35s ease;
   pointer-events:none;
+  /* Defined locally so the derived shades update when showGoalPopup sets
+     --team-color on this element — :root-level definitions stayed stuck
+     on the default blue and bled into back cards (Style F was visible
+     showing blue for Hollows etc). */
   --team-color: #1873FF;
+  --tc-dark:   color-mix(in srgb, var(--team-color) 50%, #000);
+  --tc-light:  color-mix(in srgb, var(--team-color) 60%, #fff);
+  --accent-2:  color-mix(in srgb, var(--team-color) 65%, #fff);
+  --accent-3:  color-mix(in srgb, var(--team-color) 30%, #fff);
 }
 .goal-popup.show { opacity:1; transform:translateX(-50%) translateY(0) scale(1); }
 .goal-popup .gp-team-logo {
@@ -1063,10 +1071,18 @@ body.no-bridge .boost-indicator { display:none !important; }
 .goal-popup.gp-b .lyr-1 { position:absolute; inset:0; background:#000; }
 .goal-popup.gp-b .lyr-2 { position:absolute; top:0; bottom:0; left:0; width:200px; background:linear-gradient(135deg, var(--team-color), var(--tc-dark)); }
 .goal-popup.gp-b .lyr-3 { position:absolute; top:0; bottom:0; left:200px; width:8px; background:linear-gradient(180deg, var(--accent-3), var(--accent-2)); box-shadow:0 0 14px var(--accent-2); }
+.goal-popup.gp-b .gp-team-logo {
+  position:absolute; left:32px; top:50%; transform:skewX(12deg) translateY(-50%);
+  width:74px; height:74px; font-size:42px;
+  background:rgba(0,0,0,0.22);
+  border:2px solid rgba(255,255,255,0.55);
+  box-shadow:none;
+  z-index:2;
+}
 .goal-popup.gp-b .trail { position:absolute; left:30px; top:50%; transform:translateY(-50%); width:160px; height:4px; background:linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.5) 100%); border-radius:2px; opacity:0.6; }
 .goal-popup.gp-b .trail.t2 { top:32%; width:120px; }
 .goal-popup.gp-b .trail.t3 { top:68%; width:140px; }
-.goal-popup.gp-b .content { position:relative; height:100%; transform:skewX(12deg); display:flex; align-items:center; padding:0 30px; gap:24px; }
+.goal-popup.gp-b .content { position:relative; height:100%; transform:skewX(12deg); display:flex; align-items:center; padding:0 30px 0 130px; gap:24px; }
 .goal-popup.gp-b .lbl { font-family:'Bebas Neue', sans-serif; font-style:italic; font-size:72px; letter-spacing:3px; color:white; line-height:1; text-shadow:0 4px 0 rgba(0,0,0,0.4), 0 0 18px color-mix(in srgb, var(--team-color) 60%, transparent); }
 .goal-popup.gp-b .right { margin-left:auto; text-align:right; }
 .goal-popup.gp-b .scorer { font-family:'Bebas Neue', sans-serif; font-style:italic; font-size:40px; letter-spacing:2.5px; line-height:1; color:white; display:flex; align-items:center; justify-content:flex-end; gap:10px; }
@@ -1591,6 +1607,7 @@ function renderGoalPopupShell(style) {
     case 'b':
       return (
         '<div class="body"><div class="lyr-1"></div><div class="lyr-2"></div><div class="lyr-3"></div>' +
+          logo +
           '<div class="trail"></div><div class="trail t2"></div><div class="trail t3"></div>' +
           '<div class="content"><div class="lbl">GOAL!</div><div class="right">' + scorer + assist + '</div></div>' +
         '</div>'
