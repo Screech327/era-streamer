@@ -221,6 +221,34 @@ html, body {
 }
 .player-row.empty .player-boost { display:none; }
 
+/* === ACTIVE-SPECTATOR HIGHLIGHT ===
+   Marks the player currently being spectated so viewers can match the
+   in-game POV to a row at a glance. Subtle team-color glow across the
+   row plus a pulsing dot on the outside edge. */
+.player-row.is-target {
+  background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--team-color, #888) 18%, transparent));
+}
+.players-right .player-row.is-target {
+  background:linear-gradient(270deg, transparent, color-mix(in srgb, var(--team-color, #888) 18%, transparent));
+}
+.player-row.is-target .player-name {
+  color:white;
+  text-shadow:0 0 10px var(--team-color, #888), 0 1px 4px rgba(0,0,0,0.7);
+}
+.player-row.is-target::before {
+  content:'';
+  width:6px; height:6px;
+  border-radius:50%;
+  background:var(--team-color, #fff);
+  box-shadow:0 0 10px var(--team-color, #fff);
+  flex:0 0 auto;
+  animation:targetPulse 1.4s ease-in-out infinite;
+}
+@keyframes targetPulse {
+  0%, 100% { opacity:0.55; transform:scale(0.85); }
+  50%      { opacity:1;    transform:scale(1.2);  }
+}
+
 /* === NO-BRIDGE MODE ===
    Producer-toggleable in the control page. Hides everything that depends on
    the local stats bridge so the overlay still looks clean for streamers who
@@ -1733,16 +1761,22 @@ function hideBoostIndicator() {
 // Names + boosts come straight from the live RL bridge. TeamNum 0 → left,
 // TeamNum 1 → right. Whichever players RL reports on each side fill the
 // pre-rendered slots in bridge order.
-function updatePlayerBoosts(bridgePlayers) {
+function updatePlayerBoosts(data) {
+  // Accept either the full UpdateState object (preferred — gives us the
+  // spectator target) or just the Players array (legacy callers that
+  // only need to clear the rows).
+  const bridgePlayers = Array.isArray(data) ? data : (data && data.Players);
+  const target = (data && data.Game && data.Game.bHasTarget) ? data.Game.Target : null;
   const players = (bridgePlayers || []).filter(p => p && p.Name);
-  fillSide('left',  players.filter(p => p.TeamNum === 0));
-  fillSide('right', players.filter(p => p.TeamNum === 1));
+  fillSide('left',  players.filter(p => p.TeamNum === 0), target);
+  fillSide('right', players.filter(p => p.TeamNum === 1), target);
 }
 
-function fillSide(side, sidePlayers) {
+function fillSide(side, sidePlayers, target) {
   const box = document.getElementById(side + 'Players');
   if (!box) return;
   const rows = box.querySelectorAll('.player-row');
+  const sideTeamNum = side === 'left' ? 0 : 1;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     const p = sidePlayers[i];
@@ -1755,11 +1789,16 @@ function fillSide(side, sidePlayers) {
       const pct = Math.max(0, Math.min(100, Number(p.Boost) || 0));
       if (fillEl) fillEl.style.width = pct + '%';
       if (numEl) numEl.textContent = Math.round(pct);
+      // Highlight the row if this is the spectated player. Match on
+      // name + team so two-player same-name edge cases stay distinct.
+      const isTarget = target && target.Name === p.Name && target.TeamNum === sideTeamNum;
+      row.classList.toggle('is-target', !!isTarget);
     } else {
       row.classList.add('empty');
       if (nameEl) nameEl.textContent = '';
       if (fillEl) fillEl.style.width = '0%';
       if (numEl) numEl.textContent = '';
+      row.classList.remove('is-target');
     }
   }
 }
@@ -1878,7 +1917,7 @@ function connectStats() {
       lastBridgeUpdate = msg.Data;
       renderNowWatching(msg.Data);
       renderScoreboard(msg.Data);
-      updatePlayerBoosts(msg.Data && msg.Data.Players);
+      updatePlayerBoosts(msg.Data);
       trackMatchSnapshot(msg.Data);
     } else if (msg.Event === 'MatchDestroyed') {
       nwHide();
