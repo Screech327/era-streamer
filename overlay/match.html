@@ -1156,6 +1156,26 @@ body.no-bridge .boost-indicator { display:none !important; }
 .goal-popup.gp-f .assist .name { color:white; }
 
 body.no-bridge .goal-popup { display:none !important; }
+
+/* ─── Producer-controlled visibility flags (Customize tab toggles) ─── */
+body.hide-banners    #leftBanner, body.hide-banners    #rightBanner,
+body.hide-banners    #leftPlayers, body.hide-banners   #rightPlayers,
+body.hide-banners    #leftSeries,  body.hide-banners   #rightSeries { display:none !important; }
+body.hide-boost-bars .player-boost { display:none !important; }
+body.hide-boost-bars .player-row   { gap:0; }
+body.hide-player-card .now-watching   { display:none !important; }
+body.hide-boost-meter .boost-indicator { display:none !important; }
+body.hide-goal-popup  .goal-popup      { display:none !important; }
+/* Per-stat visibility on the now-watching card. Default = all visible;
+   producer can hide individual stats from the Customize tab. */
+body.hide-stat-score   .nw-stat[data-stat="score"],
+body.hide-stat-score   .nw-score-big,
+body.hide-stat-score   .nw-hero { display:none !important; }
+body.hide-stat-goals   .nw-stat[data-stat="goals"]   { display:none !important; }
+body.hide-stat-assists .nw-stat[data-stat="assists"] { display:none !important; }
+body.hide-stat-saves   .nw-stat[data-stat="saves"]   { display:none !important; }
+body.hide-stat-shots   .nw-stat[data-stat="shots"]   { display:none !important; }
+body.hide-stat-demos   .nw-stat[data-stat="demos"]   { display:none !important; }
 </style>
 </head>
 <body>
@@ -1370,6 +1390,9 @@ function applyOverlayConfig(cfg) {
   // Goal-popup style — same a..f convention from the goal-variants doc.
   const goalStyle = (cfg && cfg.goalPopupStyle) || 'a';
   applyGoalPopupStyle(goalStyle);
+  // Element-visibility toggles. Each defaults to true so existing
+  // installs don't suddenly lose pieces of the overlay.
+  applyOverlayToggles(cfg || {});
 
   const next = !!(cfg && cfg.noBridge);
   if (next === noBridgeMode) return;
@@ -1448,36 +1471,22 @@ function renderNowWatchingShell(style) {
   // 6 stats always present, in the same order. Variants that "feature"
   // the score (D and F) still keep id="nwScore" in the visible spot.
   const cells = (mode) => {
+    // Tag each cell with data-stat so the Customize-tab visibility
+    // toggles can hide individual stats via body.hide-stat-<key>.
+    const cell = (label, key, id) => '<div class="nw-stat" data-stat="' + key + '"><div class="nw-stat-l">' + label + '</div><div class="nw-stat-v" id="' + id + '">0</div></div>';
     if (mode === 'compact5') {
-      // D & F skip a dedicated SCORE cell because the score is already
-      // featured elsewhere in the layout.
-      return (
-        '<div class="nw-stat"><div class="nw-stat-l">G</div><div class="nw-stat-v" id="nwGoals">0</div></div>' +
-        '<div class="nw-stat"><div class="nw-stat-l">A</div><div class="nw-stat-v" id="nwAssists">0</div></div>' +
-        '<div class="nw-stat"><div class="nw-stat-l">SV</div><div class="nw-stat-v" id="nwSaves">0</div></div>' +
-        '<div class="nw-stat"><div class="nw-stat-l">SH</div><div class="nw-stat-v" id="nwShots">0</div></div>' +
-        '<div class="nw-stat"><div class="nw-stat-l">D</div><div class="nw-stat-v" id="nwDemos">0</div></div>'
-      );
+      return cell('G','goals','nwGoals') + cell('A','assists','nwAssists') +
+             cell('SV','saves','nwSaves') + cell('SH','shots','nwShots') +
+             cell('D','demos','nwDemos');
     }
     if (mode === 'short6') {
-      return (
-        '<div class="nw-stat"><div class="nw-stat-l">SC</div><div class="nw-stat-v" id="nwScore">0</div></div>' +
-        '<div class="nw-stat"><div class="nw-stat-l">G</div><div class="nw-stat-v" id="nwGoals">0</div></div>' +
-        '<div class="nw-stat"><div class="nw-stat-l">A</div><div class="nw-stat-v" id="nwAssists">0</div></div>' +
-        '<div class="nw-stat"><div class="nw-stat-l">SV</div><div class="nw-stat-v" id="nwSaves">0</div></div>' +
-        '<div class="nw-stat"><div class="nw-stat-l">SH</div><div class="nw-stat-v" id="nwShots">0</div></div>' +
-        '<div class="nw-stat"><div class="nw-stat-l">D</div><div class="nw-stat-v" id="nwDemos">0</div></div>'
-      );
+      return cell('SC','score','nwScore') + cell('G','goals','nwGoals') +
+             cell('A','assists','nwAssists') + cell('SV','saves','nwSaves') +
+             cell('SH','shots','nwShots') + cell('D','demos','nwDemos');
     }
-    // full6
-    return (
-      '<div class="nw-stat"><div class="nw-stat-l">SCORE</div><div class="nw-stat-v" id="nwScore">0</div></div>' +
-      '<div class="nw-stat"><div class="nw-stat-l">GOALS</div><div class="nw-stat-v" id="nwGoals">0</div></div>' +
-      '<div class="nw-stat"><div class="nw-stat-l">ASSISTS</div><div class="nw-stat-v" id="nwAssists">0</div></div>' +
-      '<div class="nw-stat"><div class="nw-stat-l">SAVES</div><div class="nw-stat-v" id="nwSaves">0</div></div>' +
-      '<div class="nw-stat"><div class="nw-stat-l">SHOTS</div><div class="nw-stat-v" id="nwShots">0</div></div>' +
-      '<div class="nw-stat"><div class="nw-stat-l">DEMOS</div><div class="nw-stat-v" id="nwDemos">0</div></div>'
-    );
+    return cell('SCORE','score','nwScore') + cell('GOALS','goals','nwGoals') +
+           cell('ASSISTS','assists','nwAssists') + cell('SAVES','saves','nwSaves') +
+           cell('SHOTS','shots','nwShots') + cell('DEMOS','demos','nwDemos');
   };
   // Each style gets the same logo img with id="nwLogo" (or as a child of
   // .nw-logo in style C). repaintNowWatching sets `src` later. Hidden via
@@ -1709,6 +1718,24 @@ function hideGoalPopup() {
 
 // Boot the goal popup shell.
 applyGoalPopupStyle('a');
+
+// ── Producer-controlled element visibility ────────────────────────
+// Producers toggle individual overlay elements (banners, boost bars,
+// player card, boost meter, goal popup) and per-stat visibility from
+// the Customize tab. Each toggle flips a body class that the CSS
+// `body.hide-X` rules pick up.
+const NW_STAT_KEYS = ['score','goals','assists','saves','shots','demos'];
+function applyOverlayToggles(cfg) {
+  const body = document.body;
+  body.classList.toggle('hide-banners',     cfg.showBanners    === false);
+  body.classList.toggle('hide-boost-bars',  cfg.showBoostBars  === false);
+  body.classList.toggle('hide-player-card', cfg.showPlayerCard === false);
+  body.classList.toggle('hide-boost-meter', cfg.showBoostMeter === false);
+  body.classList.toggle('hide-goal-popup',  cfg.showGoalPopup  === false);
+  // Per-stat checkboxes. Empty/missing array = all on (back-compat).
+  const visible = Array.isArray(cfg.nwStats) && cfg.nwStats.length ? cfg.nwStats : NW_STAT_KEYS;
+  NW_STAT_KEYS.forEach((k) => body.classList.toggle('hide-stat-' + k, !visible.includes(k)));
+}
 
 // Direct Goal event handler — RL SOS bridge may send the scorer/
 // assister in a few different shapes; pluck them defensively.

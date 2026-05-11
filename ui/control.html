@@ -745,6 +745,80 @@ h1, h2, h3 {
 }
 .preview-panel .panel-head h2 { margin:0; }
 .panel-head-tools { display:flex; align-items:center; gap:14px; }
+/* ─── Overlay-element toggles + stat checkboxes ─────────────────────── */
+.toggle-list { display:flex; flex-direction:column; gap:1px; background:var(--line); border-radius:8px; overflow:hidden; }
+.toggle-row {
+  display:flex; align-items:center; gap:14px;
+  background:var(--panel-2);
+  padding:14px 16px;
+}
+.toggle-row .tr-info { flex:1; min-width:0; }
+.toggle-row .tr-title {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:16px; letter-spacing:2px;
+  color:white;
+  margin-bottom:3px;
+}
+.toggle-row .tr-desc {
+  font-family:'Rajdhani', sans-serif;
+  font-size:12px;
+  color:var(--text-dim);
+  line-height:1.4;
+}
+.iso-switch {
+  position:relative; flex:0 0 auto;
+  width:46px; height:24px;
+  background:#1a1a1a;
+  border:1px solid #333;
+  border-radius:50px;
+  cursor:pointer;
+  transition:background 0.18s, border-color 0.18s;
+  padding:0;
+}
+.iso-switch::after {
+  content:'';
+  position:absolute;
+  top:2px; left:2px;
+  width:18px; height:18px;
+  background:#666;
+  border-radius:50%;
+  transition:transform 0.18s, background 0.18s;
+}
+.iso-switch.on {
+  background:var(--red);
+  border-color:var(--red);
+}
+.iso-switch.on::after {
+  background:white;
+  transform:translateX(22px);
+}
+.iso-switch:hover:not(.on) { border-color:#555; }
+.iso-switch:hover.on { filter:brightness(1.1); }
+.stat-check-list {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:8px 18px;
+}
+.stat-check {
+  display:flex; align-items:center; gap:10px;
+  background:var(--panel-2);
+  border:1px solid var(--line);
+  border-radius:6px;
+  padding:9px 14px;
+  cursor:pointer;
+  font-family:'Bebas Neue', sans-serif;
+  font-size:15px; letter-spacing:2px;
+  color:var(--text-dim);
+  transition:all 0.12s;
+}
+.stat-check input { accent-color:var(--red); width:16px; height:16px; cursor:pointer; }
+.stat-check:has(input:checked) {
+  color:white;
+  border-color:rgba(230,57,70,0.4);
+  background:rgba(230,57,70,0.06);
+}
+.stat-check:hover { border-color:rgba(255,255,255,0.15); }
+
 /* Active-style badges on the MAIN preview header. Tiny indicators
    showing which CARD + GOAL style the overlay is currently using. */
 .active-style-badges { display:flex; gap:8px; align-items:center; }
@@ -1161,7 +1235,66 @@ h1, h2, h3 {
     <div class="panel">
       <h2>OVERLAY CUSTOMIZATION</h2>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:6px;">
-        Pick which visual style the overlay uses for each broadcast element. Changes apply live — the previews below update in real time.
+        Pick which visual style the overlay uses for each broadcast element, and what shows up. Changes apply live — the preview below updates in real time and propagates to OBS instantly.
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>WHAT TO SHOW</h2>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:14px;">
+        Toggle each overlay element. Off means the producer is hiding that piece for this broadcast.
+      </div>
+      <div class="toggle-list" id="overlayToggles">
+        <div class="toggle-row" data-key="showBanners">
+          <div class="tr-info">
+            <div class="tr-title">Team Banners</div>
+            <div class="tr-desc">Top-left and top-right team cards with the logo, name, GM, and roster.</div>
+          </div>
+          <button class="iso-switch" type="button"></button>
+        </div>
+        <div class="toggle-row" data-key="showBoostBars">
+          <div class="tr-info">
+            <div class="tr-title">Player Boost Bars</div>
+            <div class="tr-desc">Per-player boost meter shown next to each name in the team banners.</div>
+          </div>
+          <button class="iso-switch" type="button"></button>
+        </div>
+        <div class="toggle-row" data-key="showPlayerCard">
+          <div class="tr-info">
+            <div class="tr-title">Now-Watching Player Card</div>
+            <div class="tr-desc">Bottom-left card showing the spectated player's stats.</div>
+          </div>
+          <button class="iso-switch" type="button"></button>
+        </div>
+        <div class="toggle-row" data-key="showBoostMeter">
+          <div class="tr-info">
+            <div class="tr-title">Boost Indicator</div>
+            <div class="tr-desc">Bottom-right circular gauge showing the spectated player's boost.</div>
+          </div>
+          <button class="iso-switch" type="button"></button>
+        </div>
+        <div class="toggle-row" data-key="showGoalPopup">
+          <div class="tr-info">
+            <div class="tr-title">Goal Popup</div>
+            <div class="tr-desc">Bottom-center scorer + assist popup that fires on every goal.</div>
+          </div>
+          <button class="iso-switch" type="button"></button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>PLAYER CARD STATS</h2>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:14px;">
+        Which stats appear on the now-watching card. Untick any you'd rather leave off — applies to all card styles.
+      </div>
+      <div class="stat-check-list" id="nwStatChecks">
+        <label class="stat-check"><input type="checkbox" data-stat="score"><span>SCORE</span></label>
+        <label class="stat-check"><input type="checkbox" data-stat="goals"><span>GOALS</span></label>
+        <label class="stat-check"><input type="checkbox" data-stat="assists"><span>ASSISTS</span></label>
+        <label class="stat-check"><input type="checkbox" data-stat="saves"><span>SAVES</span></label>
+        <label class="stat-check"><input type="checkbox" data-stat="shots"><span>SHOTS</span></label>
+        <label class="stat-check"><input type="checkbox" data-stat="demos"><span>DEMOS</span></label>
       </div>
     </div>
 
@@ -2044,12 +2177,75 @@ async function setStyle(picker, style) {
   const label = picker === 'nw' ? 'PLAYER CARD' : 'GOAL POPUP';
   showToast(label + ' · ' + style.toUpperCase());
 }
+// Overlay element toggles + per-stat checkboxes. Defaults: everything
+// on, all 6 stats visible. Persisted into stream_overlay_config alongside
+// the style pickers.
+const TOGGLE_DEFAULTS = {
+  showBanners:    true,
+  showBoostBars:  true,
+  showPlayerCard: true,
+  showBoostMeter: true,
+  showGoalPopup:  true,
+};
+const NW_STAT_KEYS = ['score','goals','assists','saves','shots','demos'];
+
+function reflectToggles(cfg) {
+  document.querySelectorAll('.toggle-row[data-key]').forEach((row) => {
+    const key = row.dataset.key;
+    const sw = row.querySelector('.iso-switch');
+    if (!sw) return;
+    const on = cfg && cfg[key] !== undefined ? !!cfg[key] : !!TOGGLE_DEFAULTS[key];
+    sw.classList.toggle('on', on);
+  });
+  const visible = (cfg && Array.isArray(cfg.nwStats) && cfg.nwStats.length)
+    ? cfg.nwStats : NW_STAT_KEYS.slice();
+  document.querySelectorAll('.stat-check input[data-stat]').forEach((inp) => {
+    inp.checked = visible.includes(inp.dataset.stat);
+  });
+}
+
+async function setToggle(key, on) {
+  let cfg = {};
+  try {
+    const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
+    cfg = (arr[0] && arr[0].value) || {};
+  } catch (e) {}
+  cfg[key] = !!on;
+  await upsert('stream_overlay_config', cfg);
+  showToast(key.replace(/([A-Z])/g, ' $1').toUpperCase() + ' · ' + (on ? 'ON' : 'OFF'));
+}
+async function setNwStats() {
+  const visible = Array.from(document.querySelectorAll('.stat-check input[data-stat]:checked')).map((i) => i.dataset.stat);
+  let cfg = {};
+  try {
+    const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
+    cfg = (arr[0] && arr[0].value) || {};
+  } catch (e) {}
+  cfg.nwStats = visible;
+  await upsert('stream_overlay_config', cfg);
+  showToast('CARD STATS · ' + (visible.length ? visible.length + ' ON' : 'ALL OFF'));
+}
+
+document.querySelectorAll('.toggle-row[data-key]').forEach((row) => {
+  const sw = row.querySelector('.iso-switch');
+  if (!sw) return;
+  sw.addEventListener('click', () => {
+    const next = !sw.classList.contains('on');
+    sw.classList.toggle('on', next);
+    setToggle(row.dataset.key, next);
+  });
+});
+document.querySelectorAll('.stat-check input[data-stat]').forEach((inp) => {
+  inp.addEventListener('change', setNwStats);
+});
+
 async function loadOverlayConfig() {
   try {
     const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
     const cfg = (arr[0] && arr[0].value) || {};
     reflectStyle('nw',   cfg.nowWatchingStyle || 'a');
     reflectStyle('goal', cfg.goalPopupStyle   || 'a');
+    reflectToggles(cfg);
   } catch (e) {}
 }
 // Wire all style cards (both pickers, via data-picker attr).
