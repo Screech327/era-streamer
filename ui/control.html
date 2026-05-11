@@ -174,12 +174,11 @@ body { padding:0; }
 .side-status { padding:0 22px 14px; display:flex; flex-direction:column; gap:6px; }
 .main-content {
   padding:22px 26px 32px;
-  /* Flex column with hidden overflow — each tab handles its own scroll
-     internally so the Customize tab can pin its preview at the top
-     while only the options below scroll. */
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
+  overflow:auto;
+  /* position:relative so the Customize tab's position:absolute layout
+     (preview pinned at the top of the tab area, options scrollable
+     below) is bounded by main-content. Other tabs are unaffected. */
+  position:relative;
 }
 
 /* Old .tabs / .tab kept for compatibility — hidden now since the
@@ -624,12 +623,7 @@ h1, h2, h3 {
   color:var(--gold);
 }
 .tab-pane { display:none; flex-direction:column; gap:18px; }
-.tab-pane.active {
-  display:flex;
-  flex:1 1 auto;
-  min-height:0;
-  overflow-y:auto;
-}
+.tab-pane.active { display:flex; }
 
 /* === Archive list === */
 .archive-list { display:flex; flex-direction:column; gap:8px; }
@@ -758,8 +752,15 @@ h1, h2, h3 {
    bounded area below. Cleanly bounded — nothing scrolls behind the
    preview, no squished half-width preview. */
 .tab-pane.active[data-pane="customize"] {
-  /* Override the generic active scroll — Customize delegates scrolling
-     to .customize-options below so the preview at the top stays put. */
+  /* Bound the tab to main-content's content area so the preview can
+     stay pinned at the top while .customize-options below scrolls
+     within its own region. Position:absolute removes it from
+     main-content's normal flow so the parent's overflow doesn't take
+     over and scroll the whole tab. */
+  position:absolute;
+  top:22px; right:26px; bottom:32px; left:26px;
+  flex-direction:column;
+  gap:18px;
   overflow:hidden;
 }
 .tab-pane[data-pane="customize"] > .preview-panel {
