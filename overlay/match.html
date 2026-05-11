@@ -601,7 +601,7 @@ body.no-bridge .player-row { gap:0; }
 .boost-indicator {
   position:absolute;
   bottom:24px; right:24px;
-  width:240px; height:240px;
+  width:200px; height:200px;
   opacity:0;
   transform:translateY(8px);
   transition:opacity 0.3s ease, transform 0.3s ease;
@@ -624,10 +624,11 @@ body.no-bridge .player-row { gap:0; }
   stroke:var(--team-color, #888);
   stroke-width:8;
   stroke-linecap:round;
-  /* 2πr where r=45 → 282.7. Use 270° arc (75% of full ring) → ~212. */
-  stroke-dasharray:212;
-  stroke-dashoffset:212;
-  transition:stroke-dashoffset 0.25s ease;
+  /* 2πr where r=45 → 282.7. JS sets stroke-dasharray dynamically so the
+     arc grows from a fixed start point — dashoffset-based fill made the
+     gap rotate around the circle as boost changed. */
+  stroke-dasharray:0 283;
+  transition:stroke-dasharray 0.25s ease;
   filter:drop-shadow(0 0 4px var(--team-color, #888));
 }
 .boost-label {
@@ -638,14 +639,14 @@ body.no-bridge .player-row { gap:0; }
 }
 .boost-l {
   font-family:'Orbitron', monospace;
-  font-size:16px; letter-spacing:4px;
+  font-size:14px; letter-spacing:3.5px;
   color:#888;
   text-shadow:0 1px 3px rgba(0,0,0,0.7);
-  margin-bottom:4px;
+  margin-bottom:3px;
 }
 .boost-v {
   font-family:'Bebas Neue', sans-serif;
-  font-size:100px; letter-spacing:1px;
+  font-size:84px; letter-spacing:1px;
   line-height:0.9;
   color:white;
   text-shadow:0 2px 6px rgba(0,0,0,0.7);
@@ -1699,9 +1700,12 @@ function nwHide() {
 
 // ── Boost indicator (bottom-right 270° arc) ─────────────────────────
 function applyBoostIndicator(boost, color) {
-  // 2πr where r=45 → ~282.7; we draw 270° of that ≈ 212. Inlined so the
-  // function can be invoked at boot from applyDemoNowWatching without a
-  // TDZ hazard.
+  // Ring = 2πr where r=45 ≈ 282.7. Visible arc covers 270° ≈ 212 at full
+  // boost. Animate via the FIRST value of stroke-dasharray (visible
+  // length) so the arc always starts at the same point and just grows
+  // — dashoffset-based fill rotated the gap around the ring as the
+  // value changed, which read as the meter spinning.
+  const RING = 282.74;
   const ARC = 212;
   const el = document.getElementById('boostIndicator');
   if (!el) return;
@@ -1709,7 +1713,10 @@ function applyBoostIndicator(boost, color) {
   const fill = document.getElementById('boostFill');
   const valEl = document.getElementById('boostValue');
   if (color) el.style.setProperty('--team-color', color);
-  if (fill)  fill.style.strokeDashoffset = ARC - (ARC * pct / 100);
+  if (fill) {
+    const visible = ARC * pct / 100;
+    fill.style.strokeDasharray = visible + ' ' + (RING - visible);
+  }
   if (valEl) valEl.textContent = Math.round(pct);
   el.classList.add('visible');
 }
@@ -1885,9 +1892,14 @@ function connectStats() {
       // 2s poll cycle — fixes "I changed the style mid-stream and OBS
       // didn't update for a while".
       const key = msg.Data && msg.Data.key;
-      if (key === 'stream_overlay_config') fetchOverlayConfig();
-      else if (key === 'stream_match')  poll(); // re-runs the full poll which picks up match changes
-      else if (key === 'stream_series') poll();
+      if (key === 'stream_overlay_config') {
+        // Clear the style guard so applyNowWatchingStyle is guaranteed to
+        // re-render the inner DOM even if the new style happens to match
+        // what was applied before some other tick (race-condition safe).
+        currentNwStyle = '';
+        fetchOverlayConfig();
+      } else if (key === 'stream_match')  { lastSig = ''; poll(); }
+      else if (key === 'stream_series') { lastSeriesSig = ''; poll(); }
     }
   };
 }
