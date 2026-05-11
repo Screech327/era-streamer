@@ -1161,7 +1161,10 @@ body.no-bridge .goal-popup { display:none !important; }
 body.hide-banners    #leftBanner, body.hide-banners    #rightBanner,
 body.hide-banners    #leftPlayers, body.hide-banners   #rightPlayers,
 body.hide-banners    #leftSeries,  body.hide-banners   #rightSeries { display:none !important; }
-body.hide-boost-bars .player-boost { display:none !important; }
+body.hide-boost-bars .players .player-row .player-boost {
+  display:none !important;
+  visibility:hidden !important;
+}
 body.hide-boost-bars .player-row   { gap:0; }
 body.hide-player-card .now-watching   { display:none !important; }
 body.hide-boost-meter .boost-indicator { display:none !important; }
