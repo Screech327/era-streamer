@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PLAYER BANNERS — Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;500;700;900&family=Black+Ops+One&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --team-color-l: #1873FF;  /* left team color */
+    --team-color-r: #C26418;  /* right team color */
+    --tc-dark-l:  color-mix(in srgb, var(--team-color-l) 50%, #000);
+    --tc-dark-r:  color-mix(in srgb, var(--team-color-r) 50%, #000);
+    --tc-light-l: color-mix(in srgb, var(--team-color-l) 65%, #fff);
+    --tc-light-r: color-mix(in srgb, var(--team-color-r) 65%, #fff);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    background:#0a0a0a; color:#fff;
+    font-family:'Rajdhani',sans-serif;
+    min-height:100vh;
+    padding:40px;
+  }
+  h1 {
+    font-family:'Anton', sans-serif;
+    font-size:38px; letter-spacing:3px;
+    margin-bottom:6px;
+  }
+  .lede {
+    color:#888; font-size:14px; max-width:780px;
+    margin-bottom:24px; line-height:1.5;
+  }
+  .lede strong { color:#fff; }
+
+  .controls {
+    display:flex; gap:14px; align-items:center;
+    margin-bottom:24px; flex-wrap:wrap;
+  }
+  .controls label { font-family:'Orbitron',monospace; font-size:10px; letter-spacing:2px; color:#888; }
+  .swatch-group { display:flex; gap:8px; align-items:center; }
+  .swatch {
+    width:28px; height:28px; border-radius:50%;
+    border:2px solid rgba(255,255,255,0.1);
+    cursor:pointer;
+    transition:transform 0.12s;
+  }
+  .swatch:hover { transform:scale(1.1); }
+  .swatch.active { border-color:#fff; }
+
+  .grid {
+    display:grid;
+    grid-template-columns:1fr;
+    gap:36px;
+  }
+  .row { display:flex; flex-direction:column; gap:12px; }
+  .row-head {
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:0 4px;
+  }
+  .row-head h2 {
+    font-family:'Anton', sans-serif;
+    font-size:22px; letter-spacing:3px;
+  }
+  .row-head .note {
+    font-family:'Orbitron', monospace;
+    font-size:9px; letter-spacing:2px; color:#888;
+  }
+  /* Faux RL gameplay backdrop. Banners live at top-left + top-right
+     corners just like in the real overlay. */
+  .stage {
+    position:relative;
+    height:300px;
+    border-radius:8px;
+    overflow:hidden;
+    background:
+      radial-gradient(60% 80% at 30% 30%, rgba(60,140,255,0.18), transparent 60%),
+      radial-gradient(50% 70% at 80% 70%, rgba(255,120,30,0.18), transparent 60%),
+      linear-gradient(180deg, #1a1b1c, #0a0a0a);
+  }
+  .banner-l { position:absolute; top:18px; left:0; --team-color: var(--team-color-l); --tc-dark: var(--tc-dark-l); --tc-light: var(--tc-light-l); }
+  .banner-r { position:absolute; top:18px; right:0; --team-color: var(--team-color-r); --tc-dark: var(--tc-dark-r); --tc-light: var(--tc-light-r); }
+
+  /* =====================================================================
+     A — CURRENT
+     What ships today. Dark slab with team-color left/right border, name
+     on one side and a 115px boost bar on the other.
+  ===================================================================== */
+  .vA { width:280px; background:rgba(8,8,8,0.78); border-radius:8px; padding:8px 12px; box-shadow:0 4px 20px rgba(0,0,0,0.55); }
+  .vA.banner-l { border-left:4px solid var(--team-color); border-top-left-radius:0; border-bottom-left-radius:0; }
+  .vA.banner-r { border-right:4px solid var(--team-color); border-top-right-radius:0; border-bottom-right-radius:0; }
+  .vA .pl-row { font-family:'Bebas Neue', sans-serif; font-size:17px; letter-spacing:1.4px; color:rgba(255,255,255,0.96); padding:5px 0; border-bottom:1px solid rgba(255,255,255,0.06); text-shadow:0 1px 4px rgba(0,0,0,0.7); display:flex; align-items:center; gap:8px; }
+  .vA .pl-row:last-child { border-bottom:none; }
+  .vA.banner-r .pl-row { flex-direction:row-reverse; }
+  .vA .pl-name { flex:1 1 auto; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .vA.banner-r .pl-name { text-align:right; }
+  .vA .pl-boost { flex:0 0 140px; position:relative; height:20px; border-radius:3px; background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.12); overflow:hidden; box-shadow:inset 0 1px 2px rgba(0,0,0,0.5); }
+  .vA .pl-fill { position:absolute; top:0; bottom:0; left:0; background:linear-gradient(90deg, var(--team-color) 0%, var(--tc-light) 100%); border-radius:inherit; box-shadow:0 0 6px var(--team-color); width:var(--pct, 0%); }
+  .vA.banner-r .pl-fill { left:auto; right:0; }
+  .vA .pl-num { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-family:'Orbitron', monospace; font-size:10px; font-weight:700; color:#fff; letter-spacing:0.4px; text-shadow:0 1px 2px rgba(0,0,0,0.95); }
+
+  /* =====================================================================
+     B — STACKED GLASS
+     Each player gets their own glassmorphic mini-card. Heavy backdrop
+     blur, soft team-color glow at the edges. More breathing room
+     between rows, modern broadcast aesthetic.
+  ===================================================================== */
+  .vB { width:280px; display:flex; flex-direction:column; gap:6px; }
+  .vB .pl-row {
+    position:relative;
+    background:rgba(12,12,12,0.55);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:8px;
+    padding:9px 14px;
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    display:flex; align-items:center; gap:12px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.45);
+  }
+  .vB.banner-l .pl-row { border-left:3px solid var(--team-color); }
+  .vB.banner-r .pl-row { border-right:3px solid var(--team-color); flex-direction:row-reverse; }
+  .vB .pl-name { flex:1 1 auto; min-width:0; font-family:'Bebas Neue', sans-serif; font-size:18px; letter-spacing:1.8px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 1px 4px rgba(0,0,0,0.6); }
+  .vB.banner-r .pl-name { text-align:right; }
+  .vB .pl-boost { flex:0 0 120px; position:relative; height:12px; border-radius:30px; background:rgba(255,255,255,0.08); overflow:hidden; }
+  .vB .pl-fill { position:absolute; top:0; bottom:0; left:0; background:linear-gradient(90deg, var(--team-color), var(--tc-light)); border-radius:inherit; box-shadow:0 0 6px var(--team-color); width:var(--pct, 0%); }
+  .vB.banner-r .pl-fill { left:auto; right:0; }
+  .vB .pl-num { position:absolute; right:-32px; top:50%; transform:translateY(-50%); font-family:'Orbitron', monospace; font-weight:700; font-size:10px; letter-spacing:1px; color:var(--tc-light); }
+  .vB.banner-r .pl-num { right:auto; left:-32px; }
+
+  /* =====================================================================
+     C — ANGLED SLASH
+     Brutalist parallelogram cells, italic player names, team-color
+     accent slash at the inner edge. Esports impact.
+  ===================================================================== */
+  .vC { width:280px; display:flex; flex-direction:column; gap:3px; filter:drop-shadow(0 4px 16px rgba(0,0,0,0.55)); }
+  .vC .pl-row {
+    position:relative;
+    background:rgba(8,8,8,0.92);
+    padding:10px 18px;
+    display:flex; align-items:center; gap:12px;
+    color:white;
+  }
+  .vC.banner-l .pl-row { clip-path:polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); border-left:3px solid var(--team-color); }
+  .vC.banner-r .pl-row { clip-path:polygon(16px 0, 100% 0, 100% 100%, 0 100%); border-right:3px solid var(--team-color); flex-direction:row-reverse; }
+  /* Inner accent stripe removed — it was colliding with the number.
+     The clipped corner + side border carry enough visual weight. */
+  .vC .pl-name { flex:1 1 auto; min-width:0; font-family:'Anton', sans-serif; font-style:italic; font-size:20px; letter-spacing:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .vC.banner-r .pl-name { text-align:right; padding-right:8px; }
+  .vC.banner-l .pl-name { padding-left:2px; padding-right:18px; }
+  .vC .pl-boost { flex:0 0 100px; position:relative; height:10px; border-radius:0; background:rgba(255,255,255,0.1); overflow:hidden; transform:skewX(-12deg); }
+  .vC .pl-fill { position:absolute; top:0; bottom:0; left:0; background:var(--team-color); width:var(--pct, 0%); box-shadow:0 0 4px var(--team-color); }
+  .vC.banner-r .pl-fill { left:auto; right:0; }
+  .vC .pl-num { font-family:'Orbitron', monospace; font-weight:700; font-size:11px; letter-spacing:1.2px; color:var(--tc-light); min-width:24px; text-align:right; }
+
+  /* =====================================================================
+     D — FUEL TANK
+     Separate pill cards (gap between players). Boost fills the entire
+     card horizontally — sweeps from the outer (screen-edge) side toward
+     the center. Name + number overlay the fill. Big visual hit.
+  ===================================================================== */
+  .vD { width:280px; display:flex; flex-direction:column; gap:6px; }
+  .vD .pl-row {
+    position:relative; height:42px;
+    background:rgba(8,8,8,0.88);
+    border-radius:8px;
+    border:1px solid rgba(255,255,255,0.05);
+    overflow:hidden;
+    box-shadow:0 4px 14px rgba(0,0,0,0.45);
+  }
+  .vD .pl-fill {
+    position:absolute; top:0; bottom:0; left:0;
+    width:var(--pct, 0%);
+    background:linear-gradient(90deg, var(--tc-dark), var(--team-color) 50%, var(--tc-light));
+    box-shadow:inset 0 0 18px color-mix(in srgb, var(--team-color) 40%, transparent);
+    transition:width 0.18s linear;
+  }
+  .vD.banner-r .pl-fill {
+    left:auto; right:0;
+    background:linear-gradient(270deg, var(--tc-dark), var(--team-color) 50%, var(--tc-light));
+  }
+  .vD .pl-content {
+    position:relative; z-index:1;
+    height:100%;
+    display:flex; align-items:center; gap:12px;
+    padding:0 16px;
+  }
+  .vD.banner-r .pl-content { flex-direction:row-reverse; }
+  .vD .pl-name {
+    flex:1 1 auto; min-width:0;
+    font-family:'Bebas Neue', sans-serif;
+    font-size:20px; letter-spacing:1.8px; color:white;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    text-shadow:0 1px 5px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7);
+  }
+  .vD.banner-r .pl-name { text-align:right; }
+  .vD .pl-num {
+    font-family:'Orbitron', monospace; font-weight:900;
+    font-size:14px; letter-spacing:1px; color:white; flex:0 0 auto;
+    text-shadow:0 1px 4px rgba(0,0,0,0.95);
+  }
+
+  /* =====================================================================
+     E — MINIMAL LINES
+     Almost no panel chrome. Just big names and a thin underline meter.
+     Maximum gameplay visibility — the overlay melts away.
+  ===================================================================== */
+  .vE { width:280px; display:flex; flex-direction:column; gap:14px; padding:6px 14px; }
+  .vE .pl-row { position:relative; display:flex; flex-direction:column; gap:4px; }
+  .vE .pl-line { display:flex; align-items:baseline; gap:8px; }
+  .vE.banner-r .pl-line { flex-direction:row-reverse; }
+  .vE .pl-name { font-family:'Anton', sans-serif; font-size:24px; letter-spacing:2px; line-height:1; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-shadow:0 2px 6px rgba(0,0,0,0.7); }
+  .vE .pl-num { font-family:'Orbitron', monospace; font-weight:700; font-size:11px; letter-spacing:1.5px; color:var(--team-color); text-shadow:0 0 6px color-mix(in srgb, var(--team-color) 50%, transparent); }
+  .vE.banner-r { text-align:right; }
+  .vE .pl-boost { position:relative; height:7px; border-radius:3px; background:rgba(255,255,255,0.07); overflow:hidden; }
+  .vE .pl-fill { position:absolute; top:0; bottom:0; left:0; background:var(--team-color); width:var(--pct, 0%); box-shadow:0 0 6px var(--team-color); border-radius:inherit; }
+  .vE.banner-r .pl-fill { left:auto; right:0; }
+
+  /* =====================================================================
+     F — POWER BLOCK
+     Separate cards with gap, like D, but squared corners and a heavier
+     team-color outline. Boost fills horizontally with a SOLID team
+     color — no gradient inside the fill. D is the rounded/gradient
+     version; F is the angular/flat version of the same idea.
+  ===================================================================== */
+  .vF { width:280px; display:flex; flex-direction:column; gap:8px; }
+  .vF .pl-row {
+    position:relative; height:42px;
+    background:rgba(8,8,8,0.92);
+    border:2px solid color-mix(in srgb, var(--team-color) 45%, transparent);
+    border-radius:0;
+    overflow:hidden;
+    box-shadow:0 4px 14px rgba(0,0,0,0.5), 0 0 18px color-mix(in srgb, var(--team-color) 18%, transparent);
+  }
+  .vF .pl-fill {
+    position:absolute; top:0; bottom:0; left:0;
+    width:var(--pct, 0%);
+    background:var(--team-color);
+    transition:width 0.18s linear;
+    pointer-events:none;
+  }
+  .vF.banner-r .pl-fill { left:auto; right:0; }
+  .vF .pl-content {
+    position:relative; z-index:1;
+    height:100%;
+    display:flex; align-items:center; gap:12px;
+    padding:0 14px;
+  }
+  .vF.banner-r .pl-content { flex-direction:row-reverse; }
+  .vF .pl-name {
+    flex:1 1 auto; min-width:0;
+    font-family:'Bebas Neue', sans-serif;
+    font-size:20px; letter-spacing:1.8px; color:white;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    text-shadow:0 1px 5px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7);
+  }
+  .vF.banner-r .pl-name { text-align:right; }
+  .vF .pl-num {
+    font-family:'Orbitron', monospace; font-weight:900;
+    font-size:14px; letter-spacing:1px; color:white; flex:0 0 auto;
+    text-shadow:0 1px 4px rgba(0,0,0,0.95);
+  }
+  .vF .pl-content {
+    position:relative; z-index:1;
+    height:100%;
+    display:flex; align-items:center; gap:12px;
+    padding:0 18px;
+  }
+  .vF.banner-r .pl-content { flex-direction:row-reverse; }
+  .vF .pl-name {
+    flex:1 1 auto; min-width:0;
+    font-family:'Bebas Neue', sans-serif;
+    font-size:22px; letter-spacing:2px; color:white;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    text-shadow:0 1px 5px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.7);
+  }
+  .vF.banner-r .pl-name { text-align:right; }
+  .vF .pl-num {
+    font-family:'Orbitron', monospace; font-weight:900;
+    font-size:15px; letter-spacing:1px; color:white; flex:0 0 auto;
+    text-shadow:0 1px 4px rgba(0,0,0,0.95);
+  }
+</style>
+</head>
+<body>
+
+  <h1>PLAYER BANNERS — VARIANTS</h1>
+  <div class="lede">
+    Six layouts for the top-left/right player cards. Each shows a sample <strong>BLUE TEAM</strong> on the left and <strong>ORANGE TEAM</strong> on the right with live-cycling boost values so you can see how the bars feel in motion. Tweak the team-color swatches to stress-test color palettes.
+  </div>
+
+  <div class="controls">
+    <div class="swatch-group">
+      <label>LEFT</label>
+      <div class="swatch active" data-side="l" data-color="#1873FF" style="background:#1873FF"></div>
+      <div class="swatch" data-side="l" data-color="#E63946" style="background:#E63946"></div>
+      <div class="swatch" data-side="l" data-color="#5ACB6A" style="background:#5ACB6A"></div>
+      <div class="swatch" data-side="l" data-color="#C9A84C" style="background:#C9A84C"></div>
+      <div class="swatch" data-side="l" data-color="#9b59b6" style="background:#9b59b6"></div>
+    </div>
+    <div class="swatch-group">
+      <label>RIGHT</label>
+      <div class="swatch active" data-side="r" data-color="#C26418" style="background:#C26418"></div>
+      <div class="swatch" data-side="r" data-color="#E63946" style="background:#E63946"></div>
+      <div class="swatch" data-side="r" data-color="#5ACB6A" style="background:#5ACB6A"></div>
+      <div class="swatch" data-side="r" data-color="#C9A84C" style="background:#C9A84C"></div>
+      <div class="swatch" data-side="r" data-color="#9b59b6" style="background:#9b59b6"></div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <!-- A · CURRENT -->
+    <div class="row">
+      <div class="row-head"><h2>A · CURRENT</h2><span class="note">what ships today, reference</span></div>
+      <div class="stage" data-variant="A"></div>
+    </div>
+
+    <!-- B · STACKED GLASS -->
+    <div class="row">
+      <div class="row-head"><h2>B · STACKED GLASS</h2><span class="note">glassmorphic mini-cards, modern broadcast</span></div>
+      <div class="stage" data-variant="B"></div>
+    </div>
+
+    <!-- C · ANGLED SLASH -->
+    <div class="row">
+      <div class="row-head"><h2>C · ANGLED SLASH</h2><span class="note">brutalist parallelograms, italic names</span></div>
+      <div class="stage" data-variant="C"></div>
+    </div>
+
+    <!-- D · FUEL TANK -->
+    <div class="row">
+      <div class="row-head"><h2>D · FUEL TANK</h2><span class="note">split cards, boost = full-card horizontal fill</span></div>
+      <div class="stage" data-variant="D"></div>
+    </div>
+
+    <!-- E · MINIMAL LINES -->
+    <div class="row">
+      <div class="row-head"><h2>E · MINIMAL LINES</h2><span class="note">no chrome, names + slim underbar</span></div>
+      <div class="stage" data-variant="E"></div>
+    </div>
+
+    <!-- F · POWER BLOCK -->
+    <div class="row">
+      <div class="row-head"><h2>F · POWER BLOCK</h2><span class="note">squared cards, solid horizontal fill</span></div>
+      <div class="stage" data-variant="F"></div>
+    </div>
+  </div>
+
+<script>
+  // Sample team data
+  const LEFT_PLAYERS  = [ {name:'PIPDOG'},     {name:'SCREECH'}, {name:'TIDESTORM'} ];
+  const RIGHT_PLAYERS = [ {name:'HARRYHANGS'}, {name:'GLOOPER'}, {name:'PRECONS'}   ];
+
+  // Per-variant template builders. Each returns the inner HTML for one
+  // banner (3 player rows), parameterized by side ('l' or 'r').
+  const tplA = (players, side) => players.map((p) => (
+    '<div class="pl-row">' +
+      '<span class="pl-name">' + p.name + '</span>' +
+      '<div class="pl-boost"><div class="pl-fill"></div><div class="pl-num">0</div></div>' +
+    '</div>'
+  )).join('');
+  const tplB = (players, side) => players.map((p) => (
+    '<div class="pl-row">' +
+      '<span class="pl-name">' + p.name + '</span>' +
+      '<div class="pl-boost"><div class="pl-fill"></div><div class="pl-num">0</div></div>' +
+    '</div>'
+  )).join('');
+  // C needs the number as a sibling of the boost bar, not inside it —
+  // the bar is only 6px tall with overflow:hidden, so the number gets
+  // clipped when nested inside.
+  const tplC = (players, side) => players.map((p) => (
+    '<div class="pl-row">' +
+      '<span class="pl-name">' + p.name + '</span>' +
+      '<div class="pl-boost"><div class="pl-fill"></div></div>' +
+      '<span class="pl-num">0</span>' +
+    '</div>'
+  )).join('');
+  const tplD = (players, side) => players.map((p) => (
+    '<div class="pl-row">' +
+      '<div class="pl-fill"></div>' +
+      '<div class="pl-content">' +
+        '<span class="pl-name">' + p.name + '</span>' +
+        '<span class="pl-num">0</span>' +
+      '</div>' +
+    '</div>'
+  )).join('');
+  const tplE = (players, side) => players.map((p) => (
+    '<div class="pl-row">' +
+      '<div class="pl-line">' +
+        '<span class="pl-name">' + p.name + '</span>' +
+        '<span class="pl-num">0</span>' +
+      '</div>' +
+      '<div class="pl-boost"><div class="pl-fill"></div></div>' +
+    '</div>'
+  )).join('');
+  const tplF = (players, side) => players.map((p) => (
+    '<div class="pl-row">' +
+      '<div class="pl-fill"></div>' +
+      '<div class="pl-content">' +
+        '<span class="pl-name">' + p.name + '</span>' +
+        '<span class="pl-num">0</span>' +
+      '</div>' +
+    '</div>'
+  )).join('');
+  const TPL = { A:tplA, B:tplB, C:tplC, D:tplD, E:tplE, F:tplF };
+
+  // Render each stage with left + right banners.
+  document.querySelectorAll('.stage[data-variant]').forEach((stage) => {
+    const v = stage.dataset.variant;
+    const tpl = TPL[v];
+    const left = document.createElement('div');
+    left.className  = 'banner-l v' + v;
+    left.innerHTML  = tpl(LEFT_PLAYERS,  'l', 'BLUE TEAM');
+    const right = document.createElement('div');
+    right.className = 'banner-r v' + v;
+    right.innerHTML = tpl(RIGHT_PLAYERS, 'r', 'ORANGE TEAM');
+    stage.appendChild(left);
+    stage.appendChild(right);
+  });
+
+  // Animate boost values across all variants with phased sine waves.
+  function tick(now) {
+    const t = now / 1000;
+    // 6 player slots × 2 sides = 12 phases, plus 6 variants → cycle.
+    let idx = 0;
+    document.querySelectorAll('.pl-row').forEach((row) => {
+      const fill = row.querySelector('.pl-fill');
+      const num  = row.querySelector('.pl-num');
+      const hex  = row.querySelector('.pl-hex .v');
+      if (!fill) return;
+      const v = Math.round(50 + 50 * Math.sin(t * 1.2 + idx * 0.5));
+      // --pct (percentage) drives width/height fills. --frac (0-1)
+      // drives opacity/intensity for variants that don't slide.
+      fill.style.setProperty('--pct', v + '%');
+      fill.style.setProperty('--frac', (v / 100).toFixed(3));
+      if (num) num.textContent = v;
+      if (hex) hex.textContent = v;
+      idx++;
+    });
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // Swatch picker — sides are independent so you can stress-test
+  // contrasting palettes.
+  document.querySelectorAll('.swatch').forEach((sw) => {
+    sw.addEventListener('click', () => {
+      const side = sw.dataset.side;
+      document.querySelectorAll('.swatch[data-side="' + side + '"]').forEach((s) => s.classList.remove('active'));
+      sw.classList.add('active');
+      document.documentElement.style.setProperty('--team-color-' + side, sw.dataset.color);
+    });
+  });
+</script>
+
+</body></html>

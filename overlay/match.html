@@ -1157,6 +1157,240 @@ body.no-bridge .boost-indicator { display:none !important; }
 
 body.no-bridge .goal-popup { display:none !important; }
 
+/* ====================================================================
+   PLAYER BANNER STYLES — producer picks one on Customize tab. Style A
+   (default) keeps the original look; B–F override container chrome and
+   inner row layout. CSS variables --tc-dark / --tc-light derive from
+   the side's team color so accents stay on-brand.
+==================================================================== */
+.players { --tc-dark: color-mix(in srgb, var(--team-color, #555) 50%, #000);
+           --tc-light: color-mix(in srgb, var(--team-color, #555) 65%, #fff); }
+
+/* ── B · STACKED GLASS — separate glassmorphic mini-cards ───────── */
+.players.banner-b {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:6px;
+}
+.players.banner-b.players-left  { border-left:none; }
+.players.banner-b.players-right { border-right:none; }
+.players.banner-b .player-row {
+  background:rgba(12,12,12,0.55);
+  border:1px solid rgba(255,255,255,0.06);
+  border-radius:8px;
+  padding:9px 14px;
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  display:flex; align-items:center; gap:12px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.45);
+  border-bottom:none;
+}
+.players.banner-b.players-left  .player-row { border-left:3px solid var(--team-color); }
+.players.banner-b.players-right .player-row { border-right:3px solid var(--team-color); flex-direction:row-reverse; }
+.players.banner-b .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Bebas Neue', sans-serif;
+  font-size:18px; letter-spacing:1.8px; color:white;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  text-shadow:0 1px 4px rgba(0,0,0,0.6);
+}
+.players.banner-b.players-right .player-name { text-align:right; }
+.players.banner-b .player-boost {
+  flex:0 0 120px; position:relative; height:12px;
+  border-radius:30px; background:rgba(255,255,255,0.08);
+  overflow:hidden; border:none; box-shadow:none;
+}
+.players.banner-b .player-boost-fill {
+  background:linear-gradient(90deg, var(--team-color), var(--tc-light));
+}
+.players.banner-b .player-boost-num {
+  position:static; inset:auto;
+  font-family:'Orbitron', monospace; font-weight:700;
+  font-size:11px; letter-spacing:1px; color:var(--tc-light);
+  min-width:26px; text-align:right;
+  display:block;
+  text-shadow:0 0 4px color-mix(in srgb, var(--team-color) 40%, transparent);
+}
+
+/* ── C · ANGLED SLASH — brutalist parallelograms ─────────────────── */
+.players.banner-c {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:3px;
+  filter:drop-shadow(0 4px 16px rgba(0,0,0,0.55));
+}
+.players.banner-c.players-left  { border-left:none; }
+.players.banner-c.players-right { border-right:none; }
+.players.banner-c .player-row {
+  position:relative;
+  background:rgba(8,8,8,0.92);
+  padding:10px 18px;
+  display:flex; align-items:center; gap:12px;
+  color:white; border-bottom:none;
+}
+.players.banner-c.players-left  .player-row { clip-path:polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); border-left:3px solid var(--team-color); }
+.players.banner-c.players-right .player-row { clip-path:polygon(16px 0, 100% 0, 100% 100%, 0 100%); border-right:3px solid var(--team-color); flex-direction:row-reverse; }
+.players.banner-c .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Anton', sans-serif; font-style:italic;
+  font-size:20px; letter-spacing:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.players.banner-c.players-right .player-name { text-align:right; }
+.players.banner-c .player-boost {
+  flex:0 0 100px; position:relative; height:10px;
+  border-radius:0; background:rgba(255,255,255,0.1);
+  overflow:hidden; transform:skewX(-12deg);
+  border:none; box-shadow:none;
+}
+.players.banner-c .player-boost-fill { background:var(--team-color); border-radius:0; box-shadow:0 0 4px var(--team-color); }
+.players.banner-c .player-boost-num {
+  position:static; inset:auto;
+  font-family:'Orbitron', monospace; font-weight:700;
+  font-size:11px; letter-spacing:1.2px; color:var(--tc-light);
+  min-width:24px; text-align:right;
+  display:block;
+}
+
+/* ── D · FUEL TANK — full-card horizontal fill, rounded ─────────── */
+.players.banner-d {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:6px;
+}
+.players.banner-d.players-left  { border-left:none; }
+.players.banner-d.players-right { border-right:none; }
+.players.banner-d .player-row {
+  position:relative; height:42px;
+  background:rgba(8,8,8,0.88);
+  border-radius:8px;
+  border:1px solid rgba(255,255,255,0.05);
+  overflow:hidden;
+  box-shadow:0 4px 14px rgba(0,0,0,0.45);
+  gap:0; padding:0; border-bottom:none;
+}
+.players.banner-d .player-boost-fill {
+  position:absolute; top:0; bottom:0; left:0;
+  width:0; /* fillSide sets style.width */
+  background:linear-gradient(90deg, var(--tc-dark), var(--team-color) 50%, var(--tc-light));
+  box-shadow:inset 0 0 18px color-mix(in srgb, var(--team-color) 40%, transparent);
+  transition:width 0.18s linear;
+}
+.players.banner-d.players-right .player-boost-fill {
+  left:auto; right:0;
+  background:linear-gradient(270deg, var(--tc-dark), var(--team-color) 50%, var(--tc-light));
+}
+.players.banner-d .pl-content {
+  position:relative; z-index:1; height:100%;
+  display:flex; align-items:center; gap:12px;
+  padding:0 16px;
+}
+.players.banner-d.players-right .pl-content { flex-direction:row-reverse; }
+.players.banner-d .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Bebas Neue', sans-serif;
+  font-size:20px; letter-spacing:1.8px; color:white;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  text-shadow:0 1px 5px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7);
+}
+.players.banner-d.players-right .player-name { text-align:right; }
+.players.banner-d .player-boost-num {
+  position:static; inset:auto;
+  font-family:'Orbitron', monospace; font-weight:900;
+  font-size:14px; letter-spacing:1px; color:white;
+  flex:0 0 auto; display:block;
+  text-shadow:0 1px 4px rgba(0,0,0,0.95);
+}
+
+/* ── E · MINIMAL LINES — no chrome, slim underbar ────────────────── */
+.players.banner-e {
+  background:transparent !important;
+  padding:6px 14px; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:14px;
+}
+.players.banner-e.players-left  { border-left:none; }
+.players.banner-e.players-right { border-right:none; }
+.players.banner-e .player-row {
+  position:relative;
+  display:flex; flex-direction:column; gap:4px;
+  border-bottom:none; padding:0; background:transparent;
+  text-shadow:none;
+}
+.players.banner-e .pl-line {
+  display:flex; align-items:baseline; gap:8px;
+}
+.players.banner-e.players-right .pl-line { flex-direction:row-reverse; }
+.players.banner-e .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Anton', sans-serif;
+  font-size:24px; letter-spacing:2px; line-height:1; color:white;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  text-shadow:0 2px 6px rgba(0,0,0,0.7);
+}
+.players.banner-e .player-boost-num {
+  position:static; inset:auto;
+  font-family:'Orbitron', monospace; font-weight:700;
+  font-size:11px; letter-spacing:1.5px; color:var(--team-color);
+  text-shadow:0 0 6px color-mix(in srgb, var(--team-color) 50%, transparent);
+  display:block;
+}
+.players.banner-e.players-right { text-align:right; }
+.players.banner-e .player-boost {
+  position:relative; height:7px;
+  border-radius:3px; background:rgba(255,255,255,0.07);
+  overflow:hidden; flex:none; width:auto;
+  border:none; box-shadow:none;
+}
+.players.banner-e .player-boost-fill {
+  background:var(--team-color); border-radius:inherit;
+  box-shadow:0 0 6px var(--team-color);
+}
+
+/* ── F · POWER BLOCK — squared cards, solid fill ─────────────────── */
+.players.banner-f {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:8px;
+}
+.players.banner-f.players-left  { border-left:none; }
+.players.banner-f.players-right { border-right:none; }
+.players.banner-f .player-row {
+  position:relative; height:42px;
+  background:rgba(8,8,8,0.92);
+  border:2px solid color-mix(in srgb, var(--team-color) 45%, transparent);
+  border-radius:0;
+  overflow:hidden;
+  box-shadow:0 4px 14px rgba(0,0,0,0.5), 0 0 18px color-mix(in srgb, var(--team-color) 18%, transparent);
+  gap:0; padding:0; border-bottom:none;
+}
+.players.banner-f .player-boost-fill {
+  position:absolute; top:0; bottom:0; left:0;
+  width:0;
+  background:var(--team-color);
+  transition:width 0.18s linear;
+}
+.players.banner-f.players-right .player-boost-fill { left:auto; right:0; }
+.players.banner-f .pl-content {
+  position:relative; z-index:1; height:100%;
+  display:flex; align-items:center; gap:12px;
+  padding:0 14px;
+}
+.players.banner-f.players-right .pl-content { flex-direction:row-reverse; }
+.players.banner-f .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Bebas Neue', sans-serif;
+  font-size:20px; letter-spacing:1.8px; color:white;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  text-shadow:0 1px 5px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.7);
+}
+.players.banner-f.players-right .player-name { text-align:right; }
+.players.banner-f .player-boost-num {
+  position:static; inset:auto;
+  font-family:'Orbitron', monospace; font-weight:900;
+  font-size:14px; letter-spacing:1px; color:white;
+  flex:0 0 auto; display:block;
+  text-shadow:0 1px 4px rgba(0,0,0,0.95);
+}
+
 /* ─── Producer-controlled visibility flags (Customize tab toggles) ─── */
 body.hide-banners    #leftBanner, body.hide-banners    #rightBanner,
 body.hide-banners    #leftPlayers, body.hide-banners   #rightPlayers,
@@ -1393,6 +1627,9 @@ function applyOverlayConfig(cfg) {
   // Goal-popup style — same a..f convention from the goal-variants doc.
   const goalStyle = (cfg && cfg.goalPopupStyle) || 'a';
   applyGoalPopupStyle(goalStyle);
+  // Player-banner style — applies a banner-X class + rewrites row DOM.
+  const bannerStyle = (cfg && cfg.bannerStyle) || 'a';
+  applyBannerStyle(bannerStyle);
   // Element-visibility toggles. Each defaults to true so existing
   // installs don't suddenly lose pieces of the overlay.
   applyOverlayToggles(cfg || {});
@@ -1722,6 +1959,67 @@ function hideGoalPopup() {
 // Boot the goal popup shell.
 applyGoalPopupStyle('a');
 
+// ── Player-banner style (Customize tab) ────────────────────────────
+// One of a..f. Drives the players-box class + per-row inner DOM.
+// Same render path for live and demo — only the markup changes.
+const BANNER_STYLES = ['a','b','c','d','e','f'];
+let currentBannerStyle = 'a';
+function applyBannerStyle(style) {
+  if (!BANNER_STYLES.includes(style)) style = 'a';
+  if (style === currentBannerStyle && document.querySelector('.player-row .player-name')) return;
+  currentBannerStyle = style;
+  ['left','right'].forEach((side) => {
+    const box = document.getElementById(side + 'Players');
+    if (!box) return;
+    BANNER_STYLES.forEach((s) => box.classList.remove('banner-' + s));
+    box.classList.add('banner-' + style);
+    // Re-render row inner DOM so structure matches the active style.
+    box.querySelectorAll('.player-row').forEach((row) => {
+      const wasEmpty  = row.classList.contains('empty');
+      const wasTarget = row.classList.contains('is-target');
+      row.innerHTML = buildPlayerRowHTML(style);
+      row.classList.toggle('empty',     wasEmpty);
+      row.classList.toggle('is-target', wasTarget);
+    });
+  });
+  // Re-fill values from the last bridge tick so the bars don't reset.
+  if (lastBridgeUpdate) updatePlayerBoosts(lastBridgeUpdate);
+}
+function buildPlayerRowHTML(style) {
+  switch (style) {
+    case 'd':
+    case 'f':
+      return (
+        '<div class="player-boost-fill"></div>' +
+        '<div class="pl-content">' +
+          '<span class="player-name"></span>' +
+          '<span class="player-boost-num"></span>' +
+        '</div>'
+      );
+    case 'e':
+      return (
+        '<div class="pl-line">' +
+          '<span class="player-name"></span>' +
+          '<span class="player-boost-num"></span>' +
+        '</div>' +
+        '<div class="player-boost"><div class="player-boost-fill"></div></div>'
+      );
+    case 'c':
+      return (
+        '<span class="player-name"></span>' +
+        '<div class="player-boost"><div class="player-boost-fill"></div></div>' +
+        '<span class="player-boost-num"></span>'
+      );
+    case 'b':
+    case 'a':
+    default:
+      return (
+        '<span class="player-name"></span>' +
+        '<div class="player-boost"><div class="player-boost-fill"></div><div class="player-boost-num"></div></div>'
+      );
+  }
+}
+
 // ── Producer-controlled element visibility ────────────────────────
 // Producers toggle individual overlay elements (banners, boost bars,
 // player card, boost meter, goal popup) and per-stat visibility from
@@ -1848,10 +2146,12 @@ function startDemoAnimate() {
     const meterBoost = Math.round(50 + 50 * Math.sin(t * 1.2));
     applyBoostIndicator(meterBoost);
     // Player rows — each bar on its own phase. 6 bars across both sides.
-    document.querySelectorAll('.player-row .player-boost').forEach((boostEl, i) => {
+    // Iterate rows (not .player-boost) since variants D/F have the fill
+    // element directly inside the row, no wrapper.
+    document.querySelectorAll('.player-row').forEach((row, i) => {
       const val = Math.round(50 + 50 * Math.sin(t * 1.2 + i * 0.7));
-      const fillEl = boostEl.querySelector('.player-boost-fill');
-      const numEl  = boostEl.querySelector('.player-boost-num');
+      const fillEl = row.querySelector('.player-boost-fill');
+      const numEl  = row.querySelector('.player-boost-num');
       if (fillEl) fillEl.style.width = val + '%';
       if (numEl)  numEl.textContent  = val;
     });
@@ -2023,28 +2323,21 @@ async function renderSide(side, slot, league /*, playerOverrides — ignored */)
   logoImg.src = team.logo;
   logoBox.appendChild(logoImg);
 
-  // Pre-render N empty rows. Names + boosts arrive from the live RL bridge
-  // — no rostered-name pre-fill, no alias matching. Whatever RL says is
-  // playing on this side is what shows up.
+  // Pre-render N empty rows. Inner DOM matches the active banner style.
+  // fillSide uses querySelector to find name/fill/num so it doesn't care
+  // about per-variant nesting.
   playersBox.innerHTML = '';
+  // Ensure the players box carries the current banner-X class so the
+  // per-variant CSS applies even on the first paint.
+  BANNER_STYLES.forEach((s) => playersBox.classList.remove('banner-' + s));
+  playersBox.classList.add('banner-' + currentBannerStyle);
   for (let i = 0; i < 3; i++) {
     const row = document.createElement('div');
     row.className = 'player-row empty';
-    const nameEl = document.createElement('span');
-    nameEl.className = 'player-name';
-    const boostEl = document.createElement('div');
-    boostEl.className = 'player-boost';
-    const fillEl = document.createElement('div');
-    fillEl.className = 'player-boost-fill';
-    const numEl = document.createElement('div');
-    numEl.className = 'player-boost-num';
-    boostEl.appendChild(fillEl);
-    boostEl.appendChild(numEl);
-    row.appendChild(nameEl);
-    row.appendChild(boostEl);
+    row.innerHTML = buildPlayerRowHTML(currentBannerStyle);
     playersBox.appendChild(row);
   }
-  if (lastBridgeUpdate) updatePlayerBoosts(lastBridgeUpdate.Players);
+  if (lastBridgeUpdate) updatePlayerBoosts(lastBridgeUpdate);
 
   banner.classList.add('visible');
   playersBox.classList.add('visible');
@@ -2432,6 +2725,7 @@ function connectStats() {
         // some other tick (race-condition safe).
         currentNwStyle = '';
         currentGoalStyle = '';
+        currentBannerStyle = '';
         fetchOverlayConfig();
       } else if (key === 'stream_match')  { lastSig = ''; poll(); }
       else if (key === 'stream_series') { lastSeriesSig = ''; poll(); }

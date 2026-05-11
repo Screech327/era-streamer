@@ -1335,6 +1335,45 @@ h1, h2, h3 {
     </div>
 
     <div class="panel">
+      <h2>PLAYER BANNERS <span id="bannerStyleName" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;margin-left:8px;"></span></h2>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;">
+        Top-left and top-right cards showing each team's three players, their names, and their boost gauges.
+      </div>
+      <div class="style-picker-row" id="bannerStylePicker">
+        <button type="button" class="style-card" data-picker="banner" data-style="a">
+          <span class="sc-letter">A</span>
+          <span class="sc-name">CURRENT</span>
+          <span class="sc-desc">Dark slab, side-border</span>
+        </button>
+        <button type="button" class="style-card" data-picker="banner" data-style="b">
+          <span class="sc-letter">B</span>
+          <span class="sc-name">STACKED GLASS</span>
+          <span class="sc-desc">Glassmorphic mini-cards</span>
+        </button>
+        <button type="button" class="style-card" data-picker="banner" data-style="c">
+          <span class="sc-letter">C</span>
+          <span class="sc-name">ANGLED SLASH</span>
+          <span class="sc-desc">Brutalist parallelograms</span>
+        </button>
+        <button type="button" class="style-card" data-picker="banner" data-style="d">
+          <span class="sc-letter">D</span>
+          <span class="sc-name">FUEL TANK</span>
+          <span class="sc-desc">Full-card horizontal fill</span>
+        </button>
+        <button type="button" class="style-card" data-picker="banner" data-style="e">
+          <span class="sc-letter">E</span>
+          <span class="sc-name">MINIMAL LINES</span>
+          <span class="sc-desc">No chrome, slim bar</span>
+        </button>
+        <button type="button" class="style-card" data-picker="banner" data-style="f">
+          <span class="sc-letter">F</span>
+          <span class="sc-name">POWER BLOCK</span>
+          <span class="sc-desc">Squared, solid fill</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="panel">
       <h2>GOAL POPUP <span id="goalStyleName" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;margin-left:8px;"></span></h2>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;">
         Bottom-center popup that fires when a goal is scored, showing the scorer and the assister. Stays visible for the entire RL replay.
@@ -2161,8 +2200,9 @@ async function loadSettings() {
 // Overlay-style picker — two pickers (player card + goal popup) sit on
 // the Customize tab. Both share the stream_overlay_config row so the
 // overlay only has to poll one settings key.
-const NW_STYLE_NAMES   = { a:'A · CURRENT', b:'B · ANGULAR BLADE', c:'C · TEAM SHIELD', d:'D · HERO STATLINE', e:'E · GLASS BAR', f:'F · STACKED METRICS' };
-const GOAL_STYLE_NAMES = { a:'A · NEON HOLO BAR', b:'B · TILTED STRIKE', c:'C · DIAGONAL SPLIT', d:'D · STADIUM JUMBOTRON', e:'E · LIGHT BURST', f:'F · LAYERED DEPTH' };
+const NW_STYLE_NAMES     = { a:'A · CURRENT', b:'B · ANGULAR BLADE', c:'C · TEAM SHIELD', d:'D · HERO STATLINE', e:'E · GLASS BAR', f:'F · STACKED METRICS' };
+const GOAL_STYLE_NAMES   = { a:'A · NEON HOLO BAR', b:'B · TILTED STRIKE', c:'C · DIAGONAL SPLIT', d:'D · STADIUM JUMBOTRON', e:'E · LIGHT BURST', f:'F · LAYERED DEPTH' };
+const BANNER_STYLE_NAMES = { a:'A · CURRENT', b:'B · STACKED GLASS', c:'C · ANGLED SLASH', d:'D · FUEL TANK', e:'E · MINIMAL LINES', f:'F · POWER BLOCK' };
 
 function reflectStyle(picker, style) {
   // Settings dropdown (legacy — kept hidden for compat) + Customize cards
@@ -2173,6 +2213,8 @@ function reflectStyle(picker, style) {
   } else if (picker === 'goal') {
     const name = $('goalStyleName'); if (name) name.textContent = GOAL_STYLE_NAMES[style] || '';
     const asb = $('asbGoalStyle'); if (asb) asb.textContent = String(style || '').toUpperCase();
+  } else if (picker === 'banner') {
+    const name = $('bannerStyleName'); if (name) name.textContent = BANNER_STYLE_NAMES[style] || '';
   }
   document.querySelectorAll('.style-card[data-picker="' + picker + '"]').forEach((b) => {
     b.classList.toggle('active', b.dataset.style === style);
@@ -2185,10 +2227,11 @@ async function setStyle(picker, style) {
     const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
     cfg = (arr[0] && arr[0].value) || {};
   } catch (e) {}
-  if (picker === 'nw')   cfg.nowWatchingStyle = style;
-  if (picker === 'goal') cfg.goalPopupStyle   = style;
+  if (picker === 'nw')     cfg.nowWatchingStyle = style;
+  if (picker === 'goal')   cfg.goalPopupStyle   = style;
+  if (picker === 'banner') cfg.bannerStyle      = style;
   await upsert('stream_overlay_config', cfg);
-  const label = picker === 'nw' ? 'PLAYER CARD' : 'GOAL POPUP';
+  const label = picker === 'nw' ? 'PLAYER CARD' : picker === 'goal' ? 'GOAL POPUP' : 'BANNER';
   showToast(label + ' · ' + style.toUpperCase());
 }
 // Overlay element toggles + per-stat checkboxes. Defaults: everything
@@ -2257,8 +2300,9 @@ async function loadOverlayConfig() {
   try {
     const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
     const cfg = (arr[0] && arr[0].value) || {};
-    reflectStyle('nw',   cfg.nowWatchingStyle || 'a');
-    reflectStyle('goal', cfg.goalPopupStyle   || 'a');
+    reflectStyle('nw',     cfg.nowWatchingStyle || 'a');
+    reflectStyle('goal',   cfg.goalPopupStyle   || 'a');
+    reflectStyle('banner', cfg.bannerStyle      || 'a');
     reflectToggles(cfg);
   } catch (e) {}
 }
