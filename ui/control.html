@@ -1303,14 +1303,6 @@ h1, h2, h3 {
     </div>
   </div>
 
-  <!-- Recent matchups — useful for general use, but ERA teams only meet
-       once per season, so this lives at the bottom rather than dominating
-       the top of the page. -->
-  <div class="panel" id="recentPanel" style="display:none">
-    <h2>RECENT MATCHUPS <span style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;">— click to reload</span></h2>
-    <div class="recent-list" id="recentList"></div>
-  </div>
-
   </div><!-- end main pane -->
 
   <div class="tab-pane" data-pane="customize">
@@ -1568,6 +1560,13 @@ h1, h2, h3 {
       <div id="archiveList" class="archive-list">
         <div class="archive-empty">Nothing saved yet. Run a session — every match the bridge sees gets captured automatically. Hit SAVE SESSION above at the end and it'll show up here.</div>
       </div>
+    </div>
+    <!-- Recent matchups — hidden when empty. For ERA this rarely appears
+         (teams meet once per season), but for public users it lets you
+         quickly reload a previous matchup as the active match. -->
+    <div class="panel" id="recentPanel" style="display:none">
+      <h2>RECENT MATCHUPS <span style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;">— click to reload</span></h2>
+      <div class="recent-list" id="recentList"></div>
     </div>
   </div>
 
