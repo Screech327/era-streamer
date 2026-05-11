@@ -773,17 +773,23 @@ h1, h2, h3 {
   display:flex; flex-direction:column;
   margin:0;
 }
-.cz-preview-wrap .preview-stage {
-  /* Lock to 16:9 (matches what OBS renders). width:100% gives the box
-     a concrete dimension; aspect-ratio computes the height from there.
-     If the splitter shrinks the wrap below the natural 16:9 height,
-     the preview gets clipped at the bottom — pull the splitter back
-     down for more room. */
-  width:100%;
-  aspect-ratio:16 / 9;
-  height:auto;
-  flex:0 0 auto;
+/* Center the preview-stage inside a flex container so it can hit the
+   "contain" sizing — biggest 16:9 box that fits both the available
+   width and height. Excess space becomes letterbox margin. */
+.cz-stage-fit {
+  flex:1 1 auto;
   min-height:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+.cz-preview-wrap .preview-stage {
+  aspect-ratio:16 / 9;
+  max-width:100%;
+  max-height:100%;
+  width:auto;
+  height:auto;
 }
 .cz-splitter {
   flex:0 0 10px;
@@ -1346,8 +1352,10 @@ h1, h2, h3 {
             <button class="btn btn-small" id="cz_refreshBtn" type="button">REFRESH</button>
           </div>
         </div>
-        <div class="preview-stage" id="cz_previewStage">
-          <iframe class="preview-frame" id="cz_previewFrame" src="/match.html?demo=1&goalDemo=1" title="Customization preview"></iframe>
+        <div class="cz-stage-fit">
+          <div class="preview-stage" id="cz_previewStage">
+            <iframe class="preview-frame" id="cz_previewFrame" src="/match.html?demo=1&goalDemo=1" title="Customization preview"></iframe>
+          </div>
         </div>
       </div>
     </div>
