@@ -852,7 +852,9 @@ body.no-bridge .player-row { gap:0; }
   border-top:2px solid var(--team-color, #555);
   box-shadow:0 6px 20px rgba(0,0,0,0.65);
 }
-.style-f { position:relative; }
+/* .now-watching is already position:absolute (the shared rule above),
+   which makes it the positioning context for the logo. Don't override
+   position here or the whole card slides to the document corner. */
 .style-f .nw-logo-img {
   position:absolute;
   top:10px; right:14px;
