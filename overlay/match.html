@@ -1694,17 +1694,18 @@ function nwHide() {
 }
 
 // ── Boost indicator (bottom-right 270° arc) ─────────────────────────
-// 2πr where r=45 → ~282.7; we draw 270° of that = ~212. Fill is the
-// remaining offset that gets eaten away as boost rises 0→100.
-const BOOST_ARC_LEN = 212;
 function applyBoostIndicator(boost, color) {
+  // 2πr where r=45 → ~282.7; we draw 270° of that ≈ 212. Inlined so the
+  // function can be invoked at boot from applyDemoNowWatching without a
+  // TDZ hazard.
+  const ARC = 212;
   const el = document.getElementById('boostIndicator');
   if (!el) return;
   const pct = Math.max(0, Math.min(100, Number(boost) || 0));
   const fill = document.getElementById('boostFill');
   const valEl = document.getElementById('boostValue');
   if (color) el.style.setProperty('--team-color', color);
-  if (fill)  fill.style.strokeDashoffset = BOOST_ARC_LEN - (BOOST_ARC_LEN * pct / 100);
+  if (fill)  fill.style.strokeDashoffset = ARC - (ARC * pct / 100);
   if (valEl) valEl.textContent = Math.round(pct);
   el.classList.add('visible');
 }
