@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CUSTOMIZE PAGE — Layout Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red:#e63946;
+    --gold:#c9a84c;
+    --panel:#0f0f0f;
+    --panel-2:#161616;
+    --line:#1d1d1d;
+    --text-dim:#888;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    background:#0a0a0a; color:#e8e8e8;
+    font-family:'Rajdhani',sans-serif;
+    min-height:100vh;
+    padding:30px 40px 80px;
+  }
+  h1 {
+    font-family:'Anton', sans-serif;
+    font-size:36px; letter-spacing:3px;
+    margin-bottom:6px;
+  }
+  .lede {
+    color:#888; font-size:14px; max-width:840px;
+    margin-bottom:30px; line-height:1.55;
+  }
+  .lede strong { color:#fff; }
+
+  .variant-block { margin-bottom:46px; }
+  .variant-head {
+    display:flex; align-items:baseline; gap:14px;
+    margin-bottom:12px;
+  }
+  .variant-head .letter {
+    font-family:'Orbitron', monospace; font-weight:900;
+    font-size:14px; color:white;
+    background:var(--red); padding:4px 10px;
+    border-radius:4px; letter-spacing:1.5px;
+  }
+  .variant-head h2 {
+    font-family:'Anton', sans-serif;
+    font-size:22px; letter-spacing:3px;
+  }
+  .variant-head .note {
+    font-family:'Orbitron', monospace;
+    font-size:9px; letter-spacing:2px; color:#888;
+    margin-left:auto;
+  }
+
+  /* Mock app frame — looks like the real era-streamer window so the
+     layout proposal reads as it would in context. */
+  .frame {
+    border:1px solid #222;
+    border-radius:10px;
+    overflow:hidden;
+    box-shadow:0 12px 40px rgba(0,0,0,0.55);
+    background:#0a0a0a;
+    width:100%; max-width:1280px;
+  }
+  .titlebar {
+    height:34px; background:#080808;
+    border-bottom:1px solid #1a1a1a;
+    display:flex; align-items:center; padding:0 14px; gap:10px;
+    font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:3px;
+  }
+  .titlebar .mark {
+    width:18px; height:18px; border-radius:3px;
+    background:linear-gradient(135deg, var(--red), #7a0e1d);
+  }
+  .titlebar .accent { color:var(--red); }
+  .titlebar .spacer { flex:1; }
+  .titlebar .ver { font-family:'Orbitron',monospace; font-size:9px; color:#888; }
+
+  .app-body {
+    display:grid;
+    grid-template-columns:180px 1fr;
+    height:560px;
+  }
+  .sidebar {
+    background:#080808; border-right:1px solid #1a1a1a;
+    padding:14px 0; display:flex; flex-direction:column;
+  }
+  .side-tag {
+    font-family:'Orbitron',monospace; font-size:9px; letter-spacing:2px;
+    color:#666; padding:0 18px 6px; margin-top:6px;
+  }
+  .side-link {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 18px;
+    color:#aaa; font-family:'Bebas Neue',sans-serif;
+    font-size:14px; letter-spacing:2px;
+    border-left:3px solid transparent;
+    cursor:default;
+  }
+  .side-link.active {
+    background:rgba(230,57,70,0.10); color:white;
+    border-left-color:var(--red);
+  }
+  .side-link .ico { width:16px; text-align:center; font-size:13px; opacity:0.8; }
+  .side-status { margin-top:auto; padding:0 18px 14px; display:flex; flex-direction:column; gap:6px; font-family:'Orbitron',monospace; font-size:9px; color:#5acb6a; }
+
+  .main-area {
+    padding:18px 22px;
+    overflow:hidden;
+    display:flex; flex-direction:column;
+    background:#0a0a0a;
+  }
+
+  /* Reusable mock pieces */
+  .panel {
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:14px 16px;
+  }
+  .panel h3 {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:16px; letter-spacing:2.5px;
+    margin-bottom:8px;
+  }
+  .panel .desc { font-size:11px; color:var(--text-dim); line-height:1.45; }
+
+  .preview-stage {
+    position:relative;
+    border-radius:8px;
+    overflow:hidden;
+    background:
+      radial-gradient(60% 80% at 30% 30%, rgba(60,140,255,0.18), transparent 60%),
+      radial-gradient(50% 70% at 80% 70%, rgba(255,120,30,0.18), transparent 60%),
+      linear-gradient(180deg, #1a1b1c, #0a0a0a);
+    border:1px solid var(--line);
+    aspect-ratio:16 / 9;
+  }
+  .preview-stage::after {
+    content:'OVERLAY PREVIEW';
+    position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Orbitron',monospace; font-size:11px; letter-spacing:3px; color:#666;
+  }
+
+  .picker-card-row {
+    display:grid; grid-template-columns:repeat(3, 1fr);
+    gap:8px;
+  }
+  .picker-card {
+    background:var(--panel-2); border:1px solid var(--line);
+    border-radius:6px; padding:9px 11px;
+    display:flex; flex-direction:column; gap:2px;
+  }
+  .picker-card.active {
+    border-color:var(--red); background:rgba(230,57,70,0.07);
+    box-shadow:0 0 0 1px var(--red);
+  }
+  .picker-card .lt {
+    font-family:'Orbitron',monospace; font-weight:700; font-size:9px;
+    color:var(--red); background:rgba(230,57,70,0.10);
+    border:1px solid rgba(230,57,70,0.35);
+    border-radius:3px; padding:0 5px; align-self:flex-start;
+  }
+  .picker-card.active .lt { background:var(--red); color:white; }
+  .picker-card .nm { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:1.5px; color:white; line-height:1; }
+  .picker-card .ds { font-size:10px; color:var(--text-dim); line-height:1.3; }
+
+  .toggle-row {
+    display:flex; align-items:center; gap:10px;
+    padding:9px 12px;
+    background:var(--panel-2); border:1px solid var(--line);
+    border-radius:6px;
+  }
+  .toggle-row + .toggle-row { margin-top:5px; }
+  .toggle-row .nm { font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:1.5px; flex:1; }
+  .iso { width:34px; height:18px; background:var(--red); border-radius:30px; position:relative; flex:0 0 auto; }
+  .iso::after { content:''; position:absolute; right:2px; top:2px; width:14px; height:14px; border-radius:50%; background:white; }
+  .iso.off { background:#1a1a1a; border:1px solid #333; }
+  .iso.off::after { right:auto; left:2px; background:#666; }
+
+  /* ──────────────────────────────────────────────────────────────────
+     A · Inner Sidebar (sub-nav)
+  ────────────────────────────────────────────────────────────────── */
+  .vA .inner-sidebar {
+    width:160px; flex:0 0 auto;
+    background:#0d0d0d; border-right:1px solid #1a1a1a;
+    padding:12px 0; display:flex; flex-direction:column; gap:1px;
+  }
+  .vA .inner-sidebar .sub-tag {
+    font-family:'Orbitron',monospace; font-size:8px; letter-spacing:2px;
+    color:#555; padding:0 14px 6px;
+  }
+  .vA .inner-link {
+    padding:7px 14px;
+    font-family:'Bebas Neue',sans-serif; font-size:12px; letter-spacing:1.5px;
+    color:#999; border-left:2px solid transparent;
+  }
+  .vA .inner-link.active { background:rgba(230,57,70,0.08); color:white; border-left-color:var(--red); }
+  .vA .main-area {
+    display:grid;
+    grid-template-columns:1fr 360px;
+    gap:14px; padding:14px 16px;
+  }
+  .vA .options-pane { overflow-y:auto; padding-right:6px; }
+  .vA .preview-pane { display:flex; flex-direction:column; gap:10px; }
+  .vA .preview-pane .preview-stage { flex:0 0 auto; }
+  .vA .preview-pane .ctrls { display:flex; gap:6px; flex-wrap:wrap; }
+  .vA .preview-pane .ctrls button { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:1.5px; background:transparent; border:1px solid #333; color:#aaa; padding:5px 8px; border-radius:3px; cursor:default; }
+  .vA .preview-pane .ctrls button.primary { background:var(--red); border-color:var(--red); color:white; }
+
+  /* ──────────────────────────────────────────────────────────────────
+     B · Horizontal Sub-Tabs above options
+  ────────────────────────────────────────────────────────────────── */
+  .vB .main-area { padding:14px 16px; }
+  .vB .preview-stage { margin-bottom:12px; }
+  .vB .sub-tabs {
+    display:flex; gap:2px;
+    border-bottom:1px solid var(--line);
+    margin-bottom:12px;
+  }
+  .vB .sub-tab {
+    padding:9px 16px;
+    font-family:'Bebas Neue',sans-serif; font-size:13px; letter-spacing:1.5px;
+    color:#888;
+    border-bottom:2px solid transparent;
+    margin-bottom:-1px;
+  }
+  .vB .sub-tab.active { color:white; border-bottom-color:var(--red); }
+  .vB .options-pane { overflow-y:auto; flex:1; padding-right:6px; }
+
+  /* ──────────────────────────────────────────────────────────────────
+     C · Collapsible Preview · floating PiP
+  ────────────────────────────────────────────────────────────────── */
+  .vC .main-area { position:relative; padding:14px 16px; }
+  .vC .options-pane { overflow-y:auto; padding-right:6px; padding-bottom:8px; }
+  .vC .floating-preview {
+    position:absolute;
+    right:22px; bottom:22px;
+    width:300px;
+    background:#0d0d0d;
+    border:1px solid #2a2a2a;
+    border-radius:8px;
+    overflow:hidden;
+    box-shadow:0 12px 30px rgba(0,0,0,0.6);
+  }
+  .vC .floating-preview .fp-head {
+    display:flex; align-items:center; gap:8px;
+    background:#080808; padding:6px 10px;
+    font-family:'Orbitron',monospace; font-size:9px; letter-spacing:2px; color:#888;
+    border-bottom:1px solid #1a1a1a;
+  }
+  .vC .floating-preview .fp-head .dot { width:6px; height:6px; border-radius:50%; background:#5acb6a; }
+  .vC .floating-preview .fp-head .grow { flex:1; }
+  .vC .floating-preview .preview-stage { border:none; border-radius:0; }
+  .vC .options-pane h3 + .picker-card-row { margin-bottom:6px; }
+  .vC .opt-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+
+  /* ──────────────────────────────────────────────────────────────────
+     D · Inner Sidebar + Preview docked LEFT
+  ────────────────────────────────────────────────────────────────── */
+  .vD .inner-sidebar {
+    width:170px; flex:0 0 auto;
+    background:#0d0d0d; border-right:1px solid #1a1a1a;
+    padding:12px 0 14px; display:flex; flex-direction:column; gap:8px;
+  }
+  .vD .inner-sidebar .sub-tag {
+    font-family:'Orbitron',monospace; font-size:8px; letter-spacing:2px;
+    color:#555; padding:0 14px;
+  }
+  .vD .inner-sidebar .preview-mini {
+    margin:0 10px; aspect-ratio:16 / 9;
+    background:
+      radial-gradient(60% 80% at 30% 30%, rgba(60,140,255,0.18), transparent 60%),
+      radial-gradient(50% 70% at 80% 70%, rgba(255,120,30,0.18), transparent 60%),
+      linear-gradient(180deg, #1a1b1c, #0a0a0a);
+    border-radius:6px;
+    position:relative;
+  }
+  .vD .inner-sidebar .preview-mini::after {
+    content:'PREVIEW'; position:absolute; inset:0;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Orbitron',monospace; font-size:8px; letter-spacing:2px; color:#555;
+  }
+  .vD .inner-sidebar .sub-nav { display:flex; flex-direction:column; gap:1px; }
+  .vD .inner-link {
+    padding:7px 14px;
+    font-family:'Bebas Neue',sans-serif; font-size:12px; letter-spacing:1.5px;
+    color:#999; border-left:2px solid transparent;
+  }
+  .vD .inner-link.active { background:rgba(230,57,70,0.08); color:white; border-left-color:var(--red); }
+  .vD .main-area { padding:16px 20px; }
+  .vD .options-pane { overflow-y:auto; padding-right:6px; }
+
+  /* ──────────────────────────────────────────────────────────────────
+     E · Resizable Splitter
+  ────────────────────────────────────────────────────────────────── */
+  .vE .main-area { padding:0; }
+  .vE .split { display:flex; flex-direction:column; height:100%; }
+  .vE .split-top { flex:0 0 var(--top, 220px); position:relative; min-height:120px; }
+  .vE .split-top .preview-stage { aspect-ratio:auto; height:100%; border-radius:0; border:none; border-bottom:1px solid #1a1a1a; }
+  .vE .split-top .controls {
+    position:absolute; top:8px; right:8px;
+    display:flex; gap:6px;
+  }
+  .vE .split-top .controls button { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:1.5px; background:rgba(0,0,0,0.7); border:1px solid #333; color:#aaa; padding:5px 8px; border-radius:3px; cursor:default; backdrop-filter:blur(6px); }
+  .vE .splitter {
+    flex:0 0 8px;
+    background:linear-gradient(180deg, #0d0d0d, #1a1a1a, #0d0d0d);
+    border-top:1px solid #222; border-bottom:1px solid #222;
+    position:relative;
+    cursor:ns-resize;
+  }
+  .vE .splitter::after {
+    content:''; position:absolute; top:50%; left:50%;
+    transform:translate(-50%, -50%);
+    width:60px; height:3px;
+    background:#3a3a3a; border-radius:2px;
+  }
+  .vE .split-bottom { flex:1 1 auto; overflow-y:auto; padding:14px 16px; min-height:0; }
+</style>
+</head>
+<body>
+
+  <h1>CUSTOMIZE PAGE — LAYOUT VARIANTS</h1>
+  <div class="lede">
+    Four ideas for getting more breathing room around the customize options. Each thumbnail mocks the era-streamer window. Pick whichever direction feels right — I'll wire the live UI to match. The chosen example shows the <strong>Player Card</strong> section by way of example, but every variant works the same way for the other sections.
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="variant-block vA">
+    <div class="variant-head">
+      <span class="letter">A</span>
+      <h2>INNER SIDEBAR (SUB-NAV)</h2>
+      <span class="note">categories as their own list — only one section visible at a time</span>
+    </div>
+    <div class="frame">
+      <div class="titlebar"><div class="mark"></div><span class="accent">ERA</span> STREAMER<div class="spacer"></div><div class="ver">V0.21</div></div>
+      <div class="app-body" style="grid-template-columns:180px 160px 1fr">
+        <div class="sidebar">
+          <div class="side-tag">NAVIGATION</div>
+          <div class="side-link"><span class="ico">▦</span>Main</div>
+          <div class="side-link active"><span class="ico">✦</span>Customize</div>
+          <div class="side-link"><span class="ico">▤</span>Archive</div>
+          <div class="side-link"><span class="ico">⚙</span>Settings</div>
+          <div class="side-status">RL CONFIG OK</div>
+        </div>
+        <div class="inner-sidebar">
+          <div class="sub-tag">CUSTOMIZE</div>
+          <div class="inner-link">Visibility</div>
+          <div class="inner-link active">Player Card</div>
+          <div class="inner-link">Banners</div>
+          <div class="inner-link">Goal Popup</div>
+          <div class="inner-link">Card Stats</div>
+        </div>
+        <div class="main-area">
+          <div class="options-pane">
+            <div class="panel" style="margin-bottom:12px;">
+              <h3>PLAYER CARD — STYLE</h3>
+              <div class="desc" style="margin-bottom:10px;">Pick the look of the bottom-left now-watching card. Choose A–F.</div>
+              <div class="picker-card-row">
+                <div class="picker-card"><span class="lt">A</span><span class="nm">CURRENT</span><span class="ds">Dark slab, 6-stat grid</span></div>
+                <div class="picker-card active"><span class="lt">B</span><span class="nm">ANGULAR BLADE</span><span class="ds">Brutalist chevron tab</span></div>
+                <div class="picker-card"><span class="lt">C</span><span class="nm">TEAM SHIELD</span><span class="ds">Reserved logo slot</span></div>
+                <div class="picker-card"><span class="lt">D</span><span class="nm">HERO STATLINE</span><span class="ds">Score is the headline</span></div>
+                <div class="picker-card"><span class="lt">E</span><span class="nm">GLASS BAR</span><span class="ds">Compact horizontal pill</span></div>
+                <div class="picker-card"><span class="lt">F</span><span class="nm">STACKED METRICS</span><span class="ds">Quieter typography</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="preview-pane">
+            <div class="preview-stage"></div>
+            <div class="ctrls">
+              <button class="primary">▶ ANIMATE</button>
+              <button>FLIP COLOR</button>
+              <button>REPLAY GOAL</button>
+              <button>REFRESH</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="variant-block vB">
+    <div class="variant-head">
+      <span class="letter">B</span>
+      <h2>HORIZONTAL SUB-TABS</h2>
+      <span class="note">tabs above options, preview pinned wide on top</span>
+    </div>
+    <div class="frame">
+      <div class="titlebar"><div class="mark"></div><span class="accent">ERA</span> STREAMER<div class="spacer"></div><div class="ver">V0.21</div></div>
+      <div class="app-body">
+        <div class="sidebar">
+          <div class="side-tag">NAVIGATION</div>
+          <div class="side-link"><span class="ico">▦</span>Main</div>
+          <div class="side-link active"><span class="ico">✦</span>Customize</div>
+          <div class="side-link"><span class="ico">▤</span>Archive</div>
+          <div class="side-link"><span class="ico">⚙</span>Settings</div>
+          <div class="side-status">RL CONFIG OK</div>
+        </div>
+        <div class="main-area">
+          <div class="preview-stage" style="aspect-ratio:auto;height:170px;"></div>
+          <div class="sub-tabs">
+            <div class="sub-tab">VISIBILITY</div>
+            <div class="sub-tab active">PLAYER CARD</div>
+            <div class="sub-tab">BANNERS</div>
+            <div class="sub-tab">GOAL POPUP</div>
+            <div class="sub-tab">CARD STATS</div>
+          </div>
+          <div class="options-pane">
+            <div class="panel">
+              <h3>PLAYER CARD — STYLE</h3>
+              <div class="desc" style="margin-bottom:10px;">Pick the look of the bottom-left now-watching card. Choose A–F.</div>
+              <div class="picker-card-row" style="grid-template-columns:repeat(6, 1fr);">
+                <div class="picker-card"><span class="lt">A</span><span class="nm">CURRENT</span><span class="ds">Dark slab, 6-stat</span></div>
+                <div class="picker-card active"><span class="lt">B</span><span class="nm">BLADE</span><span class="ds">Brutalist tab</span></div>
+                <div class="picker-card"><span class="lt">C</span><span class="nm">SHIELD</span><span class="ds">Reserved logo</span></div>
+                <div class="picker-card"><span class="lt">D</span><span class="nm">HERO</span><span class="ds">Score headline</span></div>
+                <div class="picker-card"><span class="lt">E</span><span class="nm">GLASS BAR</span><span class="ds">Compact pill</span></div>
+                <div class="picker-card"><span class="lt">F</span><span class="nm">STACKED</span><span class="ds">Quieter type</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="variant-block vC">
+    <div class="variant-head">
+      <span class="letter">C</span>
+      <h2>FLOATING PREVIEW (PIP)</h2>
+      <span class="note">preview floats in the corner, options fill the page</span>
+    </div>
+    <div class="frame">
+      <div class="titlebar"><div class="mark"></div><span class="accent">ERA</span> STREAMER<div class="spacer"></div><div class="ver">V0.21</div></div>
+      <div class="app-body">
+        <div class="sidebar">
+          <div class="side-tag">NAVIGATION</div>
+          <div class="side-link"><span class="ico">▦</span>Main</div>
+          <div class="side-link active"><span class="ico">✦</span>Customize</div>
+          <div class="side-link"><span class="ico">▤</span>Archive</div>
+          <div class="side-link"><span class="ico">⚙</span>Settings</div>
+          <div class="side-status">RL CONFIG OK</div>
+        </div>
+        <div class="main-area">
+          <div class="options-pane">
+            <div class="opt-grid">
+              <div class="panel">
+                <h3>WHAT TO SHOW</h3>
+                <div class="toggle-row"><span class="nm">Team Banners</span><div class="iso"></div></div>
+                <div class="toggle-row"><span class="nm">Player Boost Bars</span><div class="iso"></div></div>
+                <div class="toggle-row"><span class="nm">Now-Watching Card</span><div class="iso"></div></div>
+                <div class="toggle-row"><span class="nm">Boost Indicator</span><div class="iso"></div></div>
+                <div class="toggle-row"><span class="nm">Goal Popup</span><div class="iso"></div></div>
+              </div>
+              <div class="panel">
+                <h3>PLAYER CARD STATS</h3>
+                <div class="toggle-row"><span class="nm">Score</span><div class="iso"></div></div>
+                <div class="toggle-row"><span class="nm">Goals</span><div class="iso"></div></div>
+                <div class="toggle-row"><span class="nm">Assists</span><div class="iso"></div></div>
+                <div class="toggle-row"><span class="nm">Saves</span><div class="iso"></div></div>
+                <div class="toggle-row"><span class="nm">Shots</span><div class="iso off"></div></div>
+                <div class="toggle-row"><span class="nm">Demos</span><div class="iso off"></div></div>
+              </div>
+            </div>
+            <div class="panel" style="margin-top:12px;">
+              <h3>PLAYER CARD — STYLE</h3>
+              <div class="picker-card-row">
+                <div class="picker-card"><span class="lt">A</span><span class="nm">CURRENT</span><span class="ds">Dark slab, 6-stat grid</span></div>
+                <div class="picker-card active"><span class="lt">B</span><span class="nm">ANGULAR BLADE</span><span class="ds">Brutalist chevron tab</span></div>
+                <div class="picker-card"><span class="lt">C</span><span class="nm">TEAM SHIELD</span><span class="ds">Reserved logo slot</span></div>
+                <div class="picker-card"><span class="lt">D</span><span class="nm">HERO STATLINE</span><span class="ds">Score is the headline</span></div>
+                <div class="picker-card"><span class="lt">E</span><span class="nm">GLASS BAR</span><span class="ds">Compact horizontal pill</span></div>
+                <div class="picker-card"><span class="lt">F</span><span class="nm">STACKED METRICS</span><span class="ds">Quieter typography</span></div>
+              </div>
+            </div>
+          </div>
+          <div class="floating-preview">
+            <div class="fp-head"><div class="dot"></div><span class="grow">PREVIEW · live</span><span>▢</span></div>
+            <div class="preview-stage"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="variant-block vE">
+    <div class="variant-head">
+      <span class="letter">E</span>
+      <h2>RESIZABLE SPLITTER</h2>
+      <span class="note">drag the divider to resize preview vs options — fully modular</span>
+    </div>
+    <div class="frame">
+      <div class="titlebar"><div class="mark"></div><span class="accent">ERA</span> STREAMER<div class="spacer"></div><div class="ver">V0.21</div></div>
+      <div class="app-body">
+        <div class="sidebar">
+          <div class="side-tag">NAVIGATION</div>
+          <div class="side-link"><span class="ico">▦</span>Main</div>
+          <div class="side-link active"><span class="ico">✦</span>Customize</div>
+          <div class="side-link"><span class="ico">▤</span>Archive</div>
+          <div class="side-link"><span class="ico">⚙</span>Settings</div>
+          <div class="side-status">RL CONFIG OK</div>
+        </div>
+        <div class="main-area">
+          <div class="split">
+            <div class="split-top">
+              <div class="preview-stage"></div>
+              <div class="controls">
+                <button>▶ ANIMATE</button>
+                <button>FLIP COLOR</button>
+                <button>REPLAY GOAL</button>
+                <button>REFRESH</button>
+              </div>
+            </div>
+            <div class="splitter" title="Drag to resize"></div>
+            <div class="split-bottom">
+              <div class="panel" style="margin-bottom:12px;">
+                <h3>WHAT TO SHOW</h3>
+                <div class="opt-grid">
+                  <div class="toggle-row"><span class="nm">Team Banners</span><div class="iso"></div></div>
+                  <div class="toggle-row"><span class="nm">Player Boost Bars</span><div class="iso"></div></div>
+                  <div class="toggle-row"><span class="nm">Now-Watching Card</span><div class="iso"></div></div>
+                  <div class="toggle-row"><span class="nm">Boost Indicator</span><div class="iso"></div></div>
+                  <div class="toggle-row"><span class="nm">Goal Popup</span><div class="iso"></div></div>
+                </div>
+              </div>
+              <div class="panel">
+                <h3>PLAYER CARD — STYLE</h3>
+                <div class="picker-card-row">
+                  <div class="picker-card"><span class="lt">A</span><span class="nm">CURRENT</span><span class="ds">Dark slab, 6-stat grid</span></div>
+                  <div class="picker-card active"><span class="lt">B</span><span class="nm">ANGULAR BLADE</span><span class="ds">Brutalist chevron tab</span></div>
+                  <div class="picker-card"><span class="lt">C</span><span class="nm">TEAM SHIELD</span><span class="ds">Reserved logo slot</span></div>
+                  <div class="picker-card"><span class="lt">D</span><span class="nm">HERO STATLINE</span><span class="ds">Score is the headline</span></div>
+                  <div class="picker-card"><span class="lt">E</span><span class="nm">GLASS BAR</span><span class="ds">Compact horizontal pill</span></div>
+                  <div class="picker-card"><span class="lt">F</span><span class="nm">STACKED METRICS</span><span class="ds">Quieter typography</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─────────────────────────────────────────────────────────────── -->
+  <div class="variant-block vD">
+    <div class="variant-head">
+      <span class="letter">D</span>
+      <h2>INNER SIDEBAR · PREVIEW MINI INSIDE IT</h2>
+      <span class="note">categories + a small preview in the same column, options own the rest</span>
+    </div>
+    <div class="frame">
+      <div class="titlebar"><div class="mark"></div><span class="accent">ERA</span> STREAMER<div class="spacer"></div><div class="ver">V0.21</div></div>
+      <div class="app-body" style="grid-template-columns:180px 170px 1fr">
+        <div class="sidebar">
+          <div class="side-tag">NAVIGATION</div>
+          <div class="side-link"><span class="ico">▦</span>Main</div>
+          <div class="side-link active"><span class="ico">✦</span>Customize</div>
+          <div class="side-link"><span class="ico">▤</span>Archive</div>
+          <div class="side-link"><span class="ico">⚙</span>Settings</div>
+          <div class="side-status">RL CONFIG OK</div>
+        </div>
+        <div class="inner-sidebar">
+          <div class="sub-tag">PREVIEW</div>
+          <div class="preview-mini"></div>
+          <div class="sub-tag">CATEGORIES</div>
+          <div class="sub-nav">
+            <div class="inner-link">Visibility</div>
+            <div class="inner-link active">Player Card</div>
+            <div class="inner-link">Banners</div>
+            <div class="inner-link">Goal Popup</div>
+            <div class="inner-link">Card Stats</div>
+          </div>
+        </div>
+        <div class="main-area">
+          <div class="options-pane">
+            <div class="panel" style="margin-bottom:12px;">
+              <h3>PLAYER CARD — STYLE</h3>
+              <div class="desc" style="margin-bottom:10px;">Pick the look of the bottom-left now-watching card. The mini preview on the left updates live so you see the change without leaving the section.</div>
+              <div class="picker-card-row" style="grid-template-columns:repeat(3, 1fr);">
+                <div class="picker-card"><span class="lt">A</span><span class="nm">CURRENT</span><span class="ds">Dark slab, 6-stat grid</span></div>
+                <div class="picker-card active"><span class="lt">B</span><span class="nm">ANGULAR BLADE</span><span class="ds">Brutalist chevron tab</span></div>
+                <div class="picker-card"><span class="lt">C</span><span class="nm">TEAM SHIELD</span><span class="ds">Reserved logo slot</span></div>
+                <div class="picker-card"><span class="lt">D</span><span class="nm">HERO STATLINE</span><span class="ds">Score is the headline</span></div>
+                <div class="picker-card"><span class="lt">E</span><span class="nm">GLASS BAR</span><span class="ds">Compact horizontal pill</span></div>
+                <div class="picker-card"><span class="lt">F</span><span class="nm">STACKED METRICS</span><span class="ds">Quieter typography</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Make Variant E's splitter draggable so you can actually feel the
+  // resize behavior. Vertical resize between preview (top) and options
+  // (bottom). Preview clamped between 120px and the available height.
+  document.querySelectorAll('.vE .splitter').forEach((handle) => {
+    const split = handle.parentElement;
+    const top = split.querySelector('.split-top');
+    let dragging = false;
+    let startY = 0, startTop = 0, splitHeight = 0;
+    handle.addEventListener('mousedown', (e) => {
+      dragging = true;
+      startY = e.clientY;
+      startTop = top.offsetHeight;
+      splitHeight = split.offsetHeight;
+      document.body.style.userSelect = 'none';
+      e.preventDefault();
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dy = e.clientY - startY;
+      const next = Math.max(120, Math.min(splitHeight - 140, startTop + dy));
+      split.style.setProperty('--top', next + 'px');
+    });
+    window.addEventListener('mouseup', () => {
+      if (!dragging) return;
+      dragging = false;
+      document.body.style.userSelect = '';
+    });
+  });
+</script>
+
+</body></html>

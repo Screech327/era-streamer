@@ -752,31 +752,92 @@ h1, h2, h3 {
    bounded area below. Cleanly bounded — nothing scrolls behind the
    preview, no squished half-width preview. */
 .tab-pane.active[data-pane="customize"] {
-  /* Bound the tab to main-content's content area so the preview can
-     stay pinned at the top while .customize-options below scrolls
-     within its own region. Position:absolute removes it from
-     main-content's normal flow so the parent's overflow doesn't take
-     over and scroll the whole tab. */
+  /* Customize tab is broken into a resizable top (preview) + sub-tabs
+     row + a single-section content pane below. Whole thing is
+     position:absolute inside main-content so the parent's overflow
+     doesn't grab the scroll. */
   position:absolute;
   top:22px; right:26px; bottom:32px; left:26px;
   flex-direction:column;
-  gap:18px;
+  gap:0;
   overflow:hidden;
 }
-.tab-pane[data-pane="customize"] > .preview-panel {
-  flex:0 0 auto;   /* natural height — driven by the 16:9 preview stage */
+.cz-preview-wrap {
+  height:var(--cz-preview-h, 320px);
+  min-height:140px;
+  flex:0 0 auto;
+  display:flex; flex-direction:column;
+}
+.cz-preview-wrap .preview-panel {
+  flex:1 1 auto;
+  display:flex; flex-direction:column;
   margin:0;
 }
-.tab-pane[data-pane="customize"] .customize-options {
+.cz-preview-wrap .preview-stage {
   flex:1 1 auto;
+  aspect-ratio:auto;
+  height:auto;
+  min-height:0;
+}
+.cz-splitter {
+  flex:0 0 10px;
+  cursor:ns-resize;
+  background:linear-gradient(180deg, transparent, rgba(255,255,255,0.03), transparent);
+  position:relative;
+  margin:6px 0;
+}
+.cz-splitter::after {
+  content:'';
+  position:absolute; left:50%; top:50%;
+  transform:translate(-50%, -50%);
+  width:60px; height:3px;
+  background:#333;
+  border-radius:2px;
+  transition:background 0.12s;
+}
+.cz-splitter:hover::after,
+.cz-splitter.dragging::after { background:var(--red); }
+.cz-bottom {
+  flex:1 1 auto;
+  min-height:0;
+  display:flex; flex-direction:column;
+  overflow:hidden;
+}
+.cz-sub-tabs {
+  display:flex; gap:2px;
+  flex:0 0 auto;
+  border-bottom:1px solid var(--line);
+  margin-bottom:14px;
+}
+.cz-sub-tab {
+  background:transparent; border:none;
+  padding:11px 18px;
+  font-family:'Bebas Neue', sans-serif;
+  font-size:15px; letter-spacing:2.5px;
+  color:#888;
+  cursor:pointer;
+  border-bottom:2px solid transparent;
+  margin-bottom:-1px;
+  transition:color 0.12s, border-color 0.12s;
+}
+.cz-sub-tab:hover { color:#ccc; }
+.cz-sub-tab.active {
+  color:white;
+  border-bottom-color:var(--red);
+}
+.cz-sub-panes {
+  flex:1 1 auto;
+  min-height:0;
   overflow-y:auto;
   overflow-x:hidden;
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-  min-height:0;
   padding-right:8px;
 }
+.cz-sub-panes .customize-options {
+  display:flex; flex-direction:column;
+  gap:18px;
+}
+.cz-sub-pane { display:none; flex-direction:column; gap:18px; }
+.cz-sub-pane.active { display:flex; }
 .preview-panel .panel-head h2 { margin:0; }
 .panel-head-tools { display:flex; align-items:center; gap:14px; }
 /* ─── Overlay-element toggles + stat checkboxes ─────────────────────── */
@@ -1265,29 +1326,41 @@ h1, h2, h3 {
   </div><!-- end main pane -->
 
   <div class="tab-pane" data-pane="customize">
-    <div class="panel preview-panel">
-      <div class="panel-head">
-        <h2>OVERLAY PREVIEW</h2>
-        <div class="panel-head-tools">
-          <button class="btn btn-small" id="cz_animateBtn" type="button" title="Animate boosts so you can see everything move">▶ ANIMATE</button>
-          <button class="btn btn-small" id="cz_flipColorBtn" type="button" title="Show the card in the other team's color">FLIP COLOR</button>
-          <button class="btn btn-small" id="cz_replayGoalBtn" type="button" title="Re-trigger the goal popup">REPLAY GOAL</button>
-          <button class="btn btn-small" id="cz_refreshBtn" type="button">REFRESH</button>
+
+    <!-- Resizable top — preview iframe + controls. Drag the splitter
+         below to make it taller/shorter. -->
+    <div class="cz-preview-wrap" id="cz_previewWrap">
+      <div class="panel preview-panel">
+        <div class="panel-head">
+          <h2>OVERLAY PREVIEW</h2>
+          <div class="panel-head-tools">
+            <button class="btn btn-small" id="cz_animateBtn" type="button" title="Animate boosts so you can see everything move">▶ ANIMATE</button>
+            <button class="btn btn-small" id="cz_flipColorBtn" type="button" title="Show the card in the other team's color">FLIP COLOR</button>
+            <button class="btn btn-small" id="cz_replayGoalBtn" type="button" title="Re-trigger the goal popup">REPLAY GOAL</button>
+            <button class="btn btn-small" id="cz_refreshBtn" type="button">REFRESH</button>
+          </div>
+        </div>
+        <div class="preview-stage" id="cz_previewStage">
+          <iframe class="preview-frame" id="cz_previewFrame" src="/match.html?demo=1&goalDemo=1" title="Customization preview"></iframe>
         </div>
       </div>
-      <div class="preview-stage" id="cz_previewStage">
-        <iframe class="preview-frame" id="cz_previewFrame" src="/match.html?demo=1&goalDemo=1" title="Customization preview"></iframe>
-      </div>
     </div>
 
-    <div class="customize-options">
-    <div class="panel">
-      <h2>OVERLAY CUSTOMIZATION</h2>
-      <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:6px;">
-        Pick which visual style the overlay uses for each broadcast element, and what shows up. Changes apply live — the preview above updates in real time and propagates to OBS instantly.
-      </div>
-    </div>
+    <!-- Drag handle between preview and options. -->
+    <div class="cz-splitter" id="cz_splitter" title="Drag to resize"></div>
 
+    <!-- Bottom — sub-tabs + only the active section's content visible. -->
+    <div class="cz-bottom">
+      <div class="cz-sub-tabs" id="cz_subTabs">
+        <button type="button" class="cz-sub-tab active" data-cz-pane="visibility">VISIBILITY</button>
+        <button type="button" class="cz-sub-tab"        data-cz-pane="card">PLAYER CARD</button>
+        <button type="button" class="cz-sub-tab"        data-cz-pane="banner">BANNERS</button>
+        <button type="button" class="cz-sub-tab"        data-cz-pane="goal">GOAL POPUP</button>
+        <button type="button" class="cz-sub-tab"        data-cz-pane="stats">CARD STATS</button>
+      </div>
+    <div class="cz-sub-panes"><div class="customize-options">
+
+    <div class="cz-sub-pane active" data-cz-pane="visibility">
     <div class="panel">
       <h2>WHAT TO SHOW</h2>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:14px;">
@@ -1331,7 +1404,9 @@ h1, h2, h3 {
         </div>
       </div>
     </div>
+    </div><!-- /visibility -->
 
+    <div class="cz-sub-pane" data-cz-pane="stats">
     <div class="panel">
       <h2>PLAYER CARD STATS</h2>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:14px;">
@@ -1346,7 +1421,9 @@ h1, h2, h3 {
         <label class="stat-check"><input type="checkbox" data-stat="demos"><span>DEMOS</span></label>
       </div>
     </div>
+    </div><!-- /stats -->
 
+    <div class="cz-sub-pane" data-cz-pane="card">
     <div class="panel">
       <h2>PLAYER CARD <span id="nwStyleName" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;margin-left:8px;"></span></h2>
       <div class="style-picker-row" id="nwStylePicker">
@@ -1382,7 +1459,9 @@ h1, h2, h3 {
         </button>
       </div>
     </div>
+    </div><!-- /card -->
 
+    <div class="cz-sub-pane" data-cz-pane="banner">
     <div class="panel">
       <h2>PLAYER BANNERS <span id="bannerStyleName" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;margin-left:8px;"></span></h2>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;">
@@ -1421,7 +1500,9 @@ h1, h2, h3 {
         </button>
       </div>
     </div>
+    </div><!-- /banner -->
 
+    <div class="cz-sub-pane" data-cz-pane="goal">
     <div class="panel">
       <h2>GOAL POPUP <span id="goalStyleName" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;margin-left:8px;"></span></h2>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;">
@@ -1460,7 +1541,9 @@ h1, h2, h3 {
         </button>
       </div>
     </div>
+    </div><!-- /goal -->
     </div><!-- end customize-options -->
+    </div><!-- end cz-sub-panes -->
 
   </div>
 
@@ -1986,6 +2069,65 @@ if (_czReplayGoal) _czReplayGoal.addEventListener('click', () => {
   if (!f || !f.contentWindow) return;
   try { f.contentWindow.postMessage({ type: 'demo-replay-goal' }, '*'); } catch (_) {}
 });
+
+// ── Customize tab: sub-tab navigation + resizable splitter ─────────
+const CZ_PANES = ['visibility','card','banner','goal','stats'];
+function activateCzPane(pane) {
+  if (!CZ_PANES.includes(pane)) pane = 'visibility';
+  document.querySelectorAll('.cz-sub-tab').forEach((t) => t.classList.toggle('active', t.dataset.czPane === pane));
+  document.querySelectorAll('.cz-sub-pane').forEach((p) => p.classList.toggle('active', p.dataset.czPane === pane));
+  try { localStorage.setItem('cz_pane', pane); } catch (_) {}
+  // Scroll the new pane back to the top so each section opens fresh.
+  const panes = document.querySelector('.cz-sub-panes');
+  if (panes) panes.scrollTop = 0;
+}
+document.querySelectorAll('.cz-sub-tab').forEach((tab) => {
+  tab.addEventListener('click', () => activateCzPane(tab.dataset.czPane));
+});
+try {
+  const saved = localStorage.getItem('cz_pane');
+  if (saved) activateCzPane(saved);
+} catch (_) {}
+
+(() => {
+  const splitter = $('cz_splitter');
+  const wrap     = $('cz_previewWrap');
+  const tab      = document.querySelector('.tab-pane[data-pane="customize"]');
+  if (!splitter || !wrap || !tab) return;
+  // Restore prior size if the producer dragged it before.
+  try {
+    const saved = parseInt(localStorage.getItem('cz_preview_h') || '', 10);
+    if (saved && saved > 0) tab.style.setProperty('--cz-preview-h', saved + 'px');
+  } catch (_) {}
+  let dragging = false, startY = 0, startH = 0, tabH = 0;
+  splitter.addEventListener('mousedown', (e) => {
+    dragging = true;
+    startY = e.clientY;
+    startH = wrap.offsetHeight;
+    tabH   = tab.offsetHeight;
+    splitter.classList.add('dragging');
+    document.body.style.userSelect = 'none';
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', (e) => {
+    if (!dragging) return;
+    const dy = e.clientY - startY;
+    // Clamp so we can't make the preview smaller than 140px or push
+    // the options below the sub-tabs visibility.
+    const next = Math.max(140, Math.min(tabH - 200, startH + dy));
+    tab.style.setProperty('--cz-preview-h', next + 'px');
+  });
+  window.addEventListener('mouseup', () => {
+    if (!dragging) return;
+    dragging = false;
+    splitter.classList.remove('dragging');
+    document.body.style.userSelect = '';
+    try {
+      const h = tab.style.getPropertyValue('--cz-preview-h');
+      if (h) localStorage.setItem('cz_preview_h', parseInt(h, 10));
+    } catch (_) {}
+  });
+})();
 // Toggle synthetic animation in the preview — boost meter cycles, each
 // player's boost bar oscillates on its own phase. Producer can see how
 // every piece behaves with live data without needing RL running.
