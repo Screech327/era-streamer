@@ -1973,13 +1973,32 @@ function applyBannerStyle(style) {
     if (!box) return;
     BANNER_STYLES.forEach((s) => box.classList.remove('banner-' + s));
     box.classList.add('banner-' + style);
-    // Re-render row inner DOM so structure matches the active style.
+    // Snapshot the player data before re-rendering so we can restore it.
+    // Otherwise a style swap mid-demo (or mid-stream while the bridge
+    // isn't ticking) leaves the rows looking empty.
+    const snapshot = [];
     box.querySelectorAll('.player-row').forEach((row) => {
-      const wasEmpty  = row.classList.contains('empty');
-      const wasTarget = row.classList.contains('is-target');
+      const fill = row.querySelector('.player-boost-fill');
+      snapshot.push({
+        name:  (row.querySelector('.player-name')      || {}).textContent || '',
+        num:   (row.querySelector('.player-boost-num') || {}).textContent || '',
+        width: fill ? fill.style.width : '',
+        empty:  row.classList.contains('empty'),
+        target: row.classList.contains('is-target'),
+      });
+    });
+    // Re-render row inner DOM so structure matches the active style.
+    box.querySelectorAll('.player-row').forEach((row, i) => {
+      const s = snapshot[i] || {};
       row.innerHTML = buildPlayerRowHTML(style);
-      row.classList.toggle('empty',     wasEmpty);
-      row.classList.toggle('is-target', wasTarget);
+      row.classList.toggle('empty',     !!s.empty);
+      row.classList.toggle('is-target', !!s.target);
+      const nameEl = row.querySelector('.player-name');
+      const numEl  = row.querySelector('.player-boost-num');
+      const fillEl = row.querySelector('.player-boost-fill');
+      if (nameEl && s.name) nameEl.textContent = s.name;
+      if (numEl  && s.num)  numEl.textContent  = s.num;
+      if (fillEl && s.width) fillEl.style.width = s.width;
     });
   });
   // Re-fill values from the last bridge tick so the bars don't reset.

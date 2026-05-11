@@ -743,15 +743,29 @@ h1, h2, h3 {
   gap:14px;
   margin-bottom:12px;
 }
-/* Customize-tab preview stays pinned to the top of the scroll area
-   so the producer can keep watching the overlay while flipping through
-   pickers and toggles in the panels below. */
+/* Customize tab is a two-column grid: preview anchored on the left,
+   options scroll independently on the right. The preview doesn't need
+   position:sticky because its column simply doesn't scroll — clean
+   layout, no content bleeding behind it. */
+.tab-pane.active[data-pane="customize"] {
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap:18px;
+  height:100%;
+  overflow:hidden;
+}
 .tab-pane[data-pane="customize"] > .preview-panel {
-  position:sticky;
-  top:0;
-  z-index:5;
-  /* Solid backdrop so panels scrolling beneath don't show through. */
-  background:var(--panel);
+  align-self:start;
+  margin:0;
+}
+.tab-pane[data-pane="customize"] .customize-options {
+  overflow-y:auto;
+  overflow-x:hidden;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  min-width:0;
+  padding-right:8px; /* breathing room for the scrollbar */
 }
 .preview-panel .panel-head h2 { margin:0; }
 .panel-head-tools { display:flex; align-items:center; gap:14px; }
@@ -1256,10 +1270,11 @@ h1, h2, h3 {
       </div>
     </div>
 
+    <div class="customize-options">
     <div class="panel">
       <h2>OVERLAY CUSTOMIZATION</h2>
       <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:6px;">
-        Pick which visual style the overlay uses for each broadcast element, and what shows up. Changes apply live — the preview above updates in real time and propagates to OBS instantly.
+        Pick which visual style the overlay uses for each broadcast element, and what shows up. Changes apply live — the preview on the left updates in real time and propagates to OBS instantly.
       </div>
     </div>
 
@@ -1435,6 +1450,7 @@ h1, h2, h3 {
         </button>
       </div>
     </div>
+    </div><!-- end customize-options -->
 
   </div>
 
