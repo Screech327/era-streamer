@@ -1811,8 +1811,57 @@ if (DEMO_MODE) {
       if (GOAL_DEMO_MODE) demoTriggerGoal();
     } else if (e.data.type === 'demo-replay-goal') {
       demoTriggerGoal();
+    } else if (e.data.type === 'demo-animate') {
+      if (e.data.on) startDemoAnimate();
+      else           stopDemoAnimate();
     }
   });
+}
+
+// Synthetic animation loop for the Customize preview. Cycles the boost
+// meter and each player's boost bar so the producer can see real
+// motion without needing Rocket League running.
+let demoAnimateRaf = null;
+let demoAnimateT0 = 0;
+const DEMO_NAMES = {
+  left:  ['PIPDOG', 'SCREECH', 'TIDESTORM'],
+  right: ['HARRYHANGS', 'GLOOPER', 'PRECONS'],
+};
+function startDemoAnimate() {
+  // Populate player rows with sample names so .empty doesn't hide the
+  // boost bars. Done once per start; rows already match team color via
+  // matchupTeamColors so colors update if the producer flips teams.
+  ['left','right'].forEach((side) => {
+    const box = document.getElementById(side + 'Players');
+    if (!box) return;
+    box.querySelectorAll('.player-row').forEach((row, i) => {
+      row.classList.remove('empty');
+      const nameEl = row.querySelector('.player-name');
+      if (nameEl && !nameEl.textContent.trim()) nameEl.textContent = DEMO_NAMES[side][i] || '—';
+    });
+  });
+  demoAnimateT0 = performance.now();
+  if (demoAnimateRaf) cancelAnimationFrame(demoAnimateRaf);
+  const tick = (now) => {
+    const t = (now - demoAnimateT0) / 1000;
+    // Boost meter — single sine wave 0..100 with ~5s period.
+    const meterBoost = Math.round(50 + 50 * Math.sin(t * 1.2));
+    applyBoostIndicator(meterBoost);
+    // Player rows — each bar on its own phase. 6 bars across both sides.
+    document.querySelectorAll('.player-row .player-boost').forEach((boostEl, i) => {
+      const val = Math.round(50 + 50 * Math.sin(t * 1.2 + i * 0.7));
+      const fillEl = boostEl.querySelector('.player-boost-fill');
+      const numEl  = boostEl.querySelector('.player-boost-num');
+      if (fillEl) fillEl.style.width = val + '%';
+      if (numEl)  numEl.textContent  = val;
+    });
+    demoAnimateRaf = requestAnimationFrame(tick);
+  };
+  demoAnimateRaf = requestAnimationFrame(tick);
+}
+function stopDemoAnimate() {
+  if (demoAnimateRaf) cancelAnimationFrame(demoAnimateRaf);
+  demoAnimateRaf = null;
 }
 
 // Demo goal popup — auto-shows in the Customize preview so the producer
