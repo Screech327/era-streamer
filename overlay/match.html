@@ -721,7 +721,10 @@ body.no-bridge .boost-indicator { display:none !important; }
 .style-b .nw-body {
   position:relative;
   background:rgba(8,8,8,0.92);
-  clip-path:polygon(0 14px, 22px 14px, 32px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
+  /* Just the bottom-right diagonal cut — keeps the brutalist blade
+     silhouette without the top-left notch that read as "bitten" at
+     overlay scale. The chevron tab floats over the top-left corner. */
+  clip-path:polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%);
   padding:22px 18px 14px 22px;
   border-left:3px solid var(--team-color, #555);
 }
