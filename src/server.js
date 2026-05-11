@@ -330,6 +330,13 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
         updated_at: body.updated_at || new Date().toISOString(),
       };
       saveState();
+      // Notify every connected overlay (OBS browser source + control panel
+      // preview iframe) so config changes apply instantly instead of
+      // waiting on the next 2s poll cycle.
+      broadcastJSON({
+        Event: 'SettingsChanged',
+        Data: { key: body.key, value: state[body.key].value, updated_at: state[body.key].updated_at },
+      });
       return sendJson(res, 200, [state[body.key]]);
     }
 

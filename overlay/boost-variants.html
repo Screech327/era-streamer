@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BOOST INDICATOR — Variants</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --team-color: #1873FF;
+    --gold: #c9a84c;
+    --green: #5acb6a;
+    --red: #e63946;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body {
+    background:#0a0a0a; color:#fff;
+    font-family:'Rajdhani',sans-serif;
+    min-height:100vh;
+    padding:40px;
+  }
+  h1 {
+    font-family:'Bebas Neue', sans-serif;
+    font-size:28px; letter-spacing:3px;
+    margin-bottom:6px;
+  }
+  .lede {
+    color:#888; font-size:14px;
+    max-width:780px;
+    margin-bottom:24px;
+    line-height:1.5;
+  }
+  .controls {
+    display:flex; gap:14px; align-items:center;
+    margin-bottom:24px;
+  }
+  .controls label { font-family:'Orbitron',monospace; font-size:10px; letter-spacing:2px; color:#888; }
+  .swatch {
+    width:28px; height:28px; border-radius:50%;
+    border:2px solid rgba(255,255,255,0.1);
+    cursor:pointer;
+    transition:transform 0.12s;
+  }
+  .swatch:hover { transform:scale(1.1); }
+  .swatch.active { border-color:#fff; }
+  .boost-slider { display:flex; align-items:center; gap:10px; }
+  .boost-slider input[type=range] { width:200px; accent-color:var(--team-color); }
+  .boost-slider .v { font-family:'Bebas Neue',sans-serif; font-size:22px; min-width:48px; text-align:right; }
+
+  .grid {
+    display:grid;
+    grid-template-columns:repeat(2, 1fr);
+    gap:32px 28px;
+  }
+  .row { display:flex; flex-direction:column; gap:12px; }
+  .row-head {
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:0 4px;
+  }
+  .row-head h2 {
+    font-family:'Bebas Neue', sans-serif;
+    font-size:18px; letter-spacing:3px;
+  }
+  .row-head .note {
+    font-family:'Orbitron', monospace;
+    font-size:9px; letter-spacing:2px; color:#888;
+  }
+  /* Faux-RL gradient backdrop so legibility is testable. The bottom-right
+     is where the boost indicator lives, matching what RL does. */
+  .stage {
+    position:relative;
+    height:260px;
+    border-radius:8px;
+    overflow:hidden;
+    background:
+      radial-gradient(60% 80% at 30% 30%, rgba(60,140,255,0.18), transparent 60%),
+      radial-gradient(50% 70% at 80% 70%, rgba(255,120,30,0.18), transparent 60%),
+      linear-gradient(180deg, #1a1b1c, #0a0a0a);
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     A — RL DEFAULT MIMIC
+     270° arc with team-colored fill, number in middle. Closest to what
+     a viewer is used to from playing the game.
+     ───────────────────────────────────────────────────────────────────── */
+  .vA {
+    position:absolute; bottom:24px; right:24px;
+    width:120px; height:120px;
+    pointer-events:none;
+  }
+  .vA svg { width:100%; height:100%; transform:rotate(135deg); }
+  .vA .track { fill:none; stroke:rgba(255,255,255,0.10); stroke-width:8; }
+  .vA .fill  {
+    fill:none; stroke:var(--team-color); stroke-width:8; stroke-linecap:round;
+    stroke-dasharray:212; /* ~270° of 2πr where r=45 → 282; 270/360*282≈212 */
+    transition:stroke-dashoffset 0.25s ease;
+    filter:drop-shadow(0 0 4px var(--team-color));
+  }
+  .vA .label {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:1px;
+  }
+  .vA .label .l { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:2px; color:#888; }
+  .vA .label .v {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:50px; letter-spacing:1px; line-height:0.9;
+    text-shadow:0 2px 6px rgba(0,0,0,0.7);
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     B — CIRCULAR RING
+     Full 360° ring, cleaner/more modern. Team color fills clockwise.
+     ───────────────────────────────────────────────────────────────────── */
+  .vB {
+    position:absolute; bottom:24px; right:24px;
+    width:110px; height:110px;
+  }
+  .vB svg { width:100%; height:100%; transform:rotate(-90deg); }
+  .vB .track { fill:rgba(0,0,0,0.55); stroke:rgba(255,255,255,0.06); stroke-width:6; }
+  .vB .fill  {
+    fill:none; stroke:var(--team-color); stroke-width:6; stroke-linecap:round;
+    stroke-dasharray:283; /* 2πr where r≈45 */
+    transition:stroke-dashoffset 0.25s ease;
+  }
+  .vB .label {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+  }
+  .vB .label .l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:2px; color:#888; margin-bottom:2px; }
+  .vB .label .v { font-family:'Bebas Neue',sans-serif; font-size:42px; letter-spacing:1px; line-height:1; }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     C — VERTICAL FUEL GAUGE
+     Tall slim bar, fill rises with boost. Number floats above. Race / sim
+     vibe. Small footprint.
+     ───────────────────────────────────────────────────────────────────── */
+  .vC {
+    position:absolute; bottom:24px; right:24px;
+    width:64px;
+    background:rgba(8,8,8,0.85);
+    border:1px solid rgba(255,255,255,0.08);
+    border-radius:8px;
+    padding:10px 0 12px;
+    display:flex; flex-direction:column; align-items:center; gap:6px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.6);
+  }
+  .vC .v { font-family:'Bebas Neue',sans-serif; font-size:30px; letter-spacing:1px; line-height:1; }
+  .vC .bar {
+    width:14px; height:130px;
+    background:rgba(255,255,255,0.06);
+    border-radius:7px;
+    overflow:hidden;
+    position:relative;
+  }
+  .vC .bar-fill {
+    position:absolute; left:0; right:0; bottom:0;
+    background:linear-gradient(180deg, var(--team-color), color-mix(in srgb, var(--team-color) 50%, #000));
+    transition:height 0.25s ease;
+    box-shadow:0 0 8px color-mix(in srgb, var(--team-color) 60%, transparent);
+  }
+  .vC .l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:2px; color:#888; }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     D — HEX PLATE
+     Hexagonal slab, number prominent, fill via team-color border that
+     wraps around. Industrial / esports brutalist.
+     ───────────────────────────────────────────────────────────────────── */
+  .vD {
+    position:absolute; bottom:24px; right:24px;
+    width:120px; height:104px;
+    display:flex; align-items:center; justify-content:center;
+    filter:drop-shadow(0 4px 14px rgba(0,0,0,0.55));
+  }
+  .vD .plate {
+    position:absolute; inset:0;
+    background:rgba(8,8,8,0.92);
+    clip-path:polygon(15% 0, 85% 0, 100% 50%, 85% 100%, 15% 100%, 0 50%);
+  }
+  .vD .border {
+    position:absolute; inset:0;
+    background:var(--team-color);
+    clip-path:polygon(15% 0, 85% 0, 100% 50%, 85% 100%, 15% 100%, 0 50%);
+    transform:scale(1);
+    z-index:0;
+  }
+  .vD .inner {
+    position:absolute; inset:3px;
+    background:#0a0a0a;
+    clip-path:polygon(15% 0, 85% 0, 100% 50%, 85% 100%, 15% 100%, 0 50%);
+    display:flex; align-items:center; justify-content:center; flex-direction:column;
+    gap:0;
+  }
+  .vD .l { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:2px; color:var(--team-color); }
+  .vD .v { font-family:'Bebas Neue',sans-serif; font-size:44px; letter-spacing:1px; line-height:1; }
+  .vD .fill-bar {
+    position:absolute; bottom:6px; left:30%; right:30%; height:3px;
+    background:rgba(255,255,255,0.06);
+    border-radius:2px;
+    z-index:2;
+  }
+  .vD .fill-bar > div {
+    height:100%;
+    background:var(--team-color);
+    border-radius:2px;
+    transition:width 0.25s ease;
+    box-shadow:0 0 6px var(--team-color);
+  }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     E — HALF-CIRCLE SPEEDOMETER
+     180° gauge, fill sweeps left-to-right. Most analog feel. Wide and short.
+     ───────────────────────────────────────────────────────────────────── */
+  .vE {
+    position:absolute; bottom:24px; right:24px;
+    width:160px; height:110px;
+  }
+  .vE svg { width:100%; height:100%; }
+  .vE .track { fill:none; stroke:rgba(255,255,255,0.10); stroke-width:10; stroke-linecap:round; }
+  .vE .fill  {
+    fill:none; stroke:var(--team-color); stroke-width:10; stroke-linecap:round;
+    stroke-dasharray:220; /* approx arc length */
+    transition:stroke-dashoffset 0.25s ease;
+    filter:drop-shadow(0 0 4px var(--team-color));
+  }
+  .vE .label {
+    position:absolute; left:0; right:0; bottom:6px;
+    display:flex; flex-direction:column; align-items:center; gap:0;
+  }
+  .vE .label .v { font-family:'Bebas Neue',sans-serif; font-size:38px; line-height:0.9; letter-spacing:1px; text-shadow:0 2px 4px rgba(0,0,0,0.7); }
+  .vE .label .l { font-family:'Orbitron',monospace; font-size:8px; letter-spacing:2px; color:#888; }
+
+  /* ─────────────────────────────────────────────────────────────────────
+     F — MINIMAL NUMBER
+     No gauge — just a giant boost number and a thin underbar. Most
+     minimal; relies on the player's read.
+     ───────────────────────────────────────────────────────────────────── */
+  .vF {
+    position:absolute; bottom:24px; right:24px;
+    padding:8px 20px 10px;
+    background:rgba(8,8,8,0.78);
+    border-radius:8px;
+    border-bottom:3px solid rgba(255,255,255,0.06);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    box-shadow:0 4px 18px rgba(0,0,0,0.55);
+  }
+  .vF .v {
+    font-family:'Bebas Neue',sans-serif;
+    font-size:68px; letter-spacing:1px; line-height:0.9;
+    color:white;
+    text-shadow:0 2px 6px rgba(0,0,0,0.7);
+  }
+  .vF .l { font-family:'Orbitron',monospace; font-size:9px; letter-spacing:3px; color:#888; }
+  .vF .underbar {
+    width:100%; height:3px;
+    background:rgba(255,255,255,0.06);
+    border-radius:2px;
+    margin-top:4px;
+    overflow:hidden;
+  }
+  .vF .underbar > div {
+    height:100%;
+    background:var(--team-color);
+    border-radius:2px;
+    transition:width 0.25s ease;
+    box-shadow:0 0 6px var(--team-color);
+  }
+</style>
+</head>
+<body>
+
+  <h1>BOOST INDICATOR — VARIANTS</h1>
+  <div class="lede">
+    Six layouts for the bottom-right boost readout, like RL's default in-game. Each is anchored at <strong>bottom-right</strong> on a faux-gameplay gradient so legibility against RL footage is testable. Switch the team color and slide the boost value to see how each fills/transitions.
+  </div>
+
+  <div class="controls">
+    <label>TEAM COLOR</label>
+    <div class="swatch active" data-color="#1873FF" style="background:#1873FF"></div>
+    <div class="swatch" data-color="#C26418" style="background:#C26418"></div>
+    <div class="swatch" data-color="#E63946" style="background:#E63946"></div>
+    <div class="swatch" data-color="#5ACB6A" style="background:#5ACB6A"></div>
+    <div class="swatch" data-color="#C9A84C" style="background:#C9A84C"></div>
+    <div class="boost-slider">
+      <label>BOOST</label>
+      <input type="range" id="boostSlider" min="0" max="100" value="73">
+      <div class="v" id="boostVal">73</div>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- A · RL Default Mimic -->
+    <div class="row">
+      <div class="row-head"><h2>A · RL DEFAULT</h2><span class="note">270° arc, familiar feel</span></div>
+      <div class="stage">
+        <div class="vA">
+          <svg viewBox="0 0 100 100">
+            <circle class="track" cx="50" cy="50" r="45" stroke-dasharray="212" stroke-dashoffset="0"/>
+            <circle class="fill"  cx="50" cy="50" r="45" data-arc="212"/>
+          </svg>
+          <div class="label">
+            <div class="l">BOOST</div>
+            <div class="v" data-num>73</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- B · Circular Ring -->
+    <div class="row">
+      <div class="row-head"><h2>B · CIRCULAR RING</h2><span class="note">full 360°, modern</span></div>
+      <div class="stage">
+        <div class="vB">
+          <svg viewBox="0 0 100 100">
+            <circle class="track" cx="50" cy="50" r="45"/>
+            <circle class="fill"  cx="50" cy="50" r="45" data-arc="283"/>
+          </svg>
+          <div class="label">
+            <div class="l">BOOST</div>
+            <div class="v" data-num>73</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- C · Vertical Fuel Gauge -->
+    <div class="row">
+      <div class="row-head"><h2>C · VERTICAL FUEL</h2><span class="note">slim, race-sim vibe</span></div>
+      <div class="stage">
+        <div class="vC">
+          <div class="v" data-num>73</div>
+          <div class="bar"><div class="bar-fill" data-fill-h></div></div>
+          <div class="l">BOOST</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- D · Hex Plate -->
+    <div class="row">
+      <div class="row-head"><h2>D · HEX PLATE</h2><span class="note">brutalist esports plate</span></div>
+      <div class="stage">
+        <div class="vD">
+          <div class="border"></div>
+          <div class="inner">
+            <div class="l">BOOST</div>
+            <div class="v" data-num>73</div>
+          </div>
+          <div class="fill-bar"><div data-fill-w></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- E · Half-circle Speedometer -->
+    <div class="row">
+      <div class="row-head"><h2>E · HALF-CIRCLE</h2><span class="note">180° analog gauge</span></div>
+      <div class="stage">
+        <div class="vE">
+          <svg viewBox="0 0 100 60">
+            <path class="track" d="M 10 50 A 40 40 0 0 1 90 50"/>
+            <path class="fill"  d="M 10 50 A 40 40 0 0 1 90 50" data-arc="126"/>
+          </svg>
+          <div class="label">
+            <div class="v" data-num>73</div>
+            <div class="l">BOOST</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- F · Minimal Number -->
+    <div class="row">
+      <div class="row-head"><h2>F · MINIMAL NUMBER</h2><span class="note">no gauge, just the read</span></div>
+      <div class="stage">
+        <div class="vF">
+          <div class="v" data-num>73</div>
+          <div class="l">BOOST</div>
+          <div class="underbar"><div data-fill-w></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+<script>
+  const slider = document.getElementById('boostSlider');
+  const valEl  = document.getElementById('boostVal');
+
+  function apply(val) {
+    valEl.textContent = val;
+    document.querySelectorAll('[data-num]').forEach((n) => n.textContent = val);
+    // Stroke-dashoffset for the arc-based variants
+    document.querySelectorAll('.fill[data-arc]').forEach((c) => {
+      const arc = parseFloat(c.dataset.arc);
+      const off = arc - (arc * (val / 100));
+      c.style.strokeDashoffset = off;
+    });
+    // Height for vertical fuel
+    document.querySelectorAll('[data-fill-h]').forEach((el) => { el.style.height = val + '%'; });
+    // Width for hex plate + minimal
+    document.querySelectorAll('[data-fill-w]').forEach((el) => { el.style.width = val + '%'; });
+  }
+  slider.addEventListener('input', () => apply(slider.value));
+  apply(slider.value);
+
+  document.querySelectorAll('.swatch').forEach((sw) => {
+    sw.addEventListener('click', () => {
+      document.querySelectorAll('.swatch').forEach((s) => s.classList.remove('active'));
+      sw.classList.add('active');
+      document.documentElement.style.setProperty('--team-color', sw.dataset.color);
+    });
+  });
+</script>
+
+</body></html>

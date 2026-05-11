@@ -1775,6 +1775,16 @@ function connectStats() {
     } else if (msg.Event === 'PodiumStart') {
       // Podium fires reliably even when MatchEnded is missed
       onMatchEnded(msg.Data);
+    } else if (msg.Event === 'SettingsChanged') {
+      // Server broadcasts this when the producer upserts a settings row
+      // (e.g. switches the player-card style). Re-fetch the relevant
+      // config immediately so the overlay doesn't have to wait out the
+      // 2s poll cycle — fixes "I changed the style mid-stream and OBS
+      // didn't update for a while".
+      const key = msg.Data && msg.Data.key;
+      if (key === 'stream_overlay_config') fetchOverlayConfig();
+      else if (key === 'stream_match')  poll(); // re-runs the full poll which picks up match changes
+      else if (key === 'stream_series') poll();
     }
   };
 }
