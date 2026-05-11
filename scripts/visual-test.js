@@ -108,11 +108,15 @@ async function main() {
   await new Promise((r) => setTimeout(r, 300));
   await snap('customize-preview-short');
 
-  // Other tabs.
+  // Other tabs. Reset main-content scroll first — interacting with the
+  // Customize tab (position:absolute layout) can leave the scroll port
+  // pushed down so the next tab snaps below the visible viewport.
   for (const tab of ['archive','settings','main']) {
     await page.evaluate((t) => {
       const btn = document.querySelector('.side-link[data-tab="' + t + '"]');
       if (btn) btn.click();
+      const mc = document.querySelector('.main-content');
+      if (mc) mc.scrollTop = 0;
     }, tab);
     await new Promise((r) => setTimeout(r, 300));
     await snap('tab-' + tab);

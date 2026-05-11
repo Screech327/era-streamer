@@ -1303,31 +1303,6 @@ h1, h2, h3 {
     </div>
   </div>
 
-  <div class="panel" id="sessionPanel">
-    <h2>SESSION RECORDING</h2>
-    <div class="row" id="sessionActiveRow">
-      <div class="field" style="flex:1">
-        <div class="label">Auto-captured games</div>
-        <div style="display:flex;align-items:center;gap:14px;">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);min-width:50px;" id="recCount">0</div>
-          <div style="flex:1;font-size:13px;color:var(--text-dim);line-height:1.5;">
-            Every match the bridge sees gets snapshotted automatically. Hit
-            <strong>SAVE SESSION</strong> at the end to keep it in the local archive.
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="row" id="sessionDisabledRow" style="display:none">
-      <div class="field" style="flex:1;font-size:13px;color:var(--text-dim);line-height:1.5;padding:10px 0;">
-        Recording is <strong style="color:var(--red)">OFF</strong>. Game stats won't be captured. Toggle it back on in <strong>SETTINGS</strong>.
-      </div>
-    </div>
-    <div class="actions" id="sessionActions">
-      <button class="btn btn-primary" id="saveSeriesBtn">SAVE SESSION</button>
-      <button class="btn btn-danger" id="resetRecBtn">DISCARD</button>
-    </div>
-  </div>
-
   <!-- Recent matchups — useful for general use, but ERA teams only meet
        once per season, so this lives at the bottom rather than dominating
        the top of the page. -->
@@ -1559,14 +1534,39 @@ h1, h2, h3 {
     </div><!-- /goal -->
     </div><!-- end customize-options -->
     </div><!-- end cz-sub-panes -->
+    </div><!-- end cz-bottom -->
 
-  </div>
+  </div><!-- end customize pane -->
 
   <div class="tab-pane" data-pane="archive">
+    <div class="panel" id="sessionPanel">
+      <h2>SESSION RECORDING</h2>
+      <div class="row" id="sessionActiveRow">
+        <div class="field" style="flex:1">
+          <div class="label">Auto-captured games</div>
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--gold);min-width:50px;" id="recCount">0</div>
+            <div style="flex:1;font-size:13px;color:var(--text-dim);line-height:1.5;">
+              Every match the bridge sees gets snapshotted automatically. Hit
+              <strong>SAVE SESSION</strong> at the end to keep it in the archive below.
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row" id="sessionDisabledRow" style="display:none">
+        <div class="field" style="flex:1;font-size:13px;color:var(--text-dim);line-height:1.5;padding:10px 0;">
+          Recording is <strong style="color:var(--red)">OFF</strong>. Game stats won't be captured. Toggle it back on in <strong>SETTINGS</strong>.
+        </div>
+      </div>
+      <div class="actions" id="sessionActions">
+        <button class="btn btn-primary" id="saveSeriesBtn">SAVE SESSION</button>
+        <button class="btn btn-danger" id="resetRecBtn">DISCARD</button>
+      </div>
+    </div>
     <div class="panel">
       <h2>SAVED SESSIONS <span id="archiveCountLabel" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;"></span></h2>
       <div id="archiveList" class="archive-list">
-        <div class="archive-empty">Nothing saved yet. Run a session — every match the bridge sees gets captured automatically. Hit SAVE SESSION in MAIN at the end and it'll show up here.</div>
+        <div class="archive-empty">Nothing saved yet. Run a session — every match the bridge sees gets captured automatically. Hit SAVE SESSION above at the end and it'll show up here.</div>
       </div>
     </div>
   </div>
@@ -2020,7 +2020,7 @@ $('saveSeriesBtn').addEventListener('click', async () => {
   } catch (e) {
     showToast('Save failed: ' + (e.message || String(e)), true);
   } finally {
-    btn.textContent = 'SAVE SERIES STATS';
+    btn.textContent = 'SAVE SESSION';
   }
 });
 $('resetRecBtn').addEventListener('click', async () => {
@@ -2192,7 +2192,7 @@ function renderArchive(series, capacity) {
   const list = $('archiveList');
   $('archiveCountLabel').textContent = '· ' + series.length + ' / ' + capacity;
   if (!series.length) {
-    list.innerHTML = '<div class="archive-empty">Nothing saved yet. Run a series — every match the bridge sees gets captured automatically. Hit SAVE SERIES STATS in MAIN at the end and it\'ll show up here.</div>';
+    list.innerHTML = '<div class="archive-empty">Nothing saved yet. Run a series — every match the bridge sees gets captured automatically. Hit SAVE SESSION above at the end and it\'ll show up here.</div>';
     return;
   }
   list.innerHTML = '';
