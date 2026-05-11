@@ -594,6 +594,64 @@ body.no-bridge .player-row { gap:0; }
 }
 .now-watching.visible { opacity:1; transform:translateY(0); }
 
+/* === BOTTOM-RIGHT BOOST INDICATOR ===
+   270° arc gauge matching RL's in-game default placement. Tracks the
+   spectated player's boost. Hidden by default until the bridge reports
+   a target (mirrors the now-watching card's lifecycle). */
+.boost-indicator {
+  position:absolute;
+  bottom:24px; right:24px;
+  width:120px; height:120px;
+  opacity:0;
+  transform:translateY(8px);
+  transition:opacity 0.3s ease, transform 0.3s ease;
+  pointer-events:none;
+}
+.boost-indicator.visible { opacity:1; transform:translateY(0); }
+.boost-indicator svg {
+  width:100%; height:100%;
+  /* Rotate so the gap sits at the bottom (RL-style). 135° lines up with
+     the 270° arc dash setup below. */
+  transform:rotate(135deg);
+}
+.boost-track {
+  fill:none;
+  stroke:rgba(255,255,255,0.10);
+  stroke-width:8;
+}
+.boost-fill {
+  fill:none;
+  stroke:var(--team-color, #888);
+  stroke-width:8;
+  stroke-linecap:round;
+  /* 2πr where r=45 → 282.7. Use 270° arc (75% of full ring) → ~212. */
+  stroke-dasharray:212;
+  stroke-dashoffset:212;
+  transition:stroke-dashoffset 0.25s ease;
+  filter:drop-shadow(0 0 4px var(--team-color, #888));
+}
+.boost-label {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center;
+  gap:1px;
+}
+.boost-l {
+  font-family:'Orbitron', monospace;
+  font-size:9px; letter-spacing:2px;
+  color:#888;
+  text-shadow:0 1px 3px rgba(0,0,0,0.7);
+}
+.boost-v {
+  font-family:'Bebas Neue', sans-serif;
+  font-size:50px; letter-spacing:1px;
+  line-height:0.9;
+  color:white;
+  text-shadow:0 2px 6px rgba(0,0,0,0.7);
+}
+/* No-bridge mode hides the boost indicator (it has nothing to read). */
+body.no-bridge .boost-indicator { display:none !important; }
+
 /* Shared subutility — these labels/values share most fonts. Per-style
    overrides come below. */
 .nw-name {
@@ -970,6 +1028,20 @@ body.no-bridge .player-row { gap:0; }
          based on the producer-selected style (stream_overlay_config.
          nowWatchingStyle) so all six layouts share the same data path. -->
     <div id="nowWatching" class="now-watching style-a"></div>
+
+    <!-- Bottom-right boost indicator — 270° arc like RL's in-game gauge.
+         Tracks the spectated player's boost from the bridge. Shares team
+         color logic with the now-watching card. -->
+    <div id="boostIndicator" class="boost-indicator">
+      <svg viewBox="0 0 100 100">
+        <circle class="boost-track" cx="50" cy="50" r="45"/>
+        <circle class="boost-fill"  cx="50" cy="50" r="45" id="boostFill"/>
+      </svg>
+      <div class="boost-label">
+        <div class="boost-l">BOOST</div>
+        <div class="boost-v" id="boostValue">0</div>
+      </div>
+    </div>
   </div>
 
 <script>
@@ -1106,6 +1178,7 @@ function applyOverlayConfig(cfg) {
 const DEMO_SNAPSHOT = {
   name: 'PIPDOG',
   score: 280, goals: 2, assists: 1, saves: 3, shots: 4, demos: 0,
+  boost: 73,
 };
 // Demo mode picks one team to "spectate" so the card color rotates
 // between left and right on each style change — that way the producer
@@ -1124,6 +1197,8 @@ function applyDemoNowWatching() {
   lastNwSnapshot = snap;
   repaintNowWatching(snap);
   el.classList.add('visible');
+  // Boost indicator picks up the same demo color + sample boost value.
+  applyBoostIndicator(DEMO_SNAPSHOT.boost, color);
 }
 
 // ── Now-watching style switcher ────────────────────────────────────
@@ -1615,6 +1690,27 @@ let statsBackoff = 1500;
 function nwHide() {
   const el = document.getElementById('nowWatching');
   if (el) el.classList.remove('visible');
+  hideBoostIndicator();
+}
+
+// ── Boost indicator (bottom-right 270° arc) ─────────────────────────
+// 2πr where r=45 → ~282.7; we draw 270° of that = ~212. Fill is the
+// remaining offset that gets eaten away as boost rises 0→100.
+const BOOST_ARC_LEN = 212;
+function applyBoostIndicator(boost, color) {
+  const el = document.getElementById('boostIndicator');
+  if (!el) return;
+  const pct = Math.max(0, Math.min(100, Number(boost) || 0));
+  const fill = document.getElementById('boostFill');
+  const valEl = document.getElementById('boostValue');
+  if (color) el.style.setProperty('--team-color', color);
+  if (fill)  fill.style.strokeDashoffset = BOOST_ARC_LEN - (BOOST_ARC_LEN * pct / 100);
+  if (valEl) valEl.textContent = Math.round(pct);
+  el.classList.add('visible');
+}
+function hideBoostIndicator() {
+  const el = document.getElementById('boostIndicator');
+  if (el) el.classList.remove('visible');
 }
 
 // Names + boosts come straight from the live RL bridge. TeamNum 0 → left,
@@ -1736,6 +1832,8 @@ function renderNowWatching(data) {
   lastNwSnapshot = snap;
   repaintNowWatching(snap);
   el.classList.add('visible');
+  // Boost indicator follows the same spectated player + team color.
+  applyBoostIndicator(player.Boost, color);
 }
 
 function connectStats() {
