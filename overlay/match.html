@@ -2737,6 +2737,10 @@ function startDemoAnimate() {
       const numEl  = row.querySelector('.player-boost-num');
       if (fillEl) fillEl.style.width = val + '%';
       if (numEl)  numEl.textContent  = val;
+      // Drive the variant-specific visuals (hex lighting, radial arc,
+      // speedometer needle, pip count, --boost var). Without this, only
+      // variants that consume .player-boost-fill width directly animate.
+      applyBoostVisual(row, val);
     });
     demoAnimateRaf = requestAnimationFrame(tick);
   };
