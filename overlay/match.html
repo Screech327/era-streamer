@@ -1645,6 +1645,211 @@ body.no-bridge .goal-popup { display:none !important; }
 .players.banner-h .player-boost-num,
 .players.banner-h .player-boost { display:none; }
 
+/* ── I · SPEEDOMETER DIAL ──────────────────────────────────────────
+   Quarter-arc gauge with a sweeping needle per player. Number inside
+   the dial. Needle rotation set by JS via the SVG transform attribute
+   (CSS transform-origin on SVG sub-elements is unreliable). */
+.players.banner-i {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:5px;
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,0.55));
+}
+.players.banner-i.players-left  { border-left:none; }
+.players.banner-i.players-right { border-right:none; }
+.players.banner-i .player-row {
+  position:relative;
+  background:rgba(8,8,8,0.92);
+  padding:8px 14px;
+  display:flex; align-items:center; gap:12px;
+  color:white; border-bottom:none;
+  border-radius:6px;
+  min-height:48px;
+}
+.players.banner-i.players-left  .player-row { border-left:3px solid var(--team-color); }
+.players.banner-i.players-right .player-row { border-right:3px solid var(--team-color); flex-direction:row-reverse; }
+.players.banner-i .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Anton', sans-serif; font-style:italic;
+  font-size:21px; letter-spacing:1.5px; line-height:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.players.banner-i.players-right .player-name { text-align:right; }
+.players.banner-i .bi-dial {
+  flex:0 0 64px; width:64px; height:40px; position:relative;
+}
+.players.banner-i .bi-dial svg { width:100%; height:100%; display:block; }
+.players.banner-i .bi-dial .bi-track {
+  fill:none; stroke:rgba(255,255,255,0.10); stroke-width:8; stroke-linecap:round;
+}
+.players.banner-i .bi-dial .bi-needle {
+  stroke:var(--team-color); stroke-width:3; stroke-linecap:round;
+  filter:drop-shadow(0 0 4px var(--team-color));
+  transition:transform 0.18s linear;
+}
+.players.banner-i .bi-dial .bi-hub {
+  fill:var(--team-color); filter:drop-shadow(0 0 3px var(--team-color));
+}
+.players.banner-i .bi-dial .bi-num {
+  position:absolute; left:0; right:0; bottom:0;
+  text-align:center;
+  font-family:'Bebas Neue', sans-serif; font-weight:700; font-size:14px;
+  color:white; line-height:1;
+  text-shadow:0 1px 2px rgba(0,0,0,0.85);
+}
+.players.banner-i .player-boost-num,
+.players.banner-i .player-boost { display:none; }
+
+/* ── J · LED PIPS ──────────────────────────────────────────────────
+   Ten small dots light up sequentially. Discrete mechanical read. */
+.players.banner-j {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:5px;
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,0.55));
+}
+.players.banner-j.players-left  { border-left:none; }
+.players.banner-j.players-right { border-right:none; }
+.players.banner-j .player-row {
+  position:relative;
+  background:rgba(8,8,8,0.92);
+  padding:9px 16px 11px;
+  display:flex; flex-direction:column; gap:6px;
+  color:white; border-bottom:none;
+  border-radius:4px;
+}
+.players.banner-j.players-left  .player-row { border-left:3px solid var(--team-color); }
+.players.banner-j.players-right .player-row { border-right:3px solid var(--team-color); }
+.players.banner-j .bj-top { display:flex; align-items:baseline; gap:10px; }
+.players.banner-j.players-right .bj-top { flex-direction:row-reverse; }
+.players.banner-j .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Anton', sans-serif; font-style:italic;
+  font-size:21px; letter-spacing:2px; line-height:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.players.banner-j.players-right .player-name { text-align:right; }
+.players.banner-j .player-boost-num {
+  position:static; inset:auto; display:block;
+  font-family:'Bebas Neue', sans-serif; font-weight:700;
+  font-size:18px; color:var(--team-color); line-height:1;
+}
+.players.banner-j .bj-pips {
+  display:flex; gap:3px; height:7px; width:100%;
+}
+.players.banner-j.players-right .bj-pips { flex-direction:row-reverse; }
+.players.banner-j .bj-pip {
+  flex:1 1 0; min-width:0;
+  background:rgba(255,255,255,0.06); border-radius:1px;
+  transition:background 0.12s linear, box-shadow 0.12s linear;
+}
+.players.banner-j .bj-pip.lit {
+  background:var(--team-color);
+  box-shadow:0 0 6px var(--team-color);
+}
+/* Shared .player-boost stays in DOM (hidden) so fillSide can write
+   width — applyBoostVisual reads it to derive lit pip count. */
+.players.banner-j .player-boost { display:none; }
+
+/* ── K · POWER OUTLINE ─────────────────────────────────────────────
+   Name itself is the gauge — outlined at low boost, fills team-color
+   left→right as boost climbs. background-clip:text gradient uses
+   --boost CSS variable (set on the row by applyBoostVisual). */
+.players.banner-k {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:5px;
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,0.55));
+}
+.players.banner-k.players-left  { border-left:none; }
+.players.banner-k.players-right { border-right:none; }
+.players.banner-k .player-row {
+  position:relative;
+  background:rgba(8,8,8,0.92);
+  padding:10px 18px;
+  display:flex; align-items:center; gap:12px;
+  color:white; border-bottom:none;
+  border-radius:4px;
+}
+.players.banner-k.players-left  .player-row { border-left:3px solid var(--team-color); }
+.players.banner-k.players-right .player-row { border-right:3px solid var(--team-color); flex-direction:row-reverse; }
+.players.banner-k .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Anton', sans-serif; font-style:italic;
+  font-size:23px; letter-spacing:2px; line-height:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  background:linear-gradient(90deg,
+    var(--team-color) 0%,
+    var(--team-color) var(--boost,0%),
+    transparent var(--boost,0%),
+    transparent 100%);
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent;
+  -webkit-text-stroke:1.2px color-mix(in srgb, var(--team-color) 75%, white);
+  transition:background 0.18s linear;
+}
+.players.banner-k.players-right .player-name { text-align:right; }
+.players.banner-k .player-boost-num {
+  position:static; inset:auto; display:block;
+  font-family:'Bebas Neue', sans-serif; font-weight:700;
+  font-size:22px; color:var(--team-color); min-width:34px;
+  text-align:right; line-height:1;
+  text-shadow:0 0 6px color-mix(in srgb, var(--team-color) 50%, transparent);
+}
+.players.banner-k .player-boost { display:none; }
+
+/* ── L · STRIPE PATTERN ────────────────────────────────────────────
+   Boost bar uses a scrolling diagonal hazard-tape pattern. Kinetic. */
+.players.banner-l {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:5px;
+  filter:drop-shadow(0 4px 14px rgba(0,0,0,0.55));
+}
+.players.banner-l.players-left  { border-left:none; }
+.players.banner-l.players-right { border-right:none; }
+.players.banner-l .player-row {
+  position:relative;
+  background:rgba(8,8,8,0.92);
+  padding:9px 16px 11px;
+  display:flex; flex-direction:column; gap:5px;
+  color:white; border-bottom:none;
+  border-radius:4px;
+}
+.players.banner-l.players-left  .player-row { border-left:3px solid var(--team-color); }
+.players.banner-l.players-right .player-row { border-right:3px solid var(--team-color); }
+.players.banner-l .bl-top { display:flex; align-items:baseline; gap:10px; }
+.players.banner-l.players-right .bl-top { flex-direction:row-reverse; }
+.players.banner-l .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Anton', sans-serif; font-style:italic;
+  font-size:21px; letter-spacing:2px; line-height:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.players.banner-l.players-right .player-name { text-align:right; }
+.players.banner-l .player-boost-num {
+  position:static; inset:auto; display:block;
+  font-family:'Bebas Neue', sans-serif; font-weight:700;
+  font-size:18px; color:var(--team-color); line-height:1;
+}
+.players.banner-l .player-boost {
+  position:relative; height:9px; width:100%; overflow:hidden;
+  background:rgba(255,255,255,0.06);
+  border-radius:2px;
+  border:none; box-shadow:none;
+  flex:0 0 9px;
+}
+.players.banner-l .player-boost-fill {
+  background:repeating-linear-gradient(135deg,
+    var(--team-color) 0 6px,
+    color-mix(in srgb, var(--team-color) 70%, #000) 6px 12px);
+  background-size:14px 14px;
+  animation:bl-stripeScroll 0.9s linear infinite;
+  box-shadow:0 0 6px var(--team-color);
+  border-radius:inherit;
+}
+@keyframes bl-stripeScroll { 0%{background-position:0 0} 100%{background-position:14px 0} }
+
 /* ─── Producer-controlled visibility flags (Customize tab toggles) ─── */
 body.hide-banners    #leftBanner, body.hide-banners    #rightBanner,
 body.hide-banners    #leftPlayers, body.hide-banners   #rightPlayers,
@@ -2234,7 +2439,7 @@ applyBoostBgStyle('none');
 // ── Player-banner style (Customize tab) ────────────────────────────
 // One of a..f. Drives the players-box class + per-row inner DOM.
 // Same render path for live and demo — only the markup changes.
-const BANNER_STYLES = ['a','b','c','d','e','f','g','h'];
+const BANNER_STYLES = ['a','b','c','d','e','f','g','h','i','j','k','l'];
 let currentBannerStyle = 'a';
 function applyBannerStyle(style) {
   if (!BANNER_STYLES.includes(style)) style = 'a';
@@ -2323,6 +2528,54 @@ function buildPlayerRowHTML(style) {
           '<div class="bh-num"></div>' +
         '</div>' +
         '<span class="player-name"></span>' +
+        '<div class="player-boost"><div class="player-boost-fill"></div></div>'
+      );
+    case 'i':
+      // Speedometer dial. Quarter-arc track + sweeping needle + number.
+      // applyBoostVisual sets the SVG transform attribute on .bi-needle.
+      return (
+        '<span class="player-name"></span>' +
+        '<div class="bi-dial">' +
+          '<svg viewBox="0 0 100 60">' +
+            '<path class="bi-track" d="M 8 55 A 42 42 0 0 1 92 55"/>' +
+            '<line class="bi-needle" x1="50" y1="55" x2="50" y2="15"/>' +
+            '<circle class="bi-hub" cx="50" cy="55" r="4"/>' +
+          '</svg>' +
+          '<div class="bi-num"></div>' +
+        '</div>' +
+        '<div class="player-boost"><div class="player-boost-fill"></div></div>'
+      );
+    case 'j':
+      // LED pips. 10 dots; applyBoostVisual toggles .lit per dot.
+      return (
+        '<div class="bj-top">' +
+          '<span class="player-name"></span>' +
+          '<span class="player-boost-num"></span>' +
+        '</div>' +
+        '<div class="bj-pips">' +
+          '<div class="bj-pip"></div><div class="bj-pip"></div><div class="bj-pip"></div>' +
+          '<div class="bj-pip"></div><div class="bj-pip"></div><div class="bj-pip"></div>' +
+          '<div class="bj-pip"></div><div class="bj-pip"></div><div class="bj-pip"></div>' +
+          '<div class="bj-pip"></div>' +
+        '</div>' +
+        '<div class="player-boost"><div class="player-boost-fill"></div></div>'
+      );
+    case 'k':
+      // Power outline. Name's background gradient uses --boost; the row
+      // gets --boost set by applyBoostVisual so the gradient updates.
+      return (
+        '<span class="player-name"></span>' +
+        '<span class="player-boost-num"></span>' +
+        '<div class="player-boost"><div class="player-boost-fill"></div></div>'
+      );
+    case 'l':
+      // Stripe pattern. Standard fill width drives the bar; the fill
+      // applies an animated diagonal stripe via CSS.
+      return (
+        '<div class="bl-top">' +
+          '<span class="player-name"></span>' +
+          '<span class="player-boost-num"></span>' +
+        '</div>' +
         '<div class="player-boost"><div class="player-boost-fill"></div></div>'
       );
     case 'c':
@@ -2879,6 +3132,26 @@ function applyBoostVisual(row, pct) {
   }
   const bhNum = row.querySelector('.bh-num');
   if (bhNum) bhNum.textContent = Math.round(pct);
+  // I — Speedometer: rotate the SVG needle around (50,55) in user
+  // coordinates. boost 0..100 → -90deg..+90deg.
+  const needle = row.querySelector('.bi-needle');
+  if (needle) {
+    const angle = -90 + pct * 1.8;
+    needle.setAttribute('transform', 'rotate(' + angle + ' 50 55)');
+  }
+  const biNum = row.querySelector('.bi-num');
+  if (biNum) biNum.textContent = Math.round(pct);
+  // J — LED Pips: light pips by k/10.
+  const pips = row.querySelectorAll('.bj-pip');
+  if (pips.length) {
+    const lit = Math.min(pips.length, Math.round(pct * pips.length / 100));
+    pips.forEach((p, i) => p.classList.toggle('lit', i < lit));
+  }
+  // K — Power Outline: expose --boost on the row so the name's
+  // background-clip:text gradient stop updates.
+  if (row.classList.contains('player-row')) {
+    row.style.setProperty('--boost', pct + '%');
+  }
 }
 
 function fillSide(side, sidePlayers, target) {
