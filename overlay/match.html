@@ -1464,7 +1464,11 @@ body.no-bridge .goal-popup { display:none !important; }
 .players.banner-e .player-boost {
   position:relative; height:7px;
   border-radius:3px; background:rgba(255,255,255,0.07);
-  overflow:hidden; flex:none; width:auto;
+  overflow:hidden;
+  /* Explicit width:100% — `flex:none; width:auto` was collapsing the
+     bar to 0px because the only child (.player-boost-fill) is
+     position:absolute and contributes no intrinsic width. */
+  flex:0 0 7px; width:100%;
   border:none; box-shadow:none;
 }
 .players.banner-e .player-boost-fill {
