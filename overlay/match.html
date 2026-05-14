@@ -678,14 +678,20 @@ body.no-bridge .player-row { gap:0; }
 }
 .boost-bg.boost-bg-none { display:none; }
 
-/* A — DISC. Subtle dark circle, thin border. */
+/* All variants share a near-solid dark fill — translucent versions read
+   as faded over busy game scenes. Variants D and F (glow / rings) get an
+   explicit solid disc underneath the decorative element so they aren't
+   see-through. */
+:root { --boost-bg-fill:rgba(8,12,18,0.94); }
+
+/* A — DISC. Solid dark circle, thin border. */
 .boost-bg.boost-bg-a {
   width:220px; height:220px;
   margin:-110px 0 0 -110px;
   border-radius:50%;
-  background:rgba(8,12,18,0.72);
-  border:1px solid rgba(255,255,255,0.08);
-  box-shadow:0 6px 24px rgba(0,0,0,0.5);
+  background:var(--boost-bg-fill);
+  border:1px solid rgba(255,255,255,0.10);
+  box-shadow:0 6px 24px rgba(0,0,0,0.55);
 }
 
 /* B — HEX. Hexagonal frame, team-color outline. ::before fills the body,
@@ -698,7 +704,7 @@ body.no-bridge .player-row { gap:0; }
   content:''; position:absolute; inset:0;
 }
 .boost-bg.boost-bg-b::before {
-  background:rgba(8,12,18,0.78);
+  background:var(--boost-bg-fill);
   clip-path:polygon(50% 0,93.3% 25%,93.3% 75%,50% 100%,6.7% 75%,6.7% 25%);
 }
 .boost-bg.boost-bg-b::after {
@@ -707,7 +713,7 @@ body.no-bridge .player-row { gap:0; }
     50% 0, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%,
     8.3% 26%, 8.3% 74%, 50% 97.5%, 91.7% 74%, 91.7% 26%, 50% 2.5%
   );
-  opacity:0.85;
+  opacity:0.9;
   filter:drop-shadow(0 0 8px var(--team-color,#888));
 }
 
@@ -718,9 +724,9 @@ body.no-bridge .player-row { gap:0; }
 }
 .boost-bg.boost-bg-c::before {
   content:''; position:absolute; inset:0;
-  background:rgba(8,12,18,0.78);
+  background:var(--boost-bg-fill);
   clip-path:polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
-  border:1px solid rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.08);
 }
 .boost-bg.boost-bg-c::after {
   content:''; position:absolute; inset:0;
@@ -729,28 +735,31 @@ body.no-bridge .player-row { gap:0; }
   filter:drop-shadow(0 0 6px var(--team-color,#888));
 }
 
-/* D — GLOW. No solid backdrop — soft team-color halo. Largest variant
-   (240x240) so the halo extends slightly past the gauge ring. */
+/* D — GLOW. Solid dark disc + soft team-color halo bleeding around it. */
 .boost-bg.boost-bg-d {
   width:240px; height:240px;
   margin:-120px 0 0 -120px;
   border-radius:50%;
-  background:radial-gradient(circle at center,
-    color-mix(in srgb, var(--team-color,#888) 45%, transparent) 0%,
-    color-mix(in srgb, var(--team-color,#888) 15%, transparent) 35%,
-    transparent 70%);
-  filter:blur(2px);
+  background:
+    radial-gradient(circle at center,
+      var(--boost-bg-fill) 0%,
+      var(--boost-bg-fill) 44%,
+      color-mix(in srgb, var(--team-color,#888) 55%, transparent) 50%,
+      color-mix(in srgb, var(--team-color,#888) 18%, transparent) 70%,
+      transparent 92%);
 }
 
-/* E — FROSTED PANEL. Glassy rounded square + team-color top accent. */
+/* E — FROSTED PANEL. Near-solid rounded square + team-color top accent.
+   Backdrop blur kept for the inner edges where the alpha is still slightly
+   under 1, but the fill is mostly opaque. */
 .boost-bg.boost-bg-e {
   width:224px; height:224px;
   margin:-112px 0 0 -112px;
   border-radius:16px;
-  background:rgba(8,12,18,0.55);
+  background:var(--boost-bg-fill);
   backdrop-filter:blur(8px);
   -webkit-backdrop-filter:blur(8px);
-  border:1px solid rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.10);
   overflow:hidden;
 }
 .boost-bg.boost-bg-e::before {
@@ -762,19 +771,23 @@ body.no-bridge .player-row { gap:0; }
     transparent 100%);
 }
 
-/* F — CONCENTRIC RINGS. Two thin decorative rings outside the gauge. */
+/* F — CONCENTRIC RINGS. Solid disc base + two thin decorative rings. */
 .boost-bg.boost-bg-f {
   width:236px; height:236px;
   margin:-118px 0 0 -118px;
+  border-radius:50%;
+  background:var(--boost-bg-fill);
+  border:1px solid rgba(255,255,255,0.12);
 }
 .boost-bg.boost-bg-f::before, .boost-bg.boost-bg-f::after {
   content:''; position:absolute; inset:0;
   border-radius:50%;
   border:1px solid rgba(255,255,255,0.10);
+  pointer-events:none;
 }
 .boost-bg.boost-bg-f::after {
   inset:14px;
-  border-color:color-mix(in srgb, var(--team-color,#888) 50%, transparent);
+  border-color:color-mix(in srgb, var(--team-color,#888) 65%, transparent);
   border-style:dashed;
 }
 
@@ -2202,7 +2215,16 @@ function handleGoalEvent(data) {
     if (scorerObj.team_num != null)      teamIdx = scorerObj.team_num;
     else if (scorerObj.TeamNum != null)  teamIdx = scorerObj.TeamNum;
   }
-  if (scorerName) showGoalPopup({ scorer: scorerName, assist: assistName || null, teamIdx });
+  if (scorerName) {
+    // Lock out the trackGoalsViaUpdateState fallback for ~1.5s. Without
+    // this, the next UpdateState tick detects the team-score bump,
+    // re-runs the diff, and (because the assister's Assists count
+    // usually propagates a tick LATER than the goal) calls
+    // showGoalPopup with assist=null — wiping the assister we just
+    // displayed from the SOS event.
+    _goalTrack.lastGoalAt = Date.now();
+    showGoalPopup({ scorer: scorerName, assist: assistName || null, teamIdx });
+  }
 }
 
 // Score-delta fallback — every UpdateState we diff team scores AND each
