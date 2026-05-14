@@ -1481,6 +1481,16 @@ h1, h2, h3 {
           <span class="sc-name">POWER BLOCK</span>
           <span class="sc-desc">Squared, solid fill</span>
         </button>
+        <button type="button" class="style-card" data-picker="banner" data-style="g">
+          <span class="sc-letter">G</span>
+          <span class="sc-name">HEX CELLS</span>
+          <span class="sc-desc">Six energy segments under the name</span>
+        </button>
+        <button type="button" class="style-card" data-picker="banner" data-style="h">
+          <span class="sc-letter">H</span>
+          <span class="sc-name">RADIAL</span>
+          <span class="sc-desc">Tiny 270° gauge per player</span>
+        </button>
       </div>
     </div>
     </div><!-- /banner -->
@@ -2442,7 +2452,7 @@ async function loadSettings() {
 // overlay only has to poll one settings key.
 const NW_STYLE_NAMES     = { a:'A · CURRENT', b:'B · ANGULAR BLADE', c:'C · TEAM SHIELD', d:'D · HERO STATLINE', e:'E · GLASS BAR', f:'F · STACKED METRICS' };
 const GOAL_STYLE_NAMES   = { a:'A · NEON HOLO BAR', b:'B · TILTED STRIKE', c:'C · DIAGONAL SPLIT', d:'D · STADIUM JUMBOTRON', e:'E · LIGHT BURST', f:'F · LAYERED DEPTH' };
-const BANNER_STYLE_NAMES = { a:'A · CURRENT', b:'B · STACKED GLASS', c:'C · ANGLED SLASH', d:'D · FUEL TANK', e:'E · MINIMAL LINES', f:'F · POWER BLOCK' };
+const BANNER_STYLE_NAMES = { a:'A · CURRENT', b:'B · STACKED GLASS', c:'C · ANGLED SLASH', d:'D · FUEL TANK', e:'E · MINIMAL LINES', f:'F · POWER BLOCK', g:'G · HEX CELLS', h:'H · RADIAL' };
 const BOOST_BG_STYLE_NAMES = { none:'NONE', a:'A · DISC', b:'B · HEX', c:'C · CUT-CORNER', d:'D · GLOW', e:'E · FROSTED', f:'F · RINGS' };
 
 function reflectStyle(picker, style) {

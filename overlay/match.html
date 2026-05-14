@@ -1522,6 +1522,129 @@ body.no-bridge .goal-popup { display:none !important; }
   text-shadow:0 1px 4px rgba(0,0,0,0.95);
 }
 
+/* ── G · HEX CELLS — six energy segments under the name ──────────────
+   Six clipped hexagonal cells light up team-color as boost climbs.
+   Energy-meter aesthetic, distinct from any bar variant. Name + big
+   number on top, segments below. Keeps the parallelogram slash so it
+   still reads as a Banner-C-family treatment. */
+.players.banner-g {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:3px;
+  filter:drop-shadow(0 4px 16px rgba(0,0,0,0.55));
+}
+.players.banner-g.players-left  { border-left:none; }
+.players.banner-g.players-right { border-right:none; }
+.players.banner-g .player-row {
+  position:relative;
+  background:rgba(8,8,8,0.92);
+  padding:8px 18px 10px;
+  display:flex; flex-direction:column; gap:6px;
+  color:white; border-bottom:none;
+}
+.players.banner-g.players-left  .player-row { clip-path:polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); border-left:3px solid var(--team-color); }
+.players.banner-g.players-right .player-row { clip-path:polygon(16px 0, 100% 0, 100% 100%, 0 100%); border-right:3px solid var(--team-color); }
+.players.banner-g .bg-top { display:flex; align-items:baseline; gap:10px; }
+.players.banner-g.players-right .bg-top { flex-direction:row-reverse; }
+.players.banner-g .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Anton', sans-serif; font-style:italic;
+  font-size:21px; letter-spacing:2px; line-height:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.players.banner-g.players-right .player-name { text-align:right; }
+.players.banner-g .player-boost-num {
+  position:static; inset:auto; display:block;
+  font-family:'Bebas Neue', sans-serif; font-weight:700;
+  font-size:20px; letter-spacing:0.5px; line-height:1;
+  color:var(--team-color);
+  text-shadow:0 0 8px color-mix(in srgb, var(--team-color) 55%, transparent);
+  min-width:30px; text-align:right;
+}
+.players.banner-g .bg-hex-row {
+  display:flex; gap:3px; height:10px; width:100%;
+}
+.players.banner-g.players-right .bg-hex-row { flex-direction:row-reverse; }
+.players.banner-g .bg-hex {
+  flex:1 1 0; min-width:0;
+  background:rgba(255,255,255,0.07);
+  clip-path:polygon(20% 0, 100% 0, 80% 100%, 0 100%);
+  position:relative;
+  transition:background 0.15s linear, box-shadow 0.15s linear;
+}
+.players.banner-g.players-right .bg-hex {
+  clip-path:polygon(0 0, 80% 0, 100% 100%, 20% 100%);
+}
+.players.banner-g .bg-hex.lit {
+  background:var(--team-color);
+  box-shadow:0 0 8px var(--team-color);
+}
+.players.banner-g .bg-hex.lit::after {
+  content:''; position:absolute; inset:0;
+  background:linear-gradient(180deg,rgba(255,255,255,0.32) 0%, transparent 50%);
+}
+/* The .player-boost / .player-boost-fill elements stay in the DOM so
+   the shared fillSide writes width into them (used as the source of
+   truth for the hex-lit count) — but they're not visible. */
+.players.banner-g .player-boost { display:none; }
+
+/* ── H · RADIAL — tiny 270° gauge per player, no horizontal bar ──────
+   Each row has a small 270° arc gauge matching the bottom-right boost
+   indicator at row scale. Big number in the center, name to the side.
+   Reads at a glance even on busy scenes. */
+.players.banner-h {
+  background:transparent !important;
+  padding:0; box-shadow:none; border-radius:0;
+  display:flex; flex-direction:column; gap:4px;
+  filter:drop-shadow(0 4px 16px rgba(0,0,0,0.55));
+}
+.players.banner-h.players-left  { border-left:none; }
+.players.banner-h.players-right { border-right:none; }
+.players.banner-h .player-row {
+  position:relative;
+  background:rgba(8,8,8,0.92);
+  padding:8px 18px 8px 10px;
+  display:flex; align-items:center; gap:12px;
+  color:white; border-bottom:none;
+  min-height:60px;
+}
+.players.banner-h.players-left  .player-row { clip-path:polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); border-left:3px solid var(--team-color); }
+.players.banner-h.players-right .player-row { clip-path:polygon(16px 0, 100% 0, 100% 100%, 0 100%); border-right:3px solid var(--team-color); flex-direction:row-reverse; padding:8px 10px 8px 18px; }
+.players.banner-h .bh-gauge {
+  flex:0 0 56px; width:56px; height:56px; position:relative;
+}
+.players.banner-h .bh-gauge svg {
+  width:100%; height:100%;
+  transform:rotate(135deg);
+}
+.players.banner-h .bh-gauge .bh-track {
+  fill:none; stroke:rgba(255,255,255,0.10); stroke-width:8;
+}
+.players.banner-h .bh-gauge .bh-fill {
+  fill:none; stroke:var(--team-color); stroke-width:8; stroke-linecap:round;
+  /* 2πr where r=45 → 282.7. Visible arc is 212 (270deg). fillSide
+     drives this via stroke-dasharray (see applyBoostVisual). */
+  stroke-dasharray:0 283;
+  filter:drop-shadow(0 0 4px var(--team-color));
+  transition:stroke-dasharray 0.18s linear;
+}
+.players.banner-h .bh-gauge .bh-num {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Bebas Neue', sans-serif; font-weight:700;
+  font-size:22px; color:white; line-height:1;
+  text-shadow:0 1px 3px rgba(0,0,0,0.8);
+}
+.players.banner-h .player-name {
+  flex:1 1 auto; min-width:0;
+  font-family:'Anton', sans-serif; font-style:italic;
+  font-size:21px; letter-spacing:2px; line-height:1;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.players.banner-h.players-right .player-name { text-align:right; }
+.players.banner-h .player-boost-num,
+.players.banner-h .player-boost { display:none; }
+
 /* ─── Producer-controlled visibility flags (Customize tab toggles) ─── */
 body.hide-banners    #leftBanner, body.hide-banners    #rightBanner,
 body.hide-banners    #leftPlayers, body.hide-banners   #rightPlayers,
@@ -2111,7 +2234,7 @@ applyBoostBgStyle('none');
 // ── Player-banner style (Customize tab) ────────────────────────────
 // One of a..f. Drives the players-box class + per-row inner DOM.
 // Same render path for live and demo — only the markup changes.
-const BANNER_STYLES = ['a','b','c','d','e','f'];
+const BANNER_STYLES = ['a','b','c','d','e','f','g','h'];
 let currentBannerStyle = 'a';
 function applyBannerStyle(style) {
   if (!BANNER_STYLES.includes(style)) style = 'a';
@@ -2170,6 +2293,36 @@ function buildPlayerRowHTML(style) {
           '<span class="player-name"></span>' +
           '<span class="player-boost-num"></span>' +
         '</div>' +
+        '<div class="player-boost"><div class="player-boost-fill"></div></div>'
+      );
+    case 'g':
+      // Hex-cells variant. fillSide writes width to .player-boost-fill
+      // (kept hidden via CSS) and applyBoostVisual reads it to light
+      // the six hex segments.
+      return (
+        '<div class="bg-top">' +
+          '<span class="player-name"></span>' +
+          '<span class="player-boost-num"></span>' +
+        '</div>' +
+        '<div class="bg-hex-row">' +
+          '<div class="bg-hex"></div><div class="bg-hex"></div><div class="bg-hex"></div>' +
+          '<div class="bg-hex"></div><div class="bg-hex"></div><div class="bg-hex"></div>' +
+        '</div>' +
+        '<div class="player-boost"><div class="player-boost-fill"></div></div>'
+      );
+    case 'h':
+      // Radial-gauge variant. SVG ring + number-inside-ring. fillSide
+      // writes width to .player-boost-fill (hidden) and applyBoostVisual
+      // sets the SVG stroke-dasharray.
+      return (
+        '<div class="bh-gauge">' +
+          '<svg viewBox="0 0 100 100">' +
+            '<circle class="bh-track" cx="50" cy="50" r="45"/>' +
+            '<circle class="bh-fill"  cx="50" cy="50" r="45"/>' +
+          '</svg>' +
+          '<div class="bh-num"></div>' +
+        '</div>' +
+        '<span class="player-name"></span>' +
         '<div class="player-boost"><div class="player-boost-fill"></div></div>'
       );
     case 'c':
@@ -2708,6 +2861,26 @@ function updatePlayerBoosts(data) {
   fillSide('right', players.filter(p => p.TeamNum === 1), target);
 }
 
+// Per-variant secondary boost visual. Banners G/H need extra DOM updates
+// beyond the shared .player-boost-fill width. fillSide calls this after
+// each row's boost value lands.
+function applyBoostVisual(row, pct) {
+  // G — Hex Cells: light up segments as boost crosses each k/6 threshold.
+  const hexes = row.querySelectorAll('.bg-hex');
+  if (hexes.length) {
+    const lit = Math.min(hexes.length, Math.round(pct * hexes.length / 100));
+    hexes.forEach((h, i) => h.classList.toggle('lit', i < lit));
+  }
+  // H — Radial: 270° arc gauge. Visible arc length is 212 (0..212).
+  const arc = row.querySelector('.bh-fill');
+  if (arc) {
+    const visible = 212 * pct / 100;
+    arc.style.strokeDasharray = visible + ' 283';
+  }
+  const bhNum = row.querySelector('.bh-num');
+  if (bhNum) bhNum.textContent = Math.round(pct);
+}
+
 function fillSide(side, sidePlayers, target) {
   const box = document.getElementById(side + 'Players');
   if (!box) return;
@@ -2725,6 +2898,7 @@ function fillSide(side, sidePlayers, target) {
       const pct = Math.max(0, Math.min(100, Number(p.Boost) || 0));
       if (fillEl) fillEl.style.width = pct + '%';
       if (numEl) numEl.textContent = Math.round(pct);
+      applyBoostVisual(row, pct);
       // Highlight the row if this is the spectated player. Match on
       // name + team so two-player same-name edge cases stay distinct.
       const isTarget = target && target.Name === p.Name && target.TeamNum === sideTeamNum;
@@ -2734,6 +2908,7 @@ function fillSide(side, sidePlayers, target) {
       if (nameEl) nameEl.textContent = '';
       if (fillEl) fillEl.style.width = '0%';
       if (numEl) numEl.textContent = '';
+      applyBoostVisual(row, 0);
       row.classList.remove('is-target');
     }
   }
