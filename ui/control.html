@@ -2133,7 +2133,7 @@ if (_czReplayGoal) _czReplayGoal.addEventListener('click', () => {
 });
 
 // ── Customize tab: sub-tab navigation + resizable splitter ─────────
-const CZ_PANES = ['visibility','card','banner','goal','stats'];
+const CZ_PANES = ['visibility','card','banner','goal','boostbg','stats'];
 function activateCzPane(pane) {
   if (!CZ_PANES.includes(pane)) pane = 'visibility';
   document.querySelectorAll('.cz-sub-tab').forEach((t) => t.classList.toggle('active', t.dataset.czPane === pane));
