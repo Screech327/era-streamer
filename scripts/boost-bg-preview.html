@@ -1,0 +1,273 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Boost gauge backgrounds</title>
+<style>
+:root { --team-color: #4ea8ff; }
+* { box-sizing:border-box; }
+body {
+  margin:0; padding:48px 32px;
+  background:
+    repeating-linear-gradient(45deg, #1a1a1a 0 20px, #222 20px 40px),
+    #0a0a0a;
+  font-family:'Segoe UI',sans-serif;
+  color:#fff;
+}
+h1 { font-size:22px; margin:0 0 24px; letter-spacing:0.04em; }
+.grid {
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:36px;
+  max-width:1400px;
+  margin:0 auto;
+}
+.cell {
+  background:rgba(0,0,0,0.4);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:10px;
+  padding:20px 16px 16px;
+  display:flex; flex-direction:column;
+  align-items:center;
+}
+.cell-label {
+  font-family:'Orbitron',monospace;
+  font-size:11px; letter-spacing:3px;
+  color:#bbb;
+  margin-bottom:4px;
+}
+.cell-desc {
+  font-size:11px; color:#888;
+  margin-bottom:18px;
+  text-align:center;
+  min-height:30px;
+}
+.stage {
+  position:relative;
+  width:280px; height:280px;
+  display:flex; align-items:center; justify-content:center;
+}
+
+/* === SHARED GAUGE (matches the live overlay) === */
+.boost-indicator {
+  position:absolute;
+  width:200px; height:200px;
+  z-index:2;
+}
+.boost-indicator svg {
+  width:100%; height:100%;
+  transform:rotate(135deg);
+}
+.boost-track { fill:none; stroke:rgba(255,255,255,0.10); stroke-width:8; }
+.boost-fill  {
+  fill:none; stroke:var(--team-color); stroke-width:8; stroke-linecap:round;
+  filter:drop-shadow(0 0 4px var(--team-color));
+}
+.boost-label {
+  position:absolute; inset:0;
+  display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:1px;
+}
+.boost-l {
+  font-family:'Orbitron',monospace;
+  font-size:14px; letter-spacing:3.5px;
+  color:#888;
+  text-shadow:0 1px 3px rgba(0,0,0,0.7);
+  margin-bottom:3px;
+}
+.boost-v {
+  font-family:'Bebas Neue','Impact',sans-serif;
+  font-size:84px; letter-spacing:1px; line-height:0.9;
+  color:#fff;
+  text-shadow:0 2px 6px rgba(0,0,0,0.7);
+}
+
+/* === A — SUBTLE DISC === */
+.bg-a {
+  position:absolute;
+  width:230px; height:230px;
+  border-radius:50%;
+  background:rgba(8,12,18,0.72);
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 6px 24px rgba(0,0,0,0.5);
+  z-index:1;
+}
+
+/* === B — HEX PANEL === */
+.bg-b {
+  position:absolute;
+  width:248px; height:248px;
+  z-index:1;
+  display:flex; align-items:center; justify-content:center;
+}
+.bg-b::before {
+  content:'';
+  position:absolute; inset:0;
+  background:rgba(8,12,18,0.78);
+  clip-path:polygon(50% 0,93.3% 25%,93.3% 75%,50% 100%,6.7% 75%,6.7% 25%);
+}
+.bg-b::after {
+  content:'';
+  position:absolute; inset:0;
+  background:var(--team-color);
+  clip-path:polygon(
+    50% 0, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%,
+    8.3% 26%, 8.3% 74%, 50% 97.5%, 91.7% 74%, 91.7% 26%, 50% 2.5%
+  );
+  opacity:0.85;
+  filter:drop-shadow(0 0 8px var(--team-color));
+}
+
+/* === C — CUT-CORNER PANEL === */
+.bg-c {
+  position:absolute;
+  width:236px; height:236px;
+  z-index:1;
+  background:rgba(8,12,18,0.78);
+  clip-path:polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+  border:1px solid rgba(255,255,255,0.06);
+}
+.bg-c-accent {
+  position:absolute;
+  width:236px; height:236px;
+  z-index:1;
+  background:var(--team-color);
+  clip-path:polygon(
+    0 18px, 18px 0, 100% 0, 100% 3px, 18px 3px, 3px 18px, 3px 100%, 0 100%
+  );
+  filter:drop-shadow(0 0 6px var(--team-color));
+}
+
+/* === D — RADIAL GLOW (no solid fill) === */
+.bg-d {
+  position:absolute;
+  width:280px; height:280px;
+  border-radius:50%;
+  background:radial-gradient(circle at center,
+    color-mix(in srgb, var(--team-color) 45%, transparent) 0%,
+    color-mix(in srgb, var(--team-color) 15%, transparent) 35%,
+    transparent 70%);
+  z-index:1;
+  filter:blur(2px);
+}
+
+/* === E — FROSTED SQUARE PANEL === */
+.bg-e {
+  position:absolute;
+  width:240px; height:240px;
+  border-radius:16px;
+  background:rgba(8,12,18,0.55);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.08);
+  z-index:1;
+  overflow:hidden;
+}
+.bg-e::before {
+  content:'';
+  position:absolute; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg,
+    transparent 0%,
+    var(--team-color) 30%,
+    var(--team-color) 70%,
+    transparent 100%);
+}
+
+/* === F — CONCENTRIC RINGS === */
+.bg-f {
+  position:absolute;
+  width:260px; height:260px;
+  z-index:1;
+}
+.bg-f::before, .bg-f::after {
+  content:'';
+  position:absolute; inset:0;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,0.10);
+}
+.bg-f::after {
+  inset:14px;
+  border-color:color-mix(in srgb, var(--team-color) 50%, transparent);
+  border-width:1px;
+  border-style:dashed;
+}
+
+</style></head><body>
+
+<h1>Boost gauge — background style options</h1>
+
+<div class="grid">
+
+  <div class="cell">
+    <div class="cell-label">A — DISC</div>
+    <div class="cell-desc">Subtle dark circle, thin border. Lets the gauge breathe with a clean contained backdrop.</div>
+    <div class="stage">
+      <div class="bg-a"></div>
+      <div class="boost-indicator">
+        <svg viewBox="0 0 100 100"><circle class="boost-track" cx="50" cy="50" r="45"/><circle class="boost-fill" cx="50" cy="50" r="45" stroke-dasharray="153 283"/></svg>
+        <div class="boost-label"><div class="boost-l">BOOST</div><div class="boost-v">73</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="cell-label">B — HEX</div>
+    <div class="cell-desc">Hexagonal frame, team-color outline. Esports/competitive feel.</div>
+    <div class="stage">
+      <div class="bg-b"></div>
+      <div class="boost-indicator">
+        <svg viewBox="0 0 100 100"><circle class="boost-track" cx="50" cy="50" r="45"/><circle class="boost-fill" cx="50" cy="50" r="45" stroke-dasharray="153 283"/></svg>
+        <div class="boost-label"><div class="boost-l">BOOST</div><div class="boost-v">73</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="cell-label">C — CUT-CORNER</div>
+    <div class="cell-desc">Angular panel with notched corners and a team-color accent edge. Sharp/technical.</div>
+    <div class="stage">
+      <div class="bg-c"></div>
+      <div class="bg-c-accent"></div>
+      <div class="boost-indicator">
+        <svg viewBox="0 0 100 100"><circle class="boost-track" cx="50" cy="50" r="45"/><circle class="boost-fill" cx="50" cy="50" r="45" stroke-dasharray="153 283"/></svg>
+        <div class="boost-label"><div class="boost-l">BOOST</div><div class="boost-v">73</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="cell-label">D — GLOW</div>
+    <div class="cell-desc">No solid backdrop — just a soft team-color halo. Minimal, lets the live scene show through.</div>
+    <div class="stage">
+      <div class="bg-d"></div>
+      <div class="boost-indicator">
+        <svg viewBox="0 0 100 100"><circle class="boost-track" cx="50" cy="50" r="45"/><circle class="boost-fill" cx="50" cy="50" r="45" stroke-dasharray="153 283"/></svg>
+        <div class="boost-label"><div class="boost-l">BOOST</div><div class="boost-v">73</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="cell-label">E — FROSTED PANEL</div>
+    <div class="cell-desc">Glassy rounded square with a thin team-color top bar. Modern, broadcast-clean.</div>
+    <div class="stage">
+      <div class="bg-e"></div>
+      <div class="boost-indicator">
+        <svg viewBox="0 0 100 100"><circle class="boost-track" cx="50" cy="50" r="45"/><circle class="boost-fill" cx="50" cy="50" r="45" stroke-dasharray="153 283"/></svg>
+        <div class="boost-label"><div class="boost-l">BOOST</div><div class="boost-v">73</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cell">
+    <div class="cell-label">F — CONCENTRIC RINGS</div>
+    <div class="cell-desc">Two thin decorative rings — outer solid white-faint, inner dashed team-color. Subtle, technical.</div>
+    <div class="stage">
+      <div class="bg-f"></div>
+      <div class="boost-indicator">
+        <svg viewBox="0 0 100 100"><circle class="boost-track" cx="50" cy="50" r="45"/><circle class="boost-fill" cx="50" cy="50" r="45" stroke-dasharray="153 283"/></svg>
+        <div class="boost-label"><div class="boost-l">BOOST</div><div class="boost-v">73</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</body></html>

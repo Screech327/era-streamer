@@ -664,6 +664,120 @@ body.no-bridge .player-row { gap:0; }
   filter:drop-shadow(0 0 4px var(--team-color, #888));
 }
 .boost-fill.has-fill { opacity:1; }
+
+/* === BOOST GAUGE BACKDROP ===
+   Producer-pick variant rendered behind the gauge. Positioned absolutely
+   relative to .boost-indicator (200x200), centered. Sized to extend
+   slightly beyond the gauge bounds for variants that need it. DOM order
+   puts the bg first → SVG/label paint on top without needing z-index. */
+.boost-bg {
+  position:absolute;
+  left:50%; top:50%;
+  pointer-events:none;
+  width:0; height:0;     /* boost-bg-none default — invisible */
+}
+.boost-bg.boost-bg-none { display:none; }
+
+/* A — DISC. Subtle dark circle, thin border. */
+.boost-bg.boost-bg-a {
+  width:220px; height:220px;
+  margin:-110px 0 0 -110px;
+  border-radius:50%;
+  background:rgba(8,12,18,0.72);
+  border:1px solid rgba(255,255,255,0.08);
+  box-shadow:0 6px 24px rgba(0,0,0,0.5);
+}
+
+/* B — HEX. Hexagonal frame, team-color outline. ::before fills the body,
+   ::after draws the colored border via a thick-then-thin clip-path. */
+.boost-bg.boost-bg-b {
+  width:228px; height:228px;
+  margin:-114px 0 0 -114px;
+}
+.boost-bg.boost-bg-b::before, .boost-bg.boost-bg-b::after {
+  content:''; position:absolute; inset:0;
+}
+.boost-bg.boost-bg-b::before {
+  background:rgba(8,12,18,0.78);
+  clip-path:polygon(50% 0,93.3% 25%,93.3% 75%,50% 100%,6.7% 75%,6.7% 25%);
+}
+.boost-bg.boost-bg-b::after {
+  background:var(--team-color,#888);
+  clip-path:polygon(
+    50% 0, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%,
+    8.3% 26%, 8.3% 74%, 50% 97.5%, 91.7% 74%, 91.7% 26%, 50% 2.5%
+  );
+  opacity:0.85;
+  filter:drop-shadow(0 0 8px var(--team-color,#888));
+}
+
+/* C — CUT-CORNER. Notched rectangle + team-color accent edge. */
+.boost-bg.boost-bg-c {
+  width:220px; height:220px;
+  margin:-110px 0 0 -110px;
+}
+.boost-bg.boost-bg-c::before {
+  content:''; position:absolute; inset:0;
+  background:rgba(8,12,18,0.78);
+  clip-path:polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+  border:1px solid rgba(255,255,255,0.06);
+}
+.boost-bg.boost-bg-c::after {
+  content:''; position:absolute; inset:0;
+  background:var(--team-color,#888);
+  clip-path:polygon(0 18px, 18px 0, 100% 0, 100% 3px, 18px 3px, 3px 18px, 3px 100%, 0 100%);
+  filter:drop-shadow(0 0 6px var(--team-color,#888));
+}
+
+/* D — GLOW. No solid backdrop — soft team-color halo. Largest variant
+   (240x240) so the halo extends slightly past the gauge ring. */
+.boost-bg.boost-bg-d {
+  width:240px; height:240px;
+  margin:-120px 0 0 -120px;
+  border-radius:50%;
+  background:radial-gradient(circle at center,
+    color-mix(in srgb, var(--team-color,#888) 45%, transparent) 0%,
+    color-mix(in srgb, var(--team-color,#888) 15%, transparent) 35%,
+    transparent 70%);
+  filter:blur(2px);
+}
+
+/* E — FROSTED PANEL. Glassy rounded square + team-color top accent. */
+.boost-bg.boost-bg-e {
+  width:224px; height:224px;
+  margin:-112px 0 0 -112px;
+  border-radius:16px;
+  background:rgba(8,12,18,0.55);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,0.08);
+  overflow:hidden;
+}
+.boost-bg.boost-bg-e::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:3px;
+  background:linear-gradient(90deg,
+    transparent 0%,
+    var(--team-color,#888) 30%,
+    var(--team-color,#888) 70%,
+    transparent 100%);
+}
+
+/* F — CONCENTRIC RINGS. Two thin decorative rings outside the gauge. */
+.boost-bg.boost-bg-f {
+  width:236px; height:236px;
+  margin:-118px 0 0 -118px;
+}
+.boost-bg.boost-bg-f::before, .boost-bg.boost-bg-f::after {
+  content:''; position:absolute; inset:0;
+  border-radius:50%;
+  border:1px solid rgba(255,255,255,0.10);
+}
+.boost-bg.boost-bg-f::after {
+  inset:14px;
+  border-color:color-mix(in srgb, var(--team-color,#888) 50%, transparent);
+  border-style:dashed;
+}
+
 .boost-label {
   position:absolute; inset:0;
   display:flex; flex-direction:column;
@@ -1497,8 +1611,12 @@ body.hide-stat-demos   .nw-stat[data-stat="demos"]   { display:none !important; 
 
     <!-- Bottom-right boost indicator — 270° arc like RL's in-game gauge.
          Tracks the spectated player's boost from the bridge. Shares team
-         color logic with the now-watching card. -->
+         color logic with the now-watching card. The .boost-bg element is
+         a producer-configurable backdrop (none/disc/hex/cut/glow/frost/
+         rings) that paints behind the gauge — fade-in/out is inherited
+         from the parent's .visible class. -->
     <div id="boostIndicator" class="boost-indicator">
+      <div id="boostBg" class="boost-bg boost-bg-none"></div>
       <svg viewBox="0 0 100 100">
         <circle class="boost-track" cx="50" cy="50" r="45"/>
         <circle class="boost-fill"  cx="50" cy="50" r="45" id="boostFill"/>
@@ -1630,6 +1748,10 @@ function applyOverlayConfig(cfg) {
   // Player-banner style — applies a banner-X class + rewrites row DOM.
   const bannerStyle = (cfg && cfg.bannerStyle) || 'a';
   applyBannerStyle(bannerStyle);
+  // Boost-gauge backdrop — 'none' | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'.
+  // Defaults to 'none' so existing installs don't suddenly grow a backdrop.
+  const boostBgStyle = (cfg && cfg.boostBgStyle) || 'none';
+  applyBoostBgStyle(boostBgStyle);
   // Element-visibility toggles. Each defaults to true so existing
   // installs don't suddenly lose pieces of the overlay.
   applyOverlayToggles(cfg || {});
@@ -1958,6 +2080,16 @@ function hideGoalPopup() {
 
 // Boot the goal popup shell.
 applyGoalPopupStyle('a');
+
+// ── Boost-gauge backdrop (Customize tab) ───────────────────────────
+const BOOST_BG_STYLES = ['none','a','b','c','d','e','f'];
+function applyBoostBgStyle(style) {
+  if (!BOOST_BG_STYLES.includes(style)) style = 'none';
+  const el = document.getElementById('boostBg');
+  if (!el) return;
+  el.className = 'boost-bg boost-bg-' + style;
+}
+applyBoostBgStyle('none');
 
 // ── Player-banner style (Customize tab) ────────────────────────────
 // One of a..f. Drives the players-box class + per-row inner DOM.

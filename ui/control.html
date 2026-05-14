@@ -1338,6 +1338,7 @@ h1, h2, h3 {
         <button type="button" class="cz-sub-tab"        data-cz-pane="card">PLAYER CARD</button>
         <button type="button" class="cz-sub-tab"        data-cz-pane="banner">BANNERS</button>
         <button type="button" class="cz-sub-tab"        data-cz-pane="goal">GOAL POPUP</button>
+        <button type="button" class="cz-sub-tab"        data-cz-pane="boostbg">BOOST BG</button>
         <button type="button" class="cz-sub-tab"        data-cz-pane="stats">CARD STATS</button>
       </div>
     <div class="cz-sub-panes"><div class="customize-options">
@@ -1524,6 +1525,53 @@ h1, h2, h3 {
       </div>
     </div>
     </div><!-- /goal -->
+
+    <div class="cz-sub-pane" data-cz-pane="boostbg">
+    <div class="panel">
+      <h2>BOOST GAUGE BACKDROP <span id="boostBgStyleName" style="color:var(--text-dim);font-weight:normal;font-size:13px;letter-spacing:1px;margin-left:8px;"></span></h2>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:10px;">
+        Background painted behind the bottom-right boost gauge. Default is none — the gauge floats on its own.
+      </div>
+      <div class="style-picker-row" id="boostBgStylePicker">
+        <button type="button" class="style-card" data-picker="boostBg" data-style="none">
+          <span class="sc-letter">—</span>
+          <span class="sc-name">NONE</span>
+          <span class="sc-desc">No backdrop (default)</span>
+        </button>
+        <button type="button" class="style-card" data-picker="boostBg" data-style="a">
+          <span class="sc-letter">A</span>
+          <span class="sc-name">DISC</span>
+          <span class="sc-desc">Subtle dark circle</span>
+        </button>
+        <button type="button" class="style-card" data-picker="boostBg" data-style="b">
+          <span class="sc-letter">B</span>
+          <span class="sc-name">HEX</span>
+          <span class="sc-desc">Hexagonal team-color frame</span>
+        </button>
+        <button type="button" class="style-card" data-picker="boostBg" data-style="c">
+          <span class="sc-letter">C</span>
+          <span class="sc-name">CUT-CORNER</span>
+          <span class="sc-desc">Angular panel + accent</span>
+        </button>
+        <button type="button" class="style-card" data-picker="boostBg" data-style="d">
+          <span class="sc-letter">D</span>
+          <span class="sc-name">GLOW</span>
+          <span class="sc-desc">Soft team-color halo</span>
+        </button>
+        <button type="button" class="style-card" data-picker="boostBg" data-style="e">
+          <span class="sc-letter">E</span>
+          <span class="sc-name">FROSTED</span>
+          <span class="sc-desc">Glassy rounded panel</span>
+        </button>
+        <button type="button" class="style-card" data-picker="boostBg" data-style="f">
+          <span class="sc-letter">F</span>
+          <span class="sc-name">RINGS</span>
+          <span class="sc-desc">Two thin decorative rings</span>
+        </button>
+      </div>
+    </div>
+    </div><!-- /boostbg -->
+
     </div><!-- end customize-options -->
     </div><!-- end cz-sub-panes -->
     </div><!-- end cz-bottom -->
@@ -2395,6 +2443,7 @@ async function loadSettings() {
 const NW_STYLE_NAMES     = { a:'A · CURRENT', b:'B · ANGULAR BLADE', c:'C · TEAM SHIELD', d:'D · HERO STATLINE', e:'E · GLASS BAR', f:'F · STACKED METRICS' };
 const GOAL_STYLE_NAMES   = { a:'A · NEON HOLO BAR', b:'B · TILTED STRIKE', c:'C · DIAGONAL SPLIT', d:'D · STADIUM JUMBOTRON', e:'E · LIGHT BURST', f:'F · LAYERED DEPTH' };
 const BANNER_STYLE_NAMES = { a:'A · CURRENT', b:'B · STACKED GLASS', c:'C · ANGLED SLASH', d:'D · FUEL TANK', e:'E · MINIMAL LINES', f:'F · POWER BLOCK' };
+const BOOST_BG_STYLE_NAMES = { none:'NONE', a:'A · DISC', b:'B · HEX', c:'C · CUT-CORNER', d:'D · GLOW', e:'E · FROSTED', f:'F · RINGS' };
 
 function reflectStyle(picker, style) {
   // Settings dropdown (legacy — kept hidden for compat) + Customize cards
@@ -2407,6 +2456,8 @@ function reflectStyle(picker, style) {
     const asb = $('asbGoalStyle'); if (asb) asb.textContent = String(style || '').toUpperCase();
   } else if (picker === 'banner') {
     const name = $('bannerStyleName'); if (name) name.textContent = BANNER_STYLE_NAMES[style] || '';
+  } else if (picker === 'boostBg') {
+    const name = $('boostBgStyleName'); if (name) name.textContent = BOOST_BG_STYLE_NAMES[style] || '';
   }
   document.querySelectorAll('.style-card[data-picker="' + picker + '"]').forEach((b) => {
     b.classList.toggle('active', b.dataset.style === style);
@@ -2419,11 +2470,16 @@ async function setStyle(picker, style) {
     const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
     cfg = (arr[0] && arr[0].value) || {};
   } catch (e) {}
-  if (picker === 'nw')     cfg.nowWatchingStyle = style;
-  if (picker === 'goal')   cfg.goalPopupStyle   = style;
-  if (picker === 'banner') cfg.bannerStyle      = style;
+  if (picker === 'nw')      cfg.nowWatchingStyle = style;
+  if (picker === 'goal')    cfg.goalPopupStyle   = style;
+  if (picker === 'banner')  cfg.bannerStyle      = style;
+  if (picker === 'boostBg') cfg.boostBgStyle     = style;
   await upsert('stream_overlay_config', cfg);
-  const label = picker === 'nw' ? 'PLAYER CARD' : picker === 'goal' ? 'GOAL POPUP' : 'BANNER';
+  const label =
+    picker === 'nw'      ? 'PLAYER CARD' :
+    picker === 'goal'    ? 'GOAL POPUP' :
+    picker === 'banner'  ? 'BANNER' :
+    picker === 'boostBg' ? 'BOOST BG' : picker.toUpperCase();
   showToast(label + ' · ' + style.toUpperCase());
 }
 // Overlay element toggles + per-stat checkboxes. Defaults: everything
@@ -2492,9 +2548,10 @@ async function loadOverlayConfig() {
   try {
     const arr = await (await fetch(API + '/rest/v1/settings?key=eq.stream_overlay_config&select=value')).json();
     const cfg = (arr[0] && arr[0].value) || {};
-    reflectStyle('nw',     cfg.nowWatchingStyle || 'a');
-    reflectStyle('goal',   cfg.goalPopupStyle   || 'a');
-    reflectStyle('banner', cfg.bannerStyle      || 'a');
+    reflectStyle('nw',      cfg.nowWatchingStyle || 'a');
+    reflectStyle('goal',    cfg.goalPopupStyle   || 'a');
+    reflectStyle('banner',  cfg.bannerStyle      || 'a');
+    reflectStyle('boostBg', cfg.boostBgStyle     || 'none');
     reflectToggles(cfg);
   } catch (e) {}
 }
