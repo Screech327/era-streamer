@@ -2380,6 +2380,21 @@ function applyGoalPopupStyle(style) {
   el.innerHTML = renderGoalPopupShell(style);
 }
 
+// Live-fill state for the currently-visible popup. Lets late-arriving
+// assister data populate the popup AFTER it's already on screen — the
+// fix for the user-reported "assists sometimes happen" bug. RL/SOS
+// often delivers the team-score bump a tick before the assister's
+// Assists count actually increments. Previously we snapshotted at goal
+// time and never looked back; now we keep watching UpdateState while
+// the popup is visible and patch in the assister when it shows up.
+const _visiblePopupGoal = {
+  active: false,
+  scoredTeam: null,
+  scorerName: null,
+  assistFilled: false,
+  baselineAssists: {},
+};
+
 function showGoalPopup({ scorer, assist, teamIdx }) {
   const el = document.getElementById('goalPopup');
   if (!el) return;
@@ -2392,6 +2407,22 @@ function showGoalPopup({ scorer, assist, teamIdx }) {
   // Hide the assist row if no assister
   const asRow = el.querySelector('.assist');
   if (asRow) asRow.style.display = assist ? '' : 'none';
+
+  // Snapshot baseline so late assister data can be folded in. Use the
+  // most recent UpdateState's per-player Assists counts as the
+  // baseline; any subsequent bump on the scoring team's roster is the
+  // assister.
+  _visiblePopupGoal.active = true;
+  _visiblePopupGoal.scoredTeam = (typeof teamIdx === 'number') ? teamIdx : null;
+  _visiblePopupGoal.scorerName = scorer || null;
+  _visiblePopupGoal.assistFilled = !!assist;
+  _visiblePopupGoal.baselineAssists = {};
+  if (lastBridgeUpdate && Array.isArray(lastBridgeUpdate.Players)) {
+    for (const p of lastBridgeUpdate.Players) {
+      if (!p || !p.Name) continue;
+      _visiblePopupGoal.baselineAssists[p.Name] = p.Assists || 0;
+    }
+  }
   // Team logo — use matchup logo if available, else letter fallback
   const logoSrc = matchupTeamLogos[teamIdx];
   const img = document.getElementById('gpLogoImg');
@@ -2421,6 +2452,35 @@ function hideGoalPopup() {
   const el = document.getElementById('goalPopup');
   if (el) el.classList.remove('show');
   clearTimeout(goalReplayTimeoutId);
+  _visiblePopupGoal.active = false;
+}
+
+// While the goal popup is visible, every UpdateState tick check if the
+// assister's Assists count has bumped since the popup opened. If yes
+// AND we haven't already filled the assister, patch it in. Solves the
+// race where SOS / the score-diff fallback fires before the assister's
+// stats have propagated.
+function fillPopupAssistIfReady(data) {
+  if (!_visiblePopupGoal.active) return;
+  if (_visiblePopupGoal.assistFilled) return;
+  if (_visiblePopupGoal.scoredTeam == null) return;
+  if (!data || !Array.isArray(data.Players)) return;
+  for (const p of data.Players) {
+    if (!p || !p.Name) continue;
+    if (p.TeamNum !== _visiblePopupGoal.scoredTeam) continue;
+    if (p.Name === _visiblePopupGoal.scorerName) continue;
+    const prev = _visiblePopupGoal.baselineAssists[p.Name] || 0;
+    if ((p.Assists || 0) > prev) {
+      // Found the assister — patch it into the visible popup.
+      const as = document.getElementById('gpAssist');
+      if (as) as.textContent = p.Name.toUpperCase();
+      const el = document.getElementById('goalPopup');
+      const asRow = el && el.querySelector('.assist');
+      if (asRow) asRow.style.display = '';
+      _visiblePopupGoal.assistFilled = true;
+      break;
+    }
+  }
 }
 
 // Boot the goal popup shell.
@@ -3308,6 +3368,7 @@ function connectStats() {
       updatePlayerBoosts(msg.Data);
       trackMatchSnapshot(msg.Data);
       trackGoalsViaUpdateState(msg.Data);
+      fillPopupAssistIfReady(msg.Data);
     } else if (msg.Event === 'MatchDestroyed') {
       nwHide();
       sbHide();
