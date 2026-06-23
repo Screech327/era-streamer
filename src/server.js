@@ -522,6 +522,11 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
   // ── WebSocket — live RL stats relay ──────────────────────────────────
   const wss = new WebSocketServer({ server });
   const wsClients = new Set();
+  // Server-level WS errors aren't tied to a single socket, so the
+  // per-socket `ws.on('error')` below isn't enough — without this, a
+  // transport error during the WS upgrade would bubble out and crash
+  // the main process.
+  wss.on('error', (err) => { if (onLog) onLog('ws-server-error: ' + ((err && err.message) || err)); });
   wss.on('connection', (ws) => {
     wsClients.add(ws);
     // Send a hello with the current app version. The overlay uses this
@@ -555,6 +560,11 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
   return new Promise((resolve, reject) => {
     server.once('error', reject);
     server.listen(PORT, '127.0.0.1', () => {
+      // Swap the one-shot startup reject for a persistent logger so a
+      // post-startup HTTP error (client RST, socket hangup, etc.)
+      // doesn't propagate as an uncaught exception.
+      server.removeListener('error', reject);
+      server.on('error', (err) => { if (onLog) onLog('http-server-error: ' + ((err && err.message) || err)); });
       if (onLog) onLog(`server listening on http://127.0.0.1:${PORT}`);
       resolve({
         port: PORT,

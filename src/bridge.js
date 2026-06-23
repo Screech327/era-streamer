@@ -51,8 +51,12 @@ class JsonStreamParser {
 function startBridge({ onUpdate, onConnect, onDisconnect }) {
   let lastUpdate = null;
   let sock = null;
+  let reconnectTimer = null;
+  let stopped = false;
 
   function connect() {
+    reconnectTimer = null;
+    if (stopped) return;
     sock = new net.Socket();
     const parser = new JsonStreamParser();
     let connected = false;
@@ -65,7 +69,11 @@ function startBridge({ onUpdate, onConnect, onDisconnect }) {
     sock.on('data', (chunk) => {
       parser.feed(chunk.toString('utf8'), (msg) => {
         if (msg.Event === 'UpdateState') lastUpdate = msg;
-        if (onUpdate) onUpdate(msg);
+        if (onUpdate) {
+          // A bad payload throwing inside the consumer used to take down
+          // the whole TCP read pipeline (and bubble up further).
+          try { onUpdate(msg); } catch (_) {}
+        }
       });
     });
 
@@ -76,8 +84,9 @@ function startBridge({ onUpdate, onConnect, onDisconnect }) {
       connected = false;
       lastUpdate = null;
       if (wasConnected && onDisconnect) onDisconnect();
+      if (stopped) return;
       // Auto-reconnect — when RL closes/restarts the next attempt picks it up.
-      setTimeout(connect, 1500);
+      reconnectTimer = setTimeout(connect, 1500);
     });
   }
 
@@ -85,7 +94,11 @@ function startBridge({ onUpdate, onConnect, onDisconnect }) {
 
   return {
     getLastUpdate: () => lastUpdate,
-    stop: () => { try { if (sock) sock.destroy(); } catch (_) {} },
+    stop: () => {
+      stopped = true;
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      try { if (sock) sock.destroy(); } catch (_) {}
+    },
     // Force-close the current socket so the on-close handler kicks the
     // auto-reconnect immediately. Used by the "Retry connection" button
     // in the control panel.
