@@ -16,7 +16,25 @@
   html,body{width:100vw;height:100vh;background:transparent;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#e0e0e0;}
   body{display:flex;align-items:center;justify-content:center;}
   #stage{width:1920px;height:1080px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;transform-origin:center center;}
-  #stage .mg-card{width:1520px;}
+  /* Full-bleed: the card fills the entire 1920x1080 frame so 'Fit to screen'
+     in OBS covers the whole screen edge-to-edge (no transparent margins, no
+     manual stretching). The website admin tool keeps the floating-card look. */
+  #stage .mg-card{width:1920px;height:1080px;border-radius:0;box-shadow:none;display:flex;flex-direction:column;padding:60px 88px;}
+  #stage .mg-body{flex:1 1 auto;align-items:center;}
+  /* Scale the content up so it reads well filling the whole frame. */
+  #stage .mg-banner-league{font-size:62px;letter-spacing:14px;}
+  #stage .mg-team-name{font-size:60px;}
+  #stage .mg-logo-wrap{width:152px;height:152px;}
+  #stage .mg-players{gap:22px;}
+  #stage .mg-player{padding:20px 26px;}
+  #stage .mg-pn{font-size:40px;}
+  #stage .mg-mmr{font-size:17px;}
+  #stage .mg-stat{min-width:120px;padding:12px 16px;}
+  #stage .mg-stat-v{font-size:36px;}
+  #stage .mg-stat-l{font-size:14px;}
+  #stage .mg-chip{min-width:62px;}
+  #stage .mg-chip-v{font-size:24px;}
+  #stage .mg-vs-text{font-size:76px;}
   #msg{font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:6px;color:#888;text-align:center;}
 </style>
 </head>
