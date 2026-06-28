@@ -92,6 +92,7 @@
       var card = C.renderCard(matchup, agg, {
         showStats: cfg.showStats !== false,
         showSeries: cfg.showSeries !== false,
+        statMode: cfg.statMode || 'highlight',
         series: { format: seriesVal.format, leftWins: seriesVal.leftWins, rightWins: seriesVal.rightWins },
         players: cloud.players,
         minGames: minGames,

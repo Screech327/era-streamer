@@ -103,6 +103,13 @@
 .mg-stat-accent .mg-stat-l { color: color-mix(in srgb, var(--gold) 85%, white); }
 .mg-empty { color: var(--muted); font-style: italic; padding: 12px 4px; }
 
+/* Full per-game line (all stats), compact chips. */
+.mg-pstats-full { display: flex; gap: 6px; flex-wrap: nowrap; }
+.mg-chip { display: flex; flex-direction: column; align-items: center; min-width: 44px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 7px; padding: 6px 6px; }
+.mg-chip-v { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 17px; line-height: 1; color: #fff; }
+.mg-chip-l { font-size: 9px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-top: 3px; }
+.mg-chip:last-child .mg-chip-v { color: var(--gold); }  /* score stands out */
+
 /* VS column */
 .mg-vs { display: flex; align-items: center; justify-content: center; position: relative; }
 .mg-vs::before { content: ''; position: absolute; top: 6%; bottom: 6%; width: 2px; background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 55%, transparent), transparent); }

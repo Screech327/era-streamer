@@ -104,6 +104,22 @@ test('resolveTonight parses match_id and filters to today ET', () => {
   assert.equal(got[0].home.roster[0].name, 'A');
 });
 
+test('eligibleSubs: same org, strictly lower league only', () => {
+  const players = [
+    { name: 'ChampGuy', mmr: 2000, league: 'league1', drafted: true, drafted_by: 'qc', dropped: false },
+    { name: 'MajorGuy', mmr: 1600, league: 'league2', drafted: true, drafted_by: 'qc', dropped: false },
+    { name: 'MinorGuy', mmr: 1400, league: 'league3', drafted: true, drafted_by: 'qc', dropped: false },
+    { name: 'AcadGuy',  mmr: 1200, league: 'league4', drafted: true, drafted_by: 'qc', dropped: false },
+    { name: 'OtherOrg', mmr: 1500, league: 'league3', drafted: true, drafted_by: 'berk', dropped: false },
+  ];
+  // Major can pull from minor + academy (below), never champion (above) or another org.
+  assert.deepEqual(C.eligibleSubs(players, 'qc', 'major').map(p => p.name).sort(), ['AcadGuy', 'MinorGuy']);
+  // Champion can pull from every lower tier of its org.
+  assert.deepEqual(C.eligibleSubs(players, 'qc', 'champion').map(p => p.name).sort(), ['AcadGuy', 'MajorGuy', 'MinorGuy']);
+  // Academy (lowest) has nobody below it.
+  assert.deepEqual(C.eligibleSubs(players, 'qc', 'academy'), []);
+});
+
 test('buildMatchup attaches rosters by org+league', () => {
   const players = [
     { name: 'A', mmr: 1500, league: 'league2', drafted: true, drafted_by: 'qc', dropped: false },

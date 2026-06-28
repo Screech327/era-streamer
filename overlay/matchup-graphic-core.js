@@ -316,12 +316,15 @@
 
   // ───────── Roster building from the cloud players table ─────────
 
-  // players: admin rows {name,mmr,league(admin),drafted,drafted_by(org),dropped}.
+  // players: admin rows {name,mmr,league(admin),drafted,drafted_by(org)}.
   // Returns {name,mmr}[] for one org+public-league, sorted MMR desc.
+  // Active roster = drafted by this org in this league — matching the admin
+  // Rosters & Free Agency page (teamRosterFor). The `dropped` flag is a
+  // player-pool concept and is intentionally IGNORED here.
   function rosterFor(players, org, publicLeague) {
     var adminLeague = PUBLIC_TO_ADMIN[publicLeague];
     var list = (players || []).filter(function (p) {
-      return p.drafted && p.drafted_by === org && p.league === adminLeague && !p.dropped;
+      return p.drafted && p.drafted_by === org && p.league === adminLeague;
     }).map(function (p) { return { name: p.name, mmr: p.mmr || 0 }; });
     list.sort(function (a, b) { return (b.mmr || 0) - (a.mmr || 0); });
     return list;
@@ -330,6 +333,24 @@
   function teamObj(org, publicLeague, players) {
     var td = (TEAM_DATA[org] || {})[publicLeague] || { name: org, logo: '' };
     return { org: org, league: publicLeague, name: td.name, logo: td.logo, roster: rosterFor(players, org, publicLeague) };
+  }
+
+  var LEAGUE_NUM = { champion: 1, major: 2, minor: 3, academy: 4 };
+
+  // Eligible substitutes for a team: ONLY players in the SAME org on a team
+  // in a STRICTLY LOWER league (a player can sub UP from a team below, never
+  // be pulled from a higher league). Returns {name,mmr,league} sorted MMR desc.
+  function eligibleSubs(players, org, publicLeague) {
+    var n = LEAGUE_NUM[publicLeague];
+    if (!n) return [];
+    var out = (players || []).filter(function (p) {
+      if (!p.drafted || p.drafted_by !== org) return false; // dropped flag ignored (see rosterFor)
+      var pl = ADMIN_TO_PUBLIC[p.league];
+      var pn = LEAGUE_NUM[pl];
+      return pn && pn > n; // lower tier only
+    }).map(function (p) { return { name: p.name, mmr: p.mmr || 0, league: ADMIN_TO_PUBLIC[p.league] }; });
+    out.sort(function (a, b) { return (b.mmr || 0) - (a.mmr || 0); });
+    return out;
   }
 
   // Explicit matchup (manual override / era-streamer current-match mode).
@@ -521,11 +542,19 @@
     if (opts.showStats !== false) {
       var t = agg.get(String(pl.name).toLowerCase()) || blankTotals(pl.name);
       var pg = perGame(t);
-      var best = pickBestOfRest(t, peers, minGames);
-      var stats = el('div', 'mg-pstats');
-      stats.appendChild(statBox('SCORE/G', fmt(pg.scorePG), false));
-      stats.appendChild(statBox(best.label.toUpperCase() + '/G', fmt(best.value), true));
-      row.appendChild(stats);
+      if (opts.statMode === 'full') {
+        // Compact per-game line: all stats as small chips.
+        var full = el('div', 'mg-pstats mg-pstats-full');
+        [['G', pg.goalsPG], ['A', pg.assistsPG], ['SV', pg.savesPG], ['SH', pg.shotsPG], ['DM', pg.demosPG], ['SC', pg.scorePG]]
+          .forEach(function (s) { full.appendChild(chip(s[0], s[0] === 'SC' ? String(Math.round(s[1])) : fmt(s[1]))); });
+        row.appendChild(full);
+      } else {
+        var best = pickBestOfRest(t, peers, minGames);
+        var stats = el('div', 'mg-pstats');
+        stats.appendChild(statBox('SCORE/G', fmt(pg.scorePG), false));
+        stats.appendChild(statBox(best.label.toUpperCase() + '/G', fmt(best.value), true));
+        row.appendChild(stats);
+      }
     }
     return row;
   }
@@ -535,6 +564,13 @@
     b.appendChild(el('span', 'mg-stat-v', value));
     b.appendChild(el('span', 'mg-stat-l', label));
     return b;
+  }
+
+  function chip(label, value) {
+    var c = el('div', 'mg-chip');
+    c.appendChild(el('span', 'mg-chip-v', value));
+    c.appendChild(el('span', 'mg-chip-l', label));
+    return c;
   }
 
   // ───────── Export ─────────
@@ -547,7 +583,7 @@
     slug: slug, normName: normName, levenshtein: levenshtein, matchPlayer: matchPlayer,
     getCurrentEraWeek: getCurrentEraWeek, minGamesFor: minGamesFor,
     aggregate: aggregate, perGame: perGame, pickBestOfRest: pickBestOfRest,
-    rosterFor: rosterFor, buildMatchup: buildMatchup, resolveTonight: resolveTonight,
+    rosterFor: rosterFor, eligibleSubs: eligibleSubs, LEAGUE_NUM: LEAGUE_NUM, buildMatchup: buildMatchup, resolveTonight: resolveTonight,
     leagueTotals: leagueTotals, fetchCloud: fetchCloud, renderCard: renderCard,
   };
 

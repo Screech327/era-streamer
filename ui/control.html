@@ -1753,10 +1753,17 @@ h1, h2, h3 {
           <div class="label">Show series score</div>
           <button class="btn btn-toggle" id="mg_showSeries" data-on="true">SERIES: ON</button>
         </div>
+        <div class="field" style="flex:0 0 220px">
+          <div class="label">Stat display</div>
+          <select class="select select-lg" id="mg_statMode">
+            <option value="highlight">Score + best stat</option>
+            <option value="full">All per-game stats</option>
+          </select>
+        </div>
         <div class="field" style="flex:1;min-width:240px">
           <div class="label">&nbsp;</div>
           <div style="font-size:13px;color:var(--text-dim);padding:10px 0;line-height:1.5;">
-            Current = the teams pushed in the MATCH tab. Slate = tonight's scheduled matchups. Each player shows score/game plus their best per-game stat.
+            Current = the teams pushed in the MATCH tab. Slate = tonight's scheduled matchups.
           </div>
         </div>
       </div>
@@ -2825,9 +2832,34 @@ $('wizCopyUrl').addEventListener('click', () => {
   var cloud = null;     // {players, archive, aliases, scheduled}
   var slate = [];       // resolved tonight matchups
   var pool = [];        // [{name,mmr}] for sub pickers
-  var cfg = { mode:'current', showStats:true, showSeries:true, slateIndex:0, subs:{ home:{}, away:{} } };
+  var streamMatch = null; // the pushed stream_match (current mode)
+  var ORG_SLOTS = ['berk','qc','bamboo','suit','leeds','mont','vb','osaka']; // teams.js slot order
+  var cfg = { mode:'current', showStats:true, showSeries:true, statMode:'highlight', slateIndex:0, subs:{ home:{}, away:{} } };
 
   function writeCfg(){ upsert('stream_matchup_graphic', cfg); }
+
+  // Resolve the home/away {org, league} currently shown, so sub pickers can be
+  // restricted to that team's eligible subs.
+  function sideTeams(){
+    if (cfg.mode === 'slate'){
+      var m = slate[Math.min(cfg.slateIndex||0, Math.max(0, slate.length-1))];
+      if (!m) return null;
+      return { home:{ org:m.home.org, league:m.home.league }, away:{ org:m.away.org, league:m.away.league } };
+    }
+    if (streamMatch && streamMatch.left && streamMatch.right){
+      return {
+        home:{ org: ORG_SLOTS[streamMatch.left.slot],  league: C.ADMIN_TO_PUBLIC[streamMatch.left.league] },
+        away:{ org: ORG_SLOTS[streamMatch.right.slot], league: C.ADMIN_TO_PUBLIC[streamMatch.right.league] },
+      };
+    }
+    return null;
+  }
+  function fetchStreamMatch(){
+    return fetch(API + '/rest/v1/settings?key=eq.stream_match&select=value')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(rows){ streamMatch = (rows && rows[0]) ? rows[0].value : null; })
+      .catch(function(){});
+  }
 
   function setToggle(btn, on, onLabel, offLabel){
     btn.dataset.on = on ? 'true' : 'false';
@@ -2853,19 +2885,29 @@ $('wizCopyUrl').addEventListener('click', () => {
   function rebuildSubs(){
     var row = $('mg_subsRow');
     row.innerHTML = '';
+    var teams = sideTeams();
     [['home','Home'],['away','Away']].forEach(function(pair){
       var side = pair[0];
+      var t = teams && teams[side];
+      // Same-org, lower-league only (sub UP). Empty for Academy / unknown team.
+      var subs = (t && t.org && t.league) ? C.eligibleSubs(cloud.players, t.org, t.league) : [];
       for (var idx=0; idx<3; idx++){
         (function(side, idx){
           var field = document.createElement('div');
           field.className = 'field'; field.style.flex = '1 1 200px';
-          var lbl = document.createElement('div'); lbl.className='label'; lbl.textContent = pair[1] + ' slot ' + (idx+1);
+          var lbl = document.createElement('div'); lbl.className='label';
+          lbl.textContent = pair[1] + ' slot ' + (idx+1) + (t && t.league ? ' · ' + (C.LEAGUE_LABELS[t.league]||'') : '');
           var sel = document.createElement('select'); sel.className='select';
           var none = document.createElement('option'); none.value=''; none.textContent='— roster —'; sel.appendChild(none);
-          pool.forEach(function(p){
-            var o = document.createElement('option'); o.value=p.name; o.textContent=p.name+(p.mmr?(' ('+p.mmr+')'):''); sel.appendChild(o);
+          subs.forEach(function(p){
+            var o = document.createElement('option'); o.value=p.name;
+            o.textContent = p.name + ' (' + (C.LEAGUE_LABELS[p.league]||'') + ' · ' + p.mmr + ')';
+            sel.appendChild(o);
           });
+          if (!subs.length){ var o0 = document.createElement('option'); o0.value=''; o0.textContent='— no eligible subs —'; o0.disabled=true; sel.appendChild(o0); }
           var cur = (cfg.subs[side]||{})[idx];
+          // Keep a previously-saved sub visible even if not in the eligible list.
+          if (cur && !subs.some(function(p){ return p.name===cur; })){ var oc=document.createElement('option'); oc.value=cur; oc.textContent=cur+' (sub)'; sel.appendChild(oc); }
           sel.value = cur || '';
           sel.addEventListener('change', function(){
             cfg.subs[side] = cfg.subs[side] || {};
@@ -2891,6 +2933,7 @@ $('wizCopyUrl').addEventListener('click', () => {
           cfg.mode = v.mode || 'current';
           cfg.showStats = v.showStats !== false;
           cfg.showSeries = v.showSeries !== false;
+          cfg.statMode = v.statMode || 'highlight';
           cfg.slateIndex = v.slateIndex || 0;
           cfg.subs = v.subs || { home:{}, away:{} };
           if (!cfg.subs.home) cfg.subs.home = {};
@@ -2901,12 +2944,14 @@ $('wizCopyUrl').addEventListener('click', () => {
 
   function initControls(){
     $('mg_mode').value = cfg.mode;
+    $('mg_statMode').value = cfg.statMode;
     setToggle($('mg_showStats'), cfg.showStats, 'STATS: ON', 'STATS: OFF');
     setToggle($('mg_showSeries'), cfg.showSeries, 'SERIES: ON', 'SERIES: OFF');
     applyModeVisibility();
 
-    $('mg_mode').addEventListener('change', function(){ cfg.mode = $('mg_mode').value; applyModeVisibility(); writeCfg(); });
-    $('mg_slate').addEventListener('change', function(){ cfg.slateIndex = parseInt($('mg_slate').value,10)||0; writeCfg(); });
+    $('mg_mode').addEventListener('change', function(){ cfg.mode = $('mg_mode').value; applyModeVisibility(); writeCfg(); (cfg.mode==='current'?fetchStreamMatch():Promise.resolve()).then(rebuildSubs); });
+    $('mg_slate').addEventListener('change', function(){ cfg.slateIndex = parseInt($('mg_slate').value,10)||0; writeCfg(); rebuildSubs(); });
+    $('mg_statMode').addEventListener('change', function(){ cfg.statMode = $('mg_statMode').value; writeCfg(); });
     $('mg_showStats').addEventListener('click', function(){ cfg.showStats = !cfg.showStats; setToggle($('mg_showStats'), cfg.showStats, 'STATS: ON', 'STATS: OFF'); writeCfg(); });
     $('mg_showSeries').addEventListener('click', function(){ cfg.showSeries = !cfg.showSeries; setToggle($('mg_showSeries'), cfg.showSeries, 'SERIES: ON', 'SERIES: OFF'); writeCfg(); });
     $('copyMatchupBtn').addEventListener('click', function(){
@@ -2923,7 +2968,8 @@ $('wizCopyUrl').addEventListener('click', () => {
     cloud = d;
     pool = (d.players||[]).map(function(p){ return { name:p.name, mmr:p.mmr||0 }; }).sort(function(a,b){ return (b.mmr||0)-(a.mmr||0); });
     slate = C.resolveTonight(d.scheduled, d.players, new Date());
-    rebuildSlate(); rebuildSubs();
+    rebuildSlate();
+    fetchStreamMatch().then(rebuildSubs);
   }).catch(function(){});
 })();
 </script>
