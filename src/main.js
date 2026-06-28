@@ -12,6 +12,13 @@ const { startBridge } = require('./bridge');
 const { start: startServer } = require('./server');
 const { autoUpdater } = require('electron-updater');
 
+// The control window is plain HTML/CSS (a panel + a small preview iframe) and
+// needs no GPU. Running alongside a fullscreen GPU game + OBS, Electron's GPU
+// process is a common source of mid-stream crashes / contention — software
+// rendering for this app removes that whole class of failure. Must be called
+// before the app is ready.
+app.disableHardwareAcceleration();
+
 const OVERLAY_DIR = path.join(__dirname, '..', 'overlay');
 const UI_DIR      = path.join(__dirname, '..', 'ui');
 

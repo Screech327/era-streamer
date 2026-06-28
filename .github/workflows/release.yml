@@ -31,8 +31,8 @@ jobs:
           # Chromium on the runner.
           PUPPETEER_SKIP_DOWNLOAD: 'true'
 
-      - name: Run core unit tests
-        run: node --test test/matchup-core.test.js
+      - name: Run unit tests
+        run: node --test test/matchup-core.test.js test/bridge.test.js
 
       - name: Build + publish (electron-builder)
         run: npm run build:win -- --publish always

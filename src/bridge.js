@@ -7,20 +7,34 @@
 // connected WebSocket client.
 
 const net = require('net');
+const { StringDecoder } = require('string_decoder');
 
 const RL_HOST = '127.0.0.1';
 const RL_PORT = 49123;
 
+// Hard cap on a single in-progress object. RL UpdateState payloads are tens
+// of KB; if we ever blow past this the parser has desynced on garbage — drop
+// the buffer and resync rather than grow it for the rest of the stream (this
+// was a latent OOM: a desync meant `buf` grew unbounded until the app died).
+const MAX_BUFFER = 4 * 1024 * 1024;
+
 class JsonStreamParser {
   constructor() {
-    this.buf = '';
-    this.depth = 0;
-    this.inStr = false;
-    this.esc = false;
+    this.decoder = new StringDecoder('utf8'); // joins multi-byte chars split across TCP chunks
+    this.reset();
   }
-  feed(chunk, onMessage) {
+  reset() { this.buf = ''; this.depth = 0; this.inStr = false; this.esc = false; }
+  feed(chunkBuf, onMessage) {
+    // Decode through StringDecoder so a UTF-8 char split across two TCP
+    // packets (e.g. a unicode player name) isn't corrupted — corruption
+    // used to desync the brace/quote counting and wedge the parser.
+    const chunk = this.decoder.write(chunkBuf);
     for (let i = 0; i < chunk.length; i++) {
       const c = chunk[i];
+      // Between top-level objects, skip anything that isn't the start of a
+      // new object (whitespace, stray bytes) so junk can't accumulate and a
+      // post-desync stream resyncs cleanly at the next '{'.
+      if (this.depth === 0 && !this.inStr && c !== '{') continue;
       this.buf += c;
       if (this.inStr) {
         if (this.esc) { this.esc = false; continue; }
@@ -41,10 +55,13 @@ class JsonStreamParser {
               }
               onMessage(obj);
             } catch (_) {}
+          } else if (this.depth < 0) {
+            this.reset(); // stray '}' — desync; resync at the next object
           }
         }
       }
     }
+    if (this.buf.length > MAX_BUFFER) this.reset();
   }
 }
 
@@ -67,7 +84,7 @@ function startBridge({ onUpdate, onConnect, onDisconnect }) {
     });
 
     sock.on('data', (chunk) => {
-      parser.feed(chunk.toString('utf8'), (msg) => {
+      parser.feed(chunk, (msg) => {
         if (msg.Event === 'UpdateState') lastUpdate = msg;
         if (onUpdate) {
           // A bad payload throwing inside the consumer used to take down
@@ -106,4 +123,4 @@ function startBridge({ onUpdate, onConnect, onDisconnect }) {
   };
 }
 
-module.exports = { startBridge };
+module.exports = { startBridge, JsonStreamParser };
