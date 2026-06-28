@@ -67,7 +67,8 @@
       {
         "provider": "github",
         "owner": "Screech327",
-        "repo": "era-streamer"
+        "repo": "era-streamer",
+        "releaseType": "release"
       }
     ]
   }
