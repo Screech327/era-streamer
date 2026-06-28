@@ -9,12 +9,14 @@
 <link rel="stylesheet" href="matchup-graphic.css">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
-  html,body{width:1920px;height:1080px;background:transparent;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#e0e0e0;}
-  /* Center one card on the 1920x1080 transparent canvas; #stage scales the
-     card down (never up) so any matchup always fits the broadcast frame. */
-  #stage{width:1920px;height:1080px;display:flex;align-items:center;justify-content:center;}
-  #scaler{transform-origin:center center;}
-  #scaler .mg-card{width:1520px;}
+  /* Fill whatever viewport we're in (1920x1080 OBS source, or a small
+     control-panel preview iframe) and center the fixed 1920x1080 design
+     stage, scaled to fit — so the same file works at broadcast size AND in
+     a tiny preview without cropping. */
+  html,body{width:100vw;height:100vh;background:transparent;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#e0e0e0;}
+  body{display:flex;align-items:center;justify-content:center;}
+  #stage{width:1920px;height:1080px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;transform-origin:center center;}
+  #stage .mg-card{width:1520px;}
   #msg{font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:6px;color:#888;text-align:center;}
 </style>
 </head>
@@ -100,22 +102,18 @@
       mountCard(card);
     }
 
-    // Mount the card inside a scaler and shrink-to-fit the 1920x1080 frame
-    // (with margins) so a long roster / long names never overflow on stream.
     function mountCard(card){
       stage.innerHTML = '';
-      var scaler = document.createElement('div');
-      scaler.id = 'scaler';
-      scaler.appendChild(card);
-      stage.appendChild(scaler);
-      // measure after layout
-      requestAnimationFrame(function(){
-        var maxW = 1820, maxH = 1000;
-        var w = card.offsetWidth, h = card.offsetHeight;
-        var scale = Math.min(maxW / w, maxH / h, 1);
-        scaler.style.transform = 'scale(' + scale + ')';
-      });
+      stage.appendChild(card);
     }
+
+    // Scale the fixed 1920x1080 design stage to fit the actual viewport
+    // (1:1 in a 1920x1080 OBS source, shrunk in a small preview iframe).
+    function fitStage(){
+      var s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      stage.style.transform = 'scale(' + s + ')';
+    }
+    window.addEventListener('resize', fitStage);
 
     function refresh(){
       return Promise.all([
@@ -126,6 +124,7 @@
     }
 
     function init(){
+      fitStage();
       C.fetchCloud().then(function(d){
         cloud = d;
         agg = C.aggregate(d.archive, d.aliases, d.players);

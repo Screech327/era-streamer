@@ -2971,6 +2971,19 @@ $('wizCopyUrl').addEventListener('click', () => {
     rebuildSlate();
     fetchStreamMatch().then(rebuildSubs);
   }).catch(function(){});
+
+  // Keep the sub pickers fresh when a match is pushed from the MATCH tab
+  // (the tab only fetches stream_match once at load otherwise).
+  try {
+    var mgWs = new WebSocket('ws://' + location.host);
+    mgWs.onmessage = function(evt){
+      var m; try { m = JSON.parse(evt.data); } catch(_) { return; }
+      if (m && m.Event === 'SettingsChanged' && m.Data && m.Data.key === 'stream_match'){
+        streamMatch = m.Data.value || null;
+        if (cfg.mode === 'current' && cloud) rebuildSubs();
+      }
+    };
+  } catch(_) {}
 })();
 </script>
 </body>
