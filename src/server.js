@@ -53,6 +53,11 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     stream_match:           { value: {}, updated_at: new Date().toISOString() },
     stream_series:          { value: { format: 'BO5', leftWins: 0, rightWins: 0 }, updated_at: new Date().toISOString() },
     stream_overlay_config:  { value: { noBridge: false }, updated_at: new Date().toISOString() },
+    // Matchup-graphic overlay state (read by /matchup-graphic.html, written by
+    // the control panel's Matchup tab). mode: 'current' (the pushed stream_match)
+    // or 'slate' (tonight's scheduled matchups, indexed by slateIndex). subs maps
+    // a side+slot to a substitute player name.
+    stream_matchup_graphic: { value: { mode: 'current', showStats: true, showSeries: true, slateIndex: 0, subs: { home: {}, away: {} } }, updated_at: new Date().toISOString() },
     player_aliases:         { value: {}, updated_at: new Date().toISOString() },
     // Series recording is always-on for era-streamer — every match end gets
     // captured automatically. The producer hits SAVE SERIES STATS at the
@@ -300,6 +305,9 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     }
     if (req.method === 'GET' && pathname === '/match.html') {
       return serveStatic(res, overlayDir, 'match.html');
+    }
+    if (req.method === 'GET' && (pathname === '/matchup-graphic.html' || pathname === '/matchup-graphic-core.js')) {
+      return serveStatic(res, overlayDir, pathname.slice(1));
     }
     if (req.method === 'GET' && pathname.startsWith('/images/')) {
       return serveStatic(res, overlayDir, pathname);

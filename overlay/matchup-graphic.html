@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ERA — Matchup Graphic Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{width:1920px;height:1080px;background:transparent;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#e0e0e0;}
+  /* Center one card on the 1920x1080 transparent canvas. */
+  #stage{width:1920px;height:1080px;display:flex;align-items:center;justify-content:center;}
+  #msg{font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:6px;color:#888;text-align:center;}
+
+  .mg-card{width:1480px;background:linear-gradient(160deg,#0c0c0f,#141418);border:1px solid rgba(255,255,255,0.06);border-radius:18px;overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,0.7);}
+  .mg-header{display:flex;align-items:center;justify-content:space-between;padding:16px 34px;color:#0a0a0a;}
+  .mg-league{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:10px;}
+  .mg-series{font-family:'Orbitron',monospace;font-size:22px;font-weight:700;letter-spacing:3px;opacity:.85;}
+  .mg-body{display:grid;grid-template-columns:1fr 110px 1fr;align-items:stretch;padding:34px 34px 40px;gap:14px;}
+  .mg-team{display:flex;flex-direction:column;gap:22px;}
+  .mg-team-right{text-align:right;}
+  .mg-team-head{display:flex;align-items:center;gap:20px;}
+  .mg-team-right .mg-team-head{flex-direction:row-reverse;}
+  .mg-logo{width:104px;height:104px;object-fit:contain;filter:drop-shadow(0 5px 12px rgba(0,0,0,.6));}
+  .mg-team-name{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:2px;line-height:1;}
+  .mg-players{display:flex;flex-direction:column;gap:16px;}
+  .mg-player{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-left:5px solid var(--accent);border-radius:11px;padding:15px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
+  .mg-team-right .mg-player{flex-direction:row-reverse;border-left:none;border-right:5px solid var(--accent);}
+  .mg-pname{display:flex;align-items:center;gap:12px;}
+  .mg-team-right .mg-pname{flex-direction:row-reverse;}
+  .mg-pn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:32px;color:#fff;}
+  .mg-mmr{font-family:'Orbitron',monospace;font-size:14px;color:#8a8a8a;}
+  .mg-sub{font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1px;color:#0a0a0a;background:var(--accent);padding:3px 9px;border-radius:5px;}
+  .mg-pstats{display:flex;gap:12px;}
+  .mg-stat{display:flex;flex-direction:column;align-items:center;min-width:96px;background:rgba(0,0,0,0.38);border-radius:9px;padding:8px 12px;}
+  .mg-stat-v{font-family:'Orbitron',monospace;font-weight:700;font-size:28px;color:#fff;}
+  .mg-stat-l{font-size:12px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-top:3px;}
+  .mg-vs{display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:58px;letter-spacing:2px;color:var(--accent);}
+  .mg-empty{color:#8a8a8a;font-style:italic;padding:12px 4px;}
+</style>
+</head>
+<body>
+  <div id="stage"><div id="msg">Loading…</div></div>
+
+  <script src="matchup-graphic-core.js"></script>
+  <script>
+  (function(){
+    var C = window.MatchupCore;
+    var stage = document.getElementById('stage');
+    // teams.js TEAM_DATA slot order — stream_match.left.slot indexes this.
+    var ORG_SLOTS = ['berk','qc','bamboo','suit','leeds','mont','vb','osaka'];
+
+    var cloud = null;     // {players, archive, aliases, scheduled}
+    var agg = null;
+    var minGames = 11;
+
+    function showMsg(text){ stage.innerHTML=''; var d=document.createElement('div'); d.id='msg'; d.textContent=text; stage.appendChild(d); }
+
+    // Local server settings (this overlay's own host), Supabase-shaped.
+    function localGet(key){
+      return fetch('/rest/v1/settings?key=eq.'+key+'&select=value')
+        .then(function(r){ return r.ok ? r.json() : null; })
+        .then(function(rows){ return rows && rows[0] ? rows[0].value : null; })
+        .catch(function(){ return null; });
+    }
+
+    function applySubs(matchup, subs){
+      if (!subs) return matchup;
+      ['home','away'].forEach(function(side){
+        var map = subs[side] || {};
+        var roster = matchup[side].roster || [];
+        var defaultNames = roster.map(function(p){ return p.name; });
+        Object.keys(map).forEach(function(idxStr){
+          var idx = parseInt(idxStr,10);
+          var name = map[idxStr];
+          if (!name) return;
+          var pl = (cloud.players||[]).find(function(p){ return p.name===name; });
+          var mmr = pl ? (pl.mmr||0) : 0;
+          var isSub = defaultNames.indexOf(name) === -1;
+          while (roster.length <= idx) roster.push({ name:'', mmr:0 });
+          roster[idx] = { name:name, mmr:mmr, isSub:isSub };
+        });
+        matchup[side].roster = roster;
+      });
+      return matchup;
+    }
+
+    function buildFromCurrent(match){
+      if (!match || !match.left || !match.right) return null;
+      var pubLeague = C.ADMIN_TO_PUBLIC[match.left.league];
+      var homeOrg = ORG_SLOTS[match.left.slot];
+      var awayOrg = ORG_SLOTS[match.right.slot];
+      if (!pubLeague || !homeOrg || !awayOrg) return null;
+      return C.buildMatchup(pubLeague, homeOrg, awayOrg, cloud.players);
+    }
+
+    function renderNow(cfg, match, series){
+      cfg = cfg || {};
+      var matchup;
+      if (cfg.mode === 'slate'){
+        var slate = C.resolveTonight(cloud.scheduled, cloud.players, new Date());
+        if (!slate.length){ showMsg('No matchups scheduled tonight'); return; }
+        matchup = slate[Math.min(cfg.slateIndex||0, slate.length-1)];
+        // resolveTonight already attaches rosters; ensure org present
+        if (!matchup.home.org || !matchup.away.org){ showMsg('Could not resolve tonight’s teams'); return; }
+        matchup = { league: matchup.league, home: matchup.home, away: matchup.away };
+      } else {
+        matchup = buildFromCurrent(match);
+        if (!matchup){ showMsg('Pick teams in the MATCH panel and PUSH TO OVERLAY'); return; }
+      }
+      applySubs(matchup, cfg.subs);
+      var seriesVal = series || {};
+      var card = C.renderCard(matchup, agg, {
+        showStats: cfg.showStats !== false,
+        showSeries: cfg.showSeries !== false,
+        series: { format: seriesVal.format, leftWins: seriesVal.leftWins, rightWins: seriesVal.rightWins },
+        players: cloud.players,
+        minGames: minGames,
+      });
+      stage.innerHTML = '';
+      stage.appendChild(card);
+    }
+
+    function refresh(){
+      return Promise.all([
+        localGet('stream_matchup_graphic'),
+        localGet('stream_match'),
+        localGet('stream_series'),
+      ]).then(function(r){ renderNow(r[0], r[1], r[2]); });
+    }
+
+    function init(){
+      C.fetchCloud().then(function(d){
+        cloud = d;
+        agg = C.aggregate(d.archive, d.aliases, d.players);
+        minGames = C.minGamesFor(C.getCurrentEraWeek(new Date()));
+        return refresh();
+      }).catch(function(e){ showMsg('Data error: ' + (e && e.message || e)); });
+
+      // Live updates from the control panel via the local server WebSocket.
+      try {
+        var ws = new WebSocket('ws://' + location.host);
+        ws.onmessage = function(evt){
+          var msg; try { msg = JSON.parse(evt.data); } catch(_) { return; }
+          if (msg && msg.Event === 'SettingsChanged' && msg.Data &&
+              (msg.Data.key === 'stream_matchup_graphic' || msg.Data.key === 'stream_match' || msg.Data.key === 'stream_series')){
+            if (cloud) refresh();
+          }
+        };
+      } catch(_) {}
+    }
+
+    init();
+  })();
+  </script>
+</body>
+</html>
