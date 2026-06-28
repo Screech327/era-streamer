@@ -41,22 +41,23 @@
 .mg-card > *:not(.mg-bg) { position: relative; z-index: 1; }
 
 /* Eyebrow */
-.mg-eyebrow { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.mg-eyebrow { display: flex; align-items: center; justify-content: center; gap: 12px; margin-bottom: 12px; }
 .mg-eyebrow-mark { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 13px; letter-spacing: 5px; color: var(--gold); }
 .mg-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
 .mg-eyebrow-sub { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 11px; letter-spacing: 4px; color: var(--muted); }
 
 /* League banner */
 .mg-banner {
-  display: flex; align-items: center; justify-content: space-between;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
   padding: 10px 18px 12px; border-radius: 10px; margin-bottom: 22px;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 26%, transparent) 0%, color-mix(in srgb, var(--accent) 6%, transparent) 60%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, color-mix(in srgb, var(--accent) 24%, transparent) 50%, transparent 100%);
   border-top: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
   border-bottom: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
-  border-left: 6px solid var(--accent);
 }
-.mg-banner-league { font-family: 'Bebas Neue', sans-serif; font-size: 46px; line-height: 1; letter-spacing: 10px; color: var(--ink); text-shadow: 0 2px 8px rgba(0,0,0,.6); }
-.mg-banner-meta { display: flex; align-items: center; gap: 12px; font-family: 'Orbitron', monospace; font-weight: 700; letter-spacing: 3px; color: var(--ink); font-size: 18px; }
+/* text-indent offsets the trailing letter-spacing so the glyphs sit dead-center */
+.mg-banner-league { font-family: 'Bebas Neue', sans-serif; font-size: 46px; line-height: 1; letter-spacing: 10px; text-indent: 10px; color: var(--ink); text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+.mg-banner-meta { position: absolute; right: 18px; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 12px; font-family: 'Orbitron', monospace; font-weight: 700; letter-spacing: 3px; color: var(--ink); font-size: 18px; }
 .mg-banner-fmt { font-size: 13px; letter-spacing: 2px; color: #0a0a0a; background: var(--gold); padding: 3px 9px; border-radius: 5px; }
 .mg-banner-score { text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent); }
 
