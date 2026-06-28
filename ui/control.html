@@ -1176,6 +1176,7 @@ h1, h2, h3 {
       <button class="side-link active" data-tab="main"><span class="ico">▦</span><span>Main</span></button>
       <button class="side-link"        data-tab="customize"><span class="ico">✦</span><span>Customize</span></button>
       <button class="side-link"        data-tab="archive"><span class="ico">▤</span><span>Archive</span></button>
+      <button class="side-link"        data-tab="matchup"><span class="ico">◆</span><span>Matchup</span></button>
       <button class="side-link"        data-tab="settings"><span class="ico">⚙</span><span>Settings</span></button>
     </div>
     <div class="side-spacer"></div>
@@ -1717,6 +1718,67 @@ h1, h2, h3 {
       </div>
       <div class="actions">
         <button class="btn btn-primary" id="capacitySaveBtn">SAVE</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane" data-pane="matchup">
+    <div class="obs-bar">
+      <div class="l">OBS BROWSER SOURCE</div>
+      <code id="matchupObsUrl">http://127.0.0.1:49124/matchup-graphic.html</code>
+      <button class="btn" id="copyMatchupBtn">COPY</button>
+    </div>
+
+    <div class="panel">
+      <h2>MATCHUP GRAPHIC</h2>
+      <div class="row">
+        <div class="field" style="flex:1 1 260px">
+          <div class="label">Source</div>
+          <select class="select select-lg" id="mg_mode">
+            <option value="current">Current pushed match</option>
+            <option value="slate">Tonight's slate</option>
+          </select>
+        </div>
+        <div class="field" style="flex:1 1 320px" id="mg_slateField" hidden>
+          <div class="label">Tonight's matchup</div>
+          <select class="select select-lg" id="mg_slate"></select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field" style="flex:0 0 auto">
+          <div class="label">Show player stats</div>
+          <button class="btn btn-toggle" id="mg_showStats" data-on="true">STATS: ON</button>
+        </div>
+        <div class="field" style="flex:0 0 auto">
+          <div class="label">Show series score</div>
+          <button class="btn btn-toggle" id="mg_showSeries" data-on="true">SERIES: ON</button>
+        </div>
+        <div class="field" style="flex:1;min-width:240px">
+          <div class="label">&nbsp;</div>
+          <div style="font-size:13px;color:var(--text-dim);padding:10px 0;line-height:1.5;">
+            Current = the teams pushed in the MATCH tab. Slate = tonight's scheduled matchups. Each player shows score/game plus their best per-game stat.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>SUBS</h2>
+      <div style="font-size:13px;color:var(--text-dim);padding:0 0 8px;line-height:1.5;">
+        Override a roster slot with a substitute. Leave on "— roster —" to use the default lineup.
+      </div>
+      <div class="row" id="mg_subsRow"></div>
+    </div>
+
+    <div class="panel preview-panel">
+      <div class="panel-head">
+        <h2>PREVIEW</h2>
+        <div class="panel-head-tools">
+          <button class="btn btn-small" id="mg_refreshBtn" type="button">REFRESH</button>
+        </div>
+      </div>
+      <div class="preview-stage" id="mg_previewStage">
+        <iframe class="preview-frame" id="mg_previewFrame" src="/matchup-graphic.html" title="Matchup graphic preview"></iframe>
       </div>
     </div>
   </div>
@@ -2751,6 +2813,118 @@ $('wizCopyUrl').addEventListener('click', () => {
   setInterval(pollUpdate, 1500);
   setInterval(pollRecording, 2000);
   setInterval(updateWizardRlStatus, 1500); // refresh wizard status while open
+})();
+</script>
+
+<!-- Matchup graphic tab — uses the shared core for slate + player pool. -->
+<script src="/matchup-graphic-core.js"></script>
+<script>
+(function(){
+  var C = window.MatchupCore;
+  if (!C) return;
+  var cloud = null;     // {players, archive, aliases, scheduled}
+  var slate = [];       // resolved tonight matchups
+  var pool = [];        // [{name,mmr}] for sub pickers
+  var cfg = { mode:'current', showStats:true, showSeries:true, slateIndex:0, subs:{ home:{}, away:{} } };
+
+  function writeCfg(){ upsert('stream_matchup_graphic', cfg); }
+
+  function setToggle(btn, on, onLabel, offLabel){
+    btn.dataset.on = on ? 'true' : 'false';
+    btn.classList.toggle('off', !on);
+    btn.textContent = on ? onLabel : offLabel;
+  }
+
+  function rebuildSlate(){
+    var sel = $('mg_slate');
+    sel.innerHTML = '';
+    slate.forEach(function(m, i){
+      var o = document.createElement('option');
+      o.value = String(i);
+      o.textContent = (C.LEAGUE_LABELS[m.league]||'') + ' — ' + (m.home.name||'?') + ' vs ' + (m.away.name||'?');
+      sel.appendChild(o);
+    });
+    if (!slate.length){
+      var o2 = document.createElement('option'); o2.value='0'; o2.textContent='No matchups scheduled tonight'; sel.appendChild(o2);
+    }
+    sel.value = String(Math.min(cfg.slateIndex||0, Math.max(0, slate.length-1)));
+  }
+
+  function rebuildSubs(){
+    var row = $('mg_subsRow');
+    row.innerHTML = '';
+    [['home','Home'],['away','Away']].forEach(function(pair){
+      var side = pair[0];
+      for (var idx=0; idx<3; idx++){
+        (function(side, idx){
+          var field = document.createElement('div');
+          field.className = 'field'; field.style.flex = '1 1 200px';
+          var lbl = document.createElement('div'); lbl.className='label'; lbl.textContent = pair[1] + ' slot ' + (idx+1);
+          var sel = document.createElement('select'); sel.className='select';
+          var none = document.createElement('option'); none.value=''; none.textContent='— roster —'; sel.appendChild(none);
+          pool.forEach(function(p){
+            var o = document.createElement('option'); o.value=p.name; o.textContent=p.name+(p.mmr?(' ('+p.mmr+')'):''); sel.appendChild(o);
+          });
+          var cur = (cfg.subs[side]||{})[idx];
+          sel.value = cur || '';
+          sel.addEventListener('change', function(){
+            cfg.subs[side] = cfg.subs[side] || {};
+            if (sel.value) cfg.subs[side][idx] = sel.value; else delete cfg.subs[side][idx];
+            writeCfg();
+          });
+          field.appendChild(lbl); field.appendChild(sel); row.appendChild(field);
+        })(side, idx);
+      }
+    });
+  }
+
+  function applyModeVisibility(){
+    $('mg_slateField').hidden = (cfg.mode !== 'slate');
+  }
+
+  function loadExistingCfg(){
+    return fetch(API + '/rest/v1/settings?key=eq.stream_matchup_graphic&select=value')
+      .then(function(r){ return r.ok ? r.json() : null; })
+      .then(function(rows){
+        if (rows && rows[0] && rows[0].value){
+          var v = rows[0].value;
+          cfg.mode = v.mode || 'current';
+          cfg.showStats = v.showStats !== false;
+          cfg.showSeries = v.showSeries !== false;
+          cfg.slateIndex = v.slateIndex || 0;
+          cfg.subs = v.subs || { home:{}, away:{} };
+          if (!cfg.subs.home) cfg.subs.home = {};
+          if (!cfg.subs.away) cfg.subs.away = {};
+        }
+      }).catch(function(){});
+  }
+
+  function initControls(){
+    $('mg_mode').value = cfg.mode;
+    setToggle($('mg_showStats'), cfg.showStats, 'STATS: ON', 'STATS: OFF');
+    setToggle($('mg_showSeries'), cfg.showSeries, 'SERIES: ON', 'SERIES: OFF');
+    applyModeVisibility();
+
+    $('mg_mode').addEventListener('change', function(){ cfg.mode = $('mg_mode').value; applyModeVisibility(); writeCfg(); });
+    $('mg_slate').addEventListener('change', function(){ cfg.slateIndex = parseInt($('mg_slate').value,10)||0; writeCfg(); });
+    $('mg_showStats').addEventListener('click', function(){ cfg.showStats = !cfg.showStats; setToggle($('mg_showStats'), cfg.showStats, 'STATS: ON', 'STATS: OFF'); writeCfg(); });
+    $('mg_showSeries').addEventListener('click', function(){ cfg.showSeries = !cfg.showSeries; setToggle($('mg_showSeries'), cfg.showSeries, 'SERIES: ON', 'SERIES: OFF'); writeCfg(); });
+    $('copyMatchupBtn').addEventListener('click', function(){
+      navigator.clipboard.writeText($('matchupObsUrl').textContent).then(function(){ showToast('MATCHUP GRAPHIC URL COPIED'); });
+    });
+    $('mg_refreshBtn').addEventListener('click', function(){ var f=$('mg_previewFrame'); f.src = f.src; });
+  }
+
+  loadExistingCfg().then(function(){
+    initControls();
+    return C.fetchCloud();
+  }).then(function(d){
+    if (!d) return;
+    cloud = d;
+    pool = (d.players||[]).map(function(p){ return { name:p.name, mmr:p.mmr||0 }; }).sort(function(a,b){ return (b.mmr||0)-(a.mmr||0); });
+    slate = C.resolveTonight(d.scheduled, d.players, new Date());
+    rebuildSlate(); rebuildSubs();
+  }).catch(function(){});
 })();
 </script>
 </body>
