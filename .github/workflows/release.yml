@@ -1,0 +1,43 @@
+name: release
+
+# Build + publish the Windows installer when a version tag is pushed.
+# electron-updater in the app reads these published Releases, so:
+#   bump version -> commit -> `git tag vX.Y.Z && git push origin vX.Y.Z`
+#   -> this builds ERA-Streamer-Setup-X.Y.Z.exe + latest.yml and publishes
+#   the Release -> the app's "Check for Update" finds + installs it.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write   # let electron-builder create/upload the GitHub Release
+
+jobs:
+  build-win:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          # puppeteer is only used by local tests, not the build — don't pull
+          # Chromium on the runner.
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+      - name: Run core unit tests
+        run: node --test test/matchup-core.test.js
+
+      - name: Build + publish (electron-builder)
+        run: npm run build:win -- --publish always
+        env:
+          # Provided automatically by Actions; has write access to this repo's
+          # Releases, which is where build.publish (github Screech327/era-streamer)
+          # points.
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
