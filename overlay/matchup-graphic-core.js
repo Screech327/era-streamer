@@ -86,6 +86,36 @@
     },
   };
 
+  // Dominant logo color per team (from ERA-Web src/data/teamColors.ts) — used to
+  // theme each side of the card the way the website blends team colors.
+  var TEAM_COLORS = {
+    'The Berk Night Furies': '#3c8970', 'Queen City Monarchs': '#453c6a', 'Bamboo Blackout': '#385211',
+    'Suitland Supernova': '#156453', 'Leeds Lightning': '#2e88d9', 'Montgomery Rebels': '#4d171d',
+    'Virginia Beach Tides': '#142b3a', 'Osaka Revenants': '#e93d74', 'Vanaheim Light Furies': '#d1e9f9',
+    'Queen City Knights': '#463a69', 'Bamboo Blitz': '#647b2c', 'Silver Spring Stars': '#2a7d65',
+    'Bristol Blizzards': '#142c4c', 'Childersburg Conquistadors': '#a9444b', 'Arlington Admirals': '#d1b58c',
+    'Tokyo Wraiths': '#ea4f7d', 'Queen City Squires': '#655598', 'Bamboo Bloom': '#49710f',
+    'Columbia Cosmos': '#367271', 'Glasgow Glacier': '#2b68a5', 'Mobile Militia': '#911d31',
+    'Chesapeake Bay Captains': '#cdb38c', 'Yokohama Yokais': '#320410', 'Forbidden Isle Zipplebacks': '#78b17d',
+    'Queen City Commoners': '#473864', 'Bamboo Bud': '#516e14', 'New Market Nebula': '#2f6f66',
+    'Oxford Ospreys': '#83b9da', 'Norfolk Fleet': '#6f88a1', 'Tallapoosa Red Sticks': '#b7474e',
+    'Kyoto Hollows': '#d46c8b',
+  };
+
+  // Team accent color → its dominant logo color, falling back to league color.
+  function colorForTeam(name, league) {
+    return TEAM_COLORS[name] || LEAGUE_COLORS[league] || '#888';
+  }
+
+  // Playoff round label from the season week stamped into the match_id.
+  function roundLabel(week) {
+    if (week === 9) return 'Quarterfinal';
+    if (week === 10) return 'Semifinal';
+    if (week === 11) return 'Final';
+    if (week) return 'Week ' + week;
+    return '';
+  }
+
   // slug(publicName) → org code, per public league. Built once from TEAM_DATA so
   // a schedule match_id ("champion-w9-queen-city-monarchs-vs-...") resolves to teams.
   var SLUG_TO_ORG = {};
@@ -318,9 +348,9 @@
   }
 
   function parseMatchId(id) {
-    var m = /^(champion|major|minor|academy)-w\d+-(.+)-vs-(.+)$/.exec(String(id || ''));
+    var m = /^(champion|major|minor|academy)-w(\d+)-(.+)-vs-(.+)$/.exec(String(id || ''));
     if (!m) return null;
-    return { league: m[1], homeSlug: m[2], awaySlug: m[3] };
+    return { league: m[1], week: parseInt(m[2], 10), homeSlug: m[3], awaySlug: m[4] };
   }
 
   // scheduled: [{match_id, scheduled_time}]; players: admin rows; now: Date.
@@ -343,6 +373,8 @@
       var awayOrg = SLUG_TO_ORG[parsed.league][parsed.awaySlug] || null;
       out.push({
         league: parsed.league,
+        week: parsed.week,
+        round: roundLabel(parsed.week),
         time: row.scheduled_time,
         home: homeOrg ? teamObj(homeOrg, parsed.league, players) : { org: null, league: parsed.league, name: parsed.homeSlug, logo: '', roster: [] },
         away: awayOrg ? teamObj(awayOrg, parsed.league, players) : { org: null, league: parsed.league, name: parsed.awaySlug, logo: '', roster: [] },
@@ -398,45 +430,74 @@
     return out;
   }
 
-  // matchup: {league, home, away}; agg: Map; opts: {showStats, showSeries, series, players, minGames}
+  // matchup: {league, home, away, round?}; agg: Map;
+  // opts: {showStats, showSeries, series, players, minGames}
   function renderCard(matchup, agg, opts) {
     opts = opts || {};
-    var color = LEAGUE_COLORS[matchup.league] || '#888';
+    var league = matchup.league;
+    var leagueColor = LEAGUE_COLORS[league] || '#888';
+    var homeColor = colorForTeam(matchup.home.name, league);
+    var awayColor = colorForTeam(matchup.away.name, league);
     var minGames = opts.minGames != null ? opts.minGames : minGamesFor(getCurrentEraWeek(new Date()));
-    var peers = leagueTotals(agg, opts.players || [], matchup.league);
+    var peers = leagueTotals(agg, opts.players || [], league);
 
     var card = el('div', 'mg-card');
-    card.style.setProperty('--accent', color);
+    card.style.setProperty('--accent', leagueColor);
+    card.style.setProperty('--home', homeColor);
+    card.style.setProperty('--away', awayColor);
+    card.appendChild(el('div', 'mg-bg'));
 
-    var header = el('div', 'mg-header');
-    header.style.background = color;
-    header.appendChild(el('span', 'mg-league', (LEAGUE_LABELS[matchup.league] || '').toUpperCase()));
-    if (opts.showSeries !== false && opts.series) {
-      var s = opts.series;
-      header.appendChild(el('span', 'mg-series', (s.format || 'BO5') + '  ' + (s.leftWins || 0) + ' – ' + (s.rightWins || 0)));
+    // Eyebrow: league brand mark.
+    var eyebrow = el('div', 'mg-eyebrow');
+    eyebrow.appendChild(el('span', 'mg-eyebrow-mark', 'ELITE ROCKET ASSOCIATION'));
+    eyebrow.appendChild(el('span', 'mg-eyebrow-dot'));
+    eyebrow.appendChild(el('span', 'mg-eyebrow-sub', 'MATCHUP'));
+    card.appendChild(eyebrow);
+
+    // League banner with round / series meta.
+    var banner = el('div', 'mg-banner');
+    banner.appendChild(el('div', 'mg-banner-league', (LEAGUE_LABELS[league] || '').toUpperCase()));
+    var s = opts.series || {};
+    var hasSeries = opts.showSeries !== false && (s.format || s.leftWins || s.rightWins);
+    if (hasSeries) {
+      var meta = el('div', 'mg-banner-meta');
+      meta.appendChild(el('span', 'mg-banner-fmt', s.format || 'BO5'));
+      meta.appendChild(el('span', 'mg-banner-score', (s.leftWins || 0) + ' – ' + (s.rightWins || 0)));
+      banner.appendChild(meta);
+    } else if (matchup.round) {
+      banner.appendChild(el('div', 'mg-banner-meta', matchup.round.toUpperCase()));
     }
-    card.appendChild(header);
+    card.appendChild(banner);
 
     var body = el('div', 'mg-body');
-    body.appendChild(renderTeam(matchup.home, agg, peers, minGames, opts, 'left'));
-    var vs = el('div', 'mg-vs', 'VS');
+    body.appendChild(renderTeam(matchup.home, agg, peers, minGames, opts, 'left', homeColor));
+    var vs = el('div', 'mg-vs');
+    vs.appendChild(el('span', 'mg-vs-text', 'VS'));
     body.appendChild(vs);
-    body.appendChild(renderTeam(matchup.away, agg, peers, minGames, opts, 'right'));
+    body.appendChild(renderTeam(matchup.away, agg, peers, minGames, opts, 'right', awayColor));
     card.appendChild(body);
     return card;
   }
 
-  function renderTeam(team, agg, peers, minGames, opts, side) {
+  function renderTeam(team, agg, peers, minGames, opts, side, teamColor) {
     var wrap = el('div', 'mg-team mg-team-' + side);
+    wrap.style.setProperty('--team', teamColor);
+
     var head = el('div', 'mg-team-head');
+    var logoWrap = el('div', 'mg-logo-wrap');
     if (team.logo) {
       var img = el('img', 'mg-logo');
       img.src = team.logo;
       img.alt = team.name || '';
-      img.onerror = function () { img.style.display = 'none'; };
-      head.appendChild(img);
-    }
-    head.appendChild(el('div', 'mg-team-name', team.name || '—'));
+      img.onerror = function () { logoWrap.classList.add('mg-logo-missing'); img.remove(); };
+      logoWrap.appendChild(img);
+    } else { logoWrap.classList.add('mg-logo-missing'); }
+    head.appendChild(logoWrap);
+
+    var nameWrap = el('div', 'mg-team-name-wrap');
+    nameWrap.appendChild(el('div', 'mg-team-name', team.name || '—'));
+    nameWrap.appendChild(el('div', 'mg-team-bar'));
+    head.appendChild(nameWrap);
     wrap.appendChild(head);
 
     var roster = (team.roster || []).slice(0, 3);
@@ -462,15 +523,15 @@
       var pg = perGame(t);
       var best = pickBestOfRest(t, peers, minGames);
       var stats = el('div', 'mg-pstats');
-      stats.appendChild(statBox('SCORE/G', fmt(pg.scorePG)));
-      stats.appendChild(statBox(best.label.toUpperCase() + '/G', fmt(best.value)));
+      stats.appendChild(statBox('SCORE/G', fmt(pg.scorePG), false));
+      stats.appendChild(statBox(best.label.toUpperCase() + '/G', fmt(best.value), true));
       row.appendChild(stats);
     }
     return row;
   }
 
-  function statBox(label, value) {
-    var b = el('div', 'mg-stat');
+  function statBox(label, value, accent) {
+    var b = el('div', 'mg-stat' + (accent ? ' mg-stat-accent' : ''));
     b.appendChild(el('span', 'mg-stat-v', value));
     b.appendChild(el('span', 'mg-stat-l', label));
     return b;
@@ -482,6 +543,7 @@
     SUPABASE_URL: SUPABASE_URL, SUPABASE_ANON: SUPABASE_ANON,
     LEAGUE_COLORS: LEAGUE_COLORS, LEAGUE_LABELS: LEAGUE_LABELS, LEAGUE_KEYS: LEAGUE_KEYS,
     ORG_TO_GM: ORG_TO_GM, ADMIN_TO_PUBLIC: ADMIN_TO_PUBLIC, PUBLIC_TO_ADMIN: PUBLIC_TO_ADMIN, TEAM_DATA: TEAM_DATA,
+    TEAM_COLORS: TEAM_COLORS, colorForTeam: colorForTeam, roundLabel: roundLabel,
     slug: slug, normName: normName, levenshtein: levenshtein, matchPlayer: matchPlayer,
     getCurrentEraWeek: getCurrentEraWeek, minGamesFor: minGamesFor,
     aggregate: aggregate, perGame: perGame, pickBestOfRest: pickBestOfRest,

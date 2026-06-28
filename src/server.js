@@ -306,7 +306,7 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     if (req.method === 'GET' && pathname === '/match.html') {
       return serveStatic(res, overlayDir, 'match.html');
     }
-    if (req.method === 'GET' && (pathname === '/matchup-graphic.html' || pathname === '/matchup-graphic-core.js')) {
+    if (req.method === 'GET' && (pathname === '/matchup-graphic.html' || pathname === '/matchup-graphic-core.js' || pathname === '/matchup-graphic.css')) {
       return serveStatic(res, overlayDir, pathname.slice(1));
     }
     if (req.method === 'GET' && pathname.startsWith('/images/')) {

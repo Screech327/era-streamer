@@ -5,39 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>ERA — Matchup Graphic Overlay</title>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="matchup-graphic.css">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   html,body{width:1920px;height:1080px;background:transparent;overflow:hidden;font-family:'Rajdhani',sans-serif;color:#e0e0e0;}
-  /* Center one card on the 1920x1080 transparent canvas. */
+  /* Center one card on the 1920x1080 transparent canvas; #stage scales the
+     card down (never up) so any matchup always fits the broadcast frame. */
   #stage{width:1920px;height:1080px;display:flex;align-items:center;justify-content:center;}
+  #scaler{transform-origin:center center;}
+  #scaler .mg-card{width:1520px;}
   #msg{font-family:'Bebas Neue',sans-serif;font-size:46px;letter-spacing:6px;color:#888;text-align:center;}
-
-  .mg-card{width:1480px;background:linear-gradient(160deg,#0c0c0f,#141418);border:1px solid rgba(255,255,255,0.06);border-radius:18px;overflow:hidden;box-shadow:0 22px 70px rgba(0,0,0,0.7);}
-  .mg-header{display:flex;align-items:center;justify-content:space-between;padding:16px 34px;color:#0a0a0a;}
-  .mg-league{font-family:'Bebas Neue',sans-serif;font-size:40px;letter-spacing:10px;}
-  .mg-series{font-family:'Orbitron',monospace;font-size:22px;font-weight:700;letter-spacing:3px;opacity:.85;}
-  .mg-body{display:grid;grid-template-columns:1fr 110px 1fr;align-items:stretch;padding:34px 34px 40px;gap:14px;}
-  .mg-team{display:flex;flex-direction:column;gap:22px;}
-  .mg-team-right{text-align:right;}
-  .mg-team-head{display:flex;align-items:center;gap:20px;}
-  .mg-team-right .mg-team-head{flex-direction:row-reverse;}
-  .mg-logo{width:104px;height:104px;object-fit:contain;filter:drop-shadow(0 5px 12px rgba(0,0,0,.6));}
-  .mg-team-name{font-family:'Bebas Neue',sans-serif;font-size:52px;letter-spacing:2px;line-height:1;}
-  .mg-players{display:flex;flex-direction:column;gap:16px;}
-  .mg-player{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.05);border-left:5px solid var(--accent);border-radius:11px;padding:15px 20px;display:flex;align-items:center;justify-content:space-between;gap:16px;}
-  .mg-team-right .mg-player{flex-direction:row-reverse;border-left:none;border-right:5px solid var(--accent);}
-  .mg-pname{display:flex;align-items:center;gap:12px;}
-  .mg-team-right .mg-pname{flex-direction:row-reverse;}
-  .mg-pn{font-family:'Rajdhani',sans-serif;font-weight:700;font-size:32px;color:#fff;}
-  .mg-mmr{font-family:'Orbitron',monospace;font-size:14px;color:#8a8a8a;}
-  .mg-sub{font-family:'Orbitron',monospace;font-size:12px;font-weight:700;letter-spacing:1px;color:#0a0a0a;background:var(--accent);padding:3px 9px;border-radius:5px;}
-  .mg-pstats{display:flex;gap:12px;}
-  .mg-stat{display:flex;flex-direction:column;align-items:center;min-width:96px;background:rgba(0,0,0,0.38);border-radius:9px;padding:8px 12px;}
-  .mg-stat-v{font-family:'Orbitron',monospace;font-weight:700;font-size:28px;color:#fff;}
-  .mg-stat-l{font-size:12px;letter-spacing:1.5px;color:var(--accent);text-transform:uppercase;margin-top:3px;}
-  .mg-vs{display:flex;align-items:center;justify-content:center;font-family:'Bebas Neue',sans-serif;font-size:58px;letter-spacing:2px;color:var(--accent);}
-  .mg-empty{color:#8a8a8a;font-style:italic;padding:12px 4px;}
 </style>
 </head>
 <body>
@@ -118,8 +96,24 @@
         players: cloud.players,
         minGames: minGames,
       });
+      mountCard(card);
+    }
+
+    // Mount the card inside a scaler and shrink-to-fit the 1920x1080 frame
+    // (with margins) so a long roster / long names never overflow on stream.
+    function mountCard(card){
       stage.innerHTML = '';
-      stage.appendChild(card);
+      var scaler = document.createElement('div');
+      scaler.id = 'scaler';
+      scaler.appendChild(card);
+      stage.appendChild(scaler);
+      // measure after layout
+      requestAnimationFrame(function(){
+        var maxW = 1820, maxH = 1000;
+        var w = card.offsetWidth, h = card.offsetHeight;
+        var scale = Math.min(maxW / w, maxH / h, 1);
+        scaler.style.transform = 'scale(' + scale + ')';
+      });
     }
 
     function refresh(){

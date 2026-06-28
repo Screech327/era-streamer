@@ -1,0 +1,111 @@
+/*
+ * ERA Matchup Graphic — shared card styling.
+ * CANONICAL: era-streamer/overlay/matchup-graphic.css. Identical copy at
+ * era-rl-admin/matchup-graphic.css (keep in sync with the core .js).
+ *
+ * On-brand with the ERA site + broadcast overlay: Bebas Neue headlines,
+ * Orbitron numbers, Rajdhani body; ERA red / league accents / gold; team
+ * dominant-color theming blended into the card; angular gradients + glows.
+ */
+
+.mg-card {
+  --ink: #ffffff;
+  --muted: rgba(255,255,255,0.42);
+  --gold: #dcc174;
+  position: relative;
+  overflow: hidden;
+  border-radius: 22px;
+  background: #090909;
+  border: 1px solid rgba(255,255,255,0.07);
+  box-shadow: 0 22px 70px rgba(0,0,0,0.72), 0 0 70px color-mix(in srgb, var(--accent) 14%, transparent);
+  padding: 26px 34px 32px;
+  font-family: 'Rajdhani', sans-serif;
+  color: var(--ink);
+  animation: mgFadeUp 0.55s cubic-bezier(.2,.7,.2,1) both;
+}
+
+/* Team-color blended background + corner glows + diagonal sheen. */
+.mg-bg {
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--home) 38%, transparent) 0%, transparent 46%),
+    radial-gradient(120% 90% at 100% 100%, color-mix(in srgb, var(--away) 38%, transparent) 0%, transparent 46%),
+    linear-gradient(115deg, color-mix(in srgb, var(--home) 22%, transparent) 0%, transparent 40%, transparent 60%, color-mix(in srgb, var(--away) 22%, transparent) 100%),
+    linear-gradient(180deg, #0d0d0f 0%, #090909 100%);
+}
+.mg-bg::after {
+  content: ''; position: absolute; inset: 0;
+  background: repeating-linear-gradient(115deg, rgba(255,255,255,0.014) 0 2px, transparent 2px 9px);
+  opacity: .6;
+}
+.mg-card > *:not(.mg-bg) { position: relative; z-index: 1; }
+
+/* Eyebrow */
+.mg-eyebrow { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.mg-eyebrow-mark { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 13px; letter-spacing: 5px; color: var(--gold); }
+.mg-eyebrow-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+.mg-eyebrow-sub { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 11px; letter-spacing: 4px; color: var(--muted); }
+
+/* League banner */
+.mg-banner {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 18px 12px; border-radius: 10px; margin-bottom: 22px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 26%, transparent) 0%, color-mix(in srgb, var(--accent) 6%, transparent) 60%, transparent 100%);
+  border-top: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  border-left: 6px solid var(--accent);
+}
+.mg-banner-league { font-family: 'Bebas Neue', sans-serif; font-size: 46px; line-height: 1; letter-spacing: 10px; color: var(--ink); text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+.mg-banner-meta { display: flex; align-items: center; gap: 12px; font-family: 'Orbitron', monospace; font-weight: 700; letter-spacing: 3px; color: var(--ink); font-size: 18px; }
+.mg-banner-fmt { font-size: 13px; letter-spacing: 2px; color: #0a0a0a; background: var(--gold); padding: 3px 9px; border-radius: 5px; }
+.mg-banner-score { text-shadow: 0 0 12px color-mix(in srgb, var(--accent) 60%, transparent); }
+
+/* Body grid */
+.mg-body { display: grid; grid-template-columns: 1fr 116px 1fr; align-items: stretch; gap: 12px; }
+.mg-team { display: flex; flex-direction: column; gap: 20px; }
+.mg-team-right { text-align: right; }
+
+.mg-team-head { display: flex; align-items: center; gap: 20px; }
+.mg-team-right .mg-team-head { flex-direction: row-reverse; }
+.mg-logo-wrap {
+  width: 118px; height: 118px; flex: 0 0 auto; border-radius: 16px;
+  display: flex; align-items: center; justify-content: center; padding: 10px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid color-mix(in srgb, var(--team) 70%, #ffffff 30%);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--team) 45%, transparent), inset 0 0 20px rgba(0,0,0,.4);
+}
+.mg-logo-wrap.mg-logo-missing { border-style: dashed; border-color: rgba(255,255,255,0.14); box-shadow: none; }
+.mg-logo { width: 100%; height: 100%; object-fit: contain; filter: drop-shadow(0 4px 10px rgba(0,0,0,.6)); }
+.mg-team-name-wrap { min-width: 0; }
+.mg-team-name { font-family: 'Bebas Neue', sans-serif; font-size: 48px; line-height: 1.02; letter-spacing: 2px; color: var(--ink); text-shadow: 0 2px 8px rgba(0,0,0,.7); }
+.mg-team-bar { height: 5px; width: 78px; margin-top: 8px; border-radius: 3px; background: color-mix(in srgb, var(--team) 75%, #ffffff 25%); box-shadow: 0 0 12px color-mix(in srgb, var(--team) 60%, transparent); }
+.mg-team-right .mg-team-bar { margin-left: auto; }
+
+/* Player rows */
+.mg-players { display: flex; flex-direction: column; gap: 14px; }
+.mg-player {
+  background: rgba(255,255,255,0.045); border: 1px solid rgba(255,255,255,0.06);
+  border-left: 5px solid color-mix(in srgb, var(--team) 78%, #ffffff 22%);
+  border-radius: 11px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+}
+.mg-team-right .mg-player { flex-direction: row-reverse; border-left: 1px solid rgba(255,255,255,0.06); border-right: 5px solid color-mix(in srgb, var(--team) 78%, #ffffff 22%); }
+.mg-pname { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.mg-team-right .mg-pname { flex-direction: row-reverse; }
+.mg-pn { font-family: 'Rajdhani', sans-serif; font-weight: 700; font-size: 31px; line-height: 1; color: #fff; white-space: nowrap; }
+.mg-mmr { font-family: 'Orbitron', monospace; font-size: 13px; color: var(--muted); }
+.mg-sub { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 11px; letter-spacing: 1px; color: #0a0a0a; background: var(--gold); padding: 3px 9px; border-radius: 5px; box-shadow: 0 0 10px color-mix(in srgb, var(--gold) 55%, transparent); }
+.mg-pstats { display: flex; gap: 12px; }
+.mg-stat { display: flex; flex-direction: column; align-items: center; min-width: 92px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.05); border-radius: 9px; padding: 8px 12px; }
+.mg-stat-v { font-family: 'Orbitron', monospace; font-weight: 700; font-size: 27px; line-height: 1; color: #fff; }
+.mg-stat-l { font-size: 11px; letter-spacing: 1.5px; color: var(--muted); text-transform: uppercase; margin-top: 5px; }
+.mg-stat-accent { border-color: color-mix(in srgb, var(--gold) 55%, transparent); background: color-mix(in srgb, var(--gold) 8%, rgba(0,0,0,0.4)); }
+.mg-stat-accent .mg-stat-v { color: var(--gold); }
+.mg-stat-accent .mg-stat-l { color: color-mix(in srgb, var(--gold) 85%, white); }
+.mg-empty { color: var(--muted); font-style: italic; padding: 12px 4px; }
+
+/* VS column */
+.mg-vs { display: flex; align-items: center; justify-content: center; position: relative; }
+.mg-vs::before { content: ''; position: absolute; top: 6%; bottom: 6%; width: 2px; background: linear-gradient(180deg, transparent, color-mix(in srgb, var(--accent) 55%, transparent), transparent); }
+.mg-vs-text { font-family: 'Bebas Neue', sans-serif; font-size: 58px; letter-spacing: 3px; color: #fff; position: relative; padding: 6px 4px; text-shadow: 0 0 20px color-mix(in srgb, var(--accent) 70%, transparent), 0 2px 6px rgba(0,0,0,.8); }
+
+@keyframes mgFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
