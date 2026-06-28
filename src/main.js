@@ -6,6 +6,7 @@
 
 const { app, BrowserWindow, shell, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
+const fs = require('fs');
 const { autoConfigure } = require('./rl-config');
 const { startBridge } = require('./bridge');
 const { start: startServer } = require('./server');
@@ -13,6 +14,35 @@ const { autoUpdater } = require('electron-updater');
 
 const OVERLAY_DIR = path.join(__dirname, '..', 'overlay');
 const UI_DIR      = path.join(__dirname, '..', 'ui');
+
+// File logger — writes to %APPDATA%\ERA Streamer\logs\main.log so crashes
+// leave evidence after the window's gone. Bounded at ~1MB by truncating
+// when we cross the cap so the file can't grow without bound.
+const LOG_DIR  = path.join(app.getPath('userData'), 'logs');
+const LOG_FILE = path.join(LOG_DIR, 'main.log');
+const LOG_MAX_BYTES = 1024 * 1024;
+function fileLog(level, ...args) {
+  try {
+    fs.mkdirSync(LOG_DIR, { recursive: true });
+    try {
+      const st = fs.statSync(LOG_FILE);
+      if (st.size > LOG_MAX_BYTES) fs.writeFileSync(LOG_FILE, '');
+    } catch (_) {}
+    const parts = args.map((a) => {
+      if (a == null) return String(a);
+      if (a instanceof Error) return a.stack || a.message;
+      if (typeof a === 'string') return a;
+      try { return JSON.stringify(a); } catch (_) { return String(a); }
+    });
+    fs.appendFileSync(LOG_FILE, `[${new Date().toISOString()}] [${level}] ${parts.join(' ')}\n`);
+  } catch (_) {}
+}
+
+// Catch anything that escapes async callbacks so a single bad event
+// doesn't take the whole app down — Node 20+/Electron 33 terminates on
+// unhandled rejections by default.
+process.on('uncaughtException',  (err)    => { fileLog('uncaught',  err); console.error('[uncaught]',  err); });
+process.on('unhandledRejection', (reason) => { fileLog('unhandled', reason); console.error('[unhandled]', reason); });
 
 let mainWindow = null;
 let serverHandle = null;
@@ -296,6 +326,16 @@ if (!gotLock) {
         mainWindow.loadURL(`http://127.0.0.1:${serverHandle.port}/control`);
       }
     });
+  });
+
+  // Renderer (control window) crashes don't take the main process down,
+  // but they used to vanish silently. Log them so we can correlate "the
+  // app crashed" reports with what actually happened.
+  app.on('render-process-gone', (_event, _wc, details) => {
+    fileLog('render-gone', details);
+  });
+  app.on('child-process-gone', (_event, details) => {
+    if (details && details.reason && details.reason !== 'clean-exit') fileLog('child-gone', details);
   });
 
   app.on('before-quit', () => { isQuitting = true; });
