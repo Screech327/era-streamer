@@ -545,8 +545,9 @@
       if (opts.statMode === 'full') {
         // Compact per-game line: all stats as small chips.
         var full = el('div', 'mg-pstats mg-pstats-full');
-        [['G', pg.goalsPG], ['A', pg.assistsPG], ['SV', pg.savesPG], ['SH', pg.shotsPG], ['DM', pg.demosPG], ['SC', pg.scorePG]]
-          .forEach(function (s) { full.appendChild(chip(s[0], s[0] === 'SC' ? String(Math.round(s[1])) : fmt(s[1]))); });
+        // [label, per-game value, isScore(round + accent)]
+        [['G', pg.goalsPG, false], ['A', pg.assistsPG, false], ['SV', pg.savesPG, false], ['SH', pg.shotsPG, false], ['DM', pg.demosPG, false], ['SC/G', pg.scorePG, true]]
+          .forEach(function (s) { full.appendChild(chip(s[0], s[2] ? String(Math.round(s[1])) : fmt(s[1]))); });
         row.appendChild(full);
       } else {
         var best = pickBestOfRest(t, peers, minGames);

@@ -1136,6 +1136,11 @@ h1, h2, h3 {
   min-height:40px;
 }
 .arc-note-input:focus { outline:none; border-color:rgba(230,57,70,0.5); }
+/* Matchup SUBS: HOME/AWAY groups, each an even 3-up grid of slot pickers. */
+.mg-sub-group { margin-bottom:16px; }
+.mg-sub-grouphead { font-family:'Orbitron',monospace; font-size:11px; letter-spacing:2px; color:var(--gold); margin:0 0 7px; }
+.mg-sub-grid { display:grid; grid-template-columns:repeat(3, 1fr); gap:12px; }
+.mg-sub-grid .select { width:100%; }
 </style>
 </head>
 <body>
@@ -1771,10 +1776,10 @@ h1, h2, h3 {
 
     <div class="panel">
       <h2>SUBS</h2>
-      <div style="font-size:13px;color:var(--text-dim);padding:0 0 8px;line-height:1.5;">
-        Override a roster slot with a substitute. Leave on "— roster —" to use the default lineup.
+      <div style="font-size:13px;color:var(--text-dim);padding:0 0 10px;line-height:1.5;">
+        Each slot shows the current starter. Switch a slot to a substitute (same org, lower league) to sub them into the graphic.
       </div>
-      <div class="row" id="mg_subsRow"></div>
+      <div id="mg_subsRow"></div>
     </div>
 
     <div class="panel preview-panel">
@@ -2886,37 +2891,47 @@ $('wizCopyUrl').addEventListener('click', () => {
     var row = $('mg_subsRow');
     row.innerHTML = '';
     var teams = sideTeams();
-    [['home','Home'],['away','Away']].forEach(function(pair){
+    [['home','HOME'],['away','AWAY']].forEach(function(pair){
       var side = pair[0];
       var t = teams && teams[side];
       // Same-org, lower-league only (sub UP). Empty for Academy / unknown team.
       var subs = (t && t.org && t.league) ? C.eligibleSubs(cloud.players, t.org, t.league) : [];
+      var roster = (t && t.org && t.league) ? C.rosterFor(cloud.players, t.org, t.league) : [];
+
+      var group = document.createElement('div'); group.className = 'mg-sub-group';
+      var head = document.createElement('div'); head.className = 'mg-sub-grouphead';
+      head.textContent = pair[1] + (t && t.name ? ' · ' + t.name : (t && t.league ? ' · ' + (C.LEAGUE_LABELS[t.league]||'') : ''));
+      group.appendChild(head);
+      var grid = document.createElement('div'); grid.className = 'mg-sub-grid';
+
       for (var idx=0; idx<3; idx++){
         (function(side, idx){
-          var field = document.createElement('div');
-          field.className = 'field'; field.style.flex = '1 1 200px';
-          var lbl = document.createElement('div'); lbl.className='label';
-          lbl.textContent = pair[1] + ' slot ' + (idx+1) + (t && t.league ? ' · ' + (C.LEAGUE_LABELS[t.league]||'') : '');
+          var starter = roster[idx];
           var sel = document.createElement('select'); sel.className='select';
-          var none = document.createElement('option'); none.value=''; none.textContent='— roster —'; sel.appendChild(none);
+          // Default = the current starter (no override; value '' uses the roster).
+          var def = document.createElement('option'); def.value='';
+          def.textContent = starter ? starter.name : '— empty —';
+          sel.appendChild(def);
           subs.forEach(function(p){
+            if (starter && p.name === starter.name) return;
             var o = document.createElement('option'); o.value=p.name;
-            o.textContent = p.name + ' (' + (C.LEAGUE_LABELS[p.league]||'') + ' · ' + p.mmr + ')';
+            o.textContent = 'SUB ▸ ' + p.name + ' (' + (C.LEAGUE_LABELS[p.league]||'') + ')';
             sel.appendChild(o);
           });
-          if (!subs.length){ var o0 = document.createElement('option'); o0.value=''; o0.textContent='— no eligible subs —'; o0.disabled=true; sel.appendChild(o0); }
           var cur = (cfg.subs[side]||{})[idx];
           // Keep a previously-saved sub visible even if not in the eligible list.
-          if (cur && !subs.some(function(p){ return p.name===cur; })){ var oc=document.createElement('option'); oc.value=cur; oc.textContent=cur+' (sub)'; sel.appendChild(oc); }
+          if (cur && !subs.some(function(p){ return p.name===cur; })){ var oc=document.createElement('option'); oc.value=cur; oc.textContent='SUB ▸ '+cur; sel.appendChild(oc); }
           sel.value = cur || '';
           sel.addEventListener('change', function(){
             cfg.subs[side] = cfg.subs[side] || {};
             if (sel.value) cfg.subs[side][idx] = sel.value; else delete cfg.subs[side][idx];
             writeCfg();
           });
-          field.appendChild(lbl); field.appendChild(sel); row.appendChild(field);
+          grid.appendChild(sel);
         })(side, idx);
       }
+      group.appendChild(grid);
+      row.appendChild(group);
     });
   }
 
