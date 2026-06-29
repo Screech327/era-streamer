@@ -45,7 +45,7 @@ const TEAM_DATA = [
     { name:'Captains', org:'Chesapeake Bay', logo:'images/Minor/Chesapeake Bay Captains.png' },
     { name:'Fleet',    org:'Norfolk',        logo:'images/Academy/Norfolk Fleet.png' },
   ]},
-  { code:'osaka',  gm:'Tiptoe', leagues:[
+  { code:'osaka',  gm:'Chrome Moisty', leagues:[
     { name:'Revenants', org:'Osaka',    logo:'images/Champion/Osaka Revenants.png' },
     { name:'Wraiths',   org:'Tokyo',    logo:'images/Major/Tokyo Wraiths.png' },
     { name:'Yokais',    org:'Yokohama', logo:'images/Minor/Yokohama Yokais.png' },
