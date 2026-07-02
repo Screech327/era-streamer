@@ -309,6 +309,9 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     if (req.method === 'GET' && (pathname === '/matchup-graphic.html' || pathname === '/matchup-graphic-core.js' || pathname === '/matchup-graphic.css')) {
       return serveStatic(res, overlayDir, pathname.slice(1));
     }
+    if (req.method === 'GET' && pathname === '/boost-smoothing.js') {
+      return serveStatic(res, overlayDir, pathname.slice(1));
+    }
     if (req.method === 'GET' && pathname.startsWith('/images/')) {
       return serveStatic(res, overlayDir, pathname);
     }

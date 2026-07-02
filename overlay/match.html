@@ -193,10 +193,19 @@ html, body {
   background:linear-gradient(90deg, var(--team-color, #C9A84C) 0%, var(--team-color, #ffd97a) 100%);
   border-radius:inherit;
   box-shadow:0 0 6px var(--team-color, #C9A84C);
-  /* Smooth fill — SOS bridge ticks frequently, transition keeps it
-     visually fluid without RAF interpolation. */
+  /* Smooth fill — the CSS transition covers the Customize preview (which
+     drives width every RAF frame). In the LIVE overlay the boost value is
+     eased in JS (see boost-smoothing.js + the interpolation loop below) and
+     html.js-boost-smoothing turns this transition off, so the bar, the
+     number, and the variant visuals all move from one interpolated value in
+     lockstep instead of the bar lagging the number. */
   transition:width 0.18s linear;
 }
+/* Live overlay: JS eases the boost value every frame, so the per-property
+   CSS transitions would only double-smooth (bar lags the number). Disable
+   them here; the opacity fade on the indicator ring is kept for show/hide. */
+html.js-boost-smoothing .player-boost-fill { transition:none; }
+html.js-boost-smoothing .boost-fill { transition:opacity 0.15s ease; }
 /* Right-side bar fills from the right edge so it visually drains toward
    the screen edge instead of toward the screen center. */
 .players-right .player-boost-fill {
@@ -1979,6 +1988,7 @@ body.hide-stat-demos   .nw-stat[data-stat="demos"]   { display:none !important; 
     <div id="goalPopup" class="goal-popup gp-a"></div>
   </div>
 
+<script src="boost-smoothing.js"></script>
 <script>
 // ERA Streamer (desktop app) bundles this overlay and serves it from the
 // local app server. SUPABASE_URL is empty so the overlay's existing fetch
@@ -2070,6 +2080,10 @@ let statsConnectStarted = false;
 // game/bridge. In demo mode we pin the card visible with sample data and
 // skip the bridge WS connect entirely.
 const DEMO_MODE = new URLSearchParams(location.search).has('demo');
+// Live overlay eases boost values in JS (see the interpolation loop near the
+// boost renderers); flag it so the CSS drops the per-property transitions.
+// The Customize preview (DEMO_MODE) keeps the CSS transitions and its own RAF.
+if (!DEMO_MODE) document.documentElement.classList.add('js-boost-smoothing');
 
 // ERA team colors extracted from logos. Convention: left side = TeamNum 0,
 // right side = TeamNum 1. Used by the scoreboard, post-game card, and the
@@ -3135,7 +3149,68 @@ function nwHide() {
 }
 
 // ── Boost indicator (bottom-right 270° arc) ─────────────────────────
-function applyBoostIndicator(boost, color) {
+// ── Live boost interpolation ──────────────────────────────────────────────
+// See boost-smoothing.js for the rationale + math. Each boost meter keeps a
+// `target` (latest value from RL) and a `display` value; a single RAF loop
+// eases display → target every frame so an irregular UpdateState cadence still
+// renders as a smooth sweep. Live only — the Customize preview (DEMO_MODE) has
+// its own RAF and renders directly. Falls back to no-op easing if the module
+// failed to load, so the overlay still shows raw values rather than breaking.
+const BS = window.BoostSmoothing || {
+  easeToward: (_d, t) => t,
+  clampBoost: (v) => Math.max(0, Math.min(100, Number(v) || 0)),
+};
+const BOOST_TAU = 0.09; // easing time constant (s); smaller = snappier
+const boostRowState = new WeakMap(); // .player-row → { target, display }
+const boostRing = { target: 0, display: 0, color: null, active: false };
+let boostRaf = null;
+let boostRafLast = 0;
+
+// Paint one player row's boost meter (bar width + number + variant visuals)
+// from a single value so they all move in lockstep.
+function renderRowBoost(row, pct) {
+  const fillEl = row.querySelector('.player-boost-fill');
+  const numEl  = row.querySelector('.player-boost-num');
+  if (fillEl) fillEl.style.width = pct + '%';
+  if (numEl)  numEl.textContent  = Math.round(pct);
+  applyBoostVisual(row, pct);
+}
+
+// Record a row's easing target. `snap` renders immediately with no ease — used
+// when a row is (re)populated so a new player doesn't sweep up from 0.
+function setRowBoostTarget(row, pct, snap) {
+  let s = boostRowState.get(row);
+  if (!s) { s = { target: pct, display: pct }; boostRowState.set(row, s); }
+  s.target = pct;
+  if (snap || DEMO_MODE) { s.display = pct; renderRowBoost(row, pct); }
+  startBoostAnim();
+}
+
+function boostAnimTick(now) {
+  const dt = boostRafLast ? Math.min(0.1, (now - boostRafLast) / 1000) : 1 / 60;
+  boostRafLast = now;
+  const rows = document.querySelectorAll('.player-row');
+  for (let i = 0; i < rows.length; i++) {
+    const s = boostRowState.get(rows[i]);
+    if (!s || s.display === s.target) continue;
+    s.display = BS.easeToward(s.display, s.target, dt, BOOST_TAU);
+    renderRowBoost(rows[i], s.display);
+  }
+  if (boostRing.active && boostRing.display !== boostRing.target) {
+    boostRing.display = BS.easeToward(boostRing.display, boostRing.target, dt, BOOST_TAU);
+    renderBoostIndicator(boostRing.display, boostRing.color);
+  }
+  boostRaf = requestAnimationFrame(boostAnimTick);
+}
+
+function startBoostAnim() {
+  if (boostRaf || DEMO_MODE) return;
+  boostRafLast = 0;
+  boostRaf = requestAnimationFrame(boostAnimTick);
+}
+
+// Pure render of the spectated-player boost ring from a value + color.
+function renderBoostIndicator(boost, color) {
   // Ring = 2πr where r=45 ≈ 282.7. Visible arc covers 270° ≈ 212 at full
   // boost. Animate via the FIRST value of stroke-dasharray (visible
   // length) so the arc always starts at the same point and just grows
@@ -3145,7 +3220,7 @@ function applyBoostIndicator(boost, color) {
   const ARC = 212;
   const el = document.getElementById('boostIndicator');
   if (!el) return;
-  const pct = Math.max(0, Math.min(100, Number(boost) || 0));
+  const pct = BS.clampBoost(boost);
   const fill = document.getElementById('boostFill');
   const valEl = document.getElementById('boostValue');
   if (color) el.style.setProperty('--team-color', color);
@@ -3159,9 +3234,25 @@ function applyBoostIndicator(boost, color) {
   if (valEl) valEl.textContent = Math.round(pct);
   el.classList.add('visible');
 }
+
+function applyBoostIndicator(boost, color) {
+  const pct = BS.clampBoost(boost);
+  // Customize preview drives its own smooth RAF — render directly.
+  if (DEMO_MODE) { renderBoostIndicator(pct, color); return; }
+  if (color) boostRing.color = color;
+  boostRing.target = pct;
+  // First value after (re)appearing: snap so the ring doesn't sweep from 0.
+  if (!boostRing.active) { boostRing.display = pct; boostRing.active = true; }
+  // Paint current display now so color/visibility apply this tick; the RAF
+  // loop eases the arc the rest of the way.
+  renderBoostIndicator(boostRing.display, boostRing.color);
+  startBoostAnim();
+}
+
 function hideBoostIndicator() {
   const el = document.getElementById('boostIndicator');
   if (el) el.classList.remove('visible');
+  boostRing.active = false; // stop the RAF from repainting a hidden ring
 }
 
 // Names + boosts come straight from the live RL bridge. TeamNum 0 → left,
@@ -3227,15 +3318,14 @@ function fillSide(side, sidePlayers, target) {
     const row = rows[i];
     const p = sidePlayers[i];
     const nameEl = row.querySelector('.player-name');
-    const fillEl = row.querySelector('.player-boost-fill');
-    const numEl  = row.querySelector('.player-boost-num');
     if (p) {
+      // Snap the boost when this slot was empty (a player just appeared) so
+      // it doesn't sweep up from 0; otherwise ease toward the new value. The
+      // RAF loop (see setRowBoostTarget) drives the actual bar/number/visual.
+      const wasEmpty = row.classList.contains('empty');
       row.classList.remove('empty');
       if (nameEl) nameEl.textContent = p.Name;
-      const pct = Math.max(0, Math.min(100, Number(p.Boost) || 0));
-      if (fillEl) fillEl.style.width = pct + '%';
-      if (numEl) numEl.textContent = Math.round(pct);
-      applyBoostVisual(row, pct);
+      setRowBoostTarget(row, BS.clampBoost(p.Boost), wasEmpty);
       // Highlight the row if this is the spectated player. Match on
       // name + team so two-player same-name edge cases stay distinct.
       const isTarget = target && target.Name === p.Name && target.TeamNum === sideTeamNum;
@@ -3243,9 +3333,7 @@ function fillSide(side, sidePlayers, target) {
     } else {
       row.classList.add('empty');
       if (nameEl) nameEl.textContent = '';
-      if (fillEl) fillEl.style.width = '0%';
-      if (numEl) numEl.textContent = '';
-      applyBoostVisual(row, 0);
+      setRowBoostTarget(row, 0, true); // row is hidden while empty; keep state at 0
       row.classList.remove('is-target');
     }
   }
