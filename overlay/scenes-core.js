@@ -181,7 +181,7 @@
       '<div class="center">' +
         '<div class="eyebrow">GG — SEE YOU NEXT TIME</div>' +
         '<div class="title" style="font-size:118px">THANK YOU <span class="accent">FOR WATCHING</span></div>' +
-        '<div class="tagline">Full results, standings &amp; VODs at eliterocketassociation.com</div>' +
+        '<div class="tagline">Full results &amp; standings at eliterocketassociation.com · VODs on Twitch</div>' +
         '<div class="sched" style="max-width:940px">' +
           '<div class="s-lbl">TONIGHT\'S RESULTS</div>' +
           rows +

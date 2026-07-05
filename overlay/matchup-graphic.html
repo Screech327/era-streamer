@@ -97,8 +97,7 @@
 
     var countdownTimer = null;
 
-    function leagueLabel(match) {
-      var pubKey = match && match.left && match.left.league ? C.ADMIN_TO_PUBLIC[match.left.league] : null;
+    function leagueLabelFromKey(pubKey) {
       var label = pubKey ? (C.LEAGUE_LABELS[pubKey] || '').toUpperCase() : '';
       if (!label) return 'ELITE ROCKET ASSOCIATION';
       return label.indexOf('LEAGUE') === -1 ? label + ' LEAGUE' : label;
@@ -109,11 +108,29 @@
                color: C.colorForTeam(side.name, league) };
     }
 
-    function currentMainEvent(match) {
-      var mu = buildFromCurrent(match);
-      if (mu) return { home: sideMeta(mu.home, mu.league), away: sideMeta(mu.away, mu.league),
-                       format: (window.__series && window.__series.format) || '' };
-      return null;
+    // Resolve the matchup the producer has selected, respecting the same
+    // 'current' (pushed MATCH tab) vs 'slate' (tonight's schedule) mode the
+    // card uses — so scenes track the same lineup as the matchup card.
+    // Applies subs. Returns null when nothing is resolvable.
+    function resolveActiveMatchup(cfg, match) {
+      var matchup;
+      if (cfg.mode === 'slate') {
+        var slate = C.resolveTonight(cloud.scheduled, cloud.players, new Date());
+        if (!slate.length) return null;
+        var m = slate[Math.min(cfg.slateIndex || 0, slate.length - 1)];
+        if (!m.home.org || !m.away.org) return null;
+        matchup = { league: m.league, home: m.home, away: m.away };
+      } else {
+        matchup = buildFromCurrent(match);
+        if (!matchup) return null;
+      }
+      applySubs(matchup, cfg.subs);
+      return matchup;
+    }
+
+    function mainEventFrom(mu) {
+      return { home: sideMeta(mu.home, mu.league), away: sideMeta(mu.away, mu.league),
+               format: (window.__series && window.__series.format) || '' };
     }
 
     function scheduleData() {
@@ -126,11 +143,16 @@
 
     function renderScene(cfg, match, series) {
       window.__series = series || {};
+      // Starting Soon's main event + league header follow the producer's
+      // selected matchup (current push or tonight's slate), same as the card.
+      var active = cfg.screen === 'starting-soon' ? resolveActiveMatchup(cfg, match) : null;
+      var leagueKey = active ? active.league
+        : (match && match.left && match.left.league ? C.ADMIN_TO_PUBLIC[match.left.league] : null);
       var data = {
-        league: leagueLabel(match),
+        league: leagueLabelFromKey(leagueKey),
         week: 'WEEK ' + C.getCurrentEraWeek(new Date()),
         countdown: cfg.countdown || null,
-        mainEvent: cfg.screen === 'starting-soon' ? currentMainEvent(match) : null,
+        mainEvent: active ? mainEventFrom(active) : null,
         schedule: cfg.screen === 'intermission' ? scheduleData() : [],
         results: cfg.screen === 'thank-you'
           ? window.SceneRenderer.resolveTonightResults(window.__localArchive || { series: [] }, Date.now()) : [],
@@ -159,19 +181,11 @@
         renderScene(cfg, match, series);
         return;
       }
-      var matchup;
-      if (cfg.mode === 'slate'){
-        var slate = C.resolveTonight(cloud.scheduled, cloud.players, new Date());
-        if (!slate.length){ showMsg('No matchups scheduled tonight'); return; }
-        matchup = slate[Math.min(cfg.slateIndex||0, slate.length-1)];
-        // resolveTonight already attaches rosters; ensure org present
-        if (!matchup.home.org || !matchup.away.org){ showMsg('Could not resolve tonight’s teams'); return; }
-        matchup = { league: matchup.league, home: matchup.home, away: matchup.away };
-      } else {
-        matchup = buildFromCurrent(match);
-        if (!matchup){ showMsg('Pick teams in the MATCH panel and PUSH TO OVERLAY'); return; }
+      var matchup = resolveActiveMatchup(cfg, match);
+      if (!matchup){
+        showMsg(cfg.mode === 'slate' ? 'No matchups scheduled tonight' : 'Pick teams in the MATCH panel and PUSH TO OVERLAY');
+        return;
       }
-      applySubs(matchup, cfg.subs);
       var seriesVal = series || {};
       var card = C.renderCard(matchup, agg, {
         showStats: cfg.showStats !== false,
