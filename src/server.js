@@ -57,7 +57,7 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     // the control panel's Matchup tab). mode: 'current' (the pushed stream_match)
     // or 'slate' (tonight's scheduled matchups, indexed by slateIndex). subs maps
     // a side+slot to a substitute player name.
-    stream_matchup_graphic: { value: { screen: 'matchup', mode: 'current', showStats: true, showSeries: true, statMode: 'highlight', slateIndex: 0, subs: { home: {}, away: {} }, countdown: { on: false, endsAt: null }, tagline: '', casters: [ { name: '', role: 'PLAY-BY-PLAY' }, { name: '', role: 'COLOR / ANALYST' } ], deskTopic: '' }, updated_at: new Date().toISOString() },
+    stream_matchup_graphic: { value: { screen: 'matchup', mode: 'current', showStats: true, showSeries: true, statMode: 'highlight', slateIndex: 0, subs: { home: {}, away: {} }, countdown: { on: false, endsAt: null }, tagline: '', casters: [ { name: '', role: 'PLAY-BY-PLAY' }, { name: '', role: 'COLOR / ANALYST' } ], deskTopic: '', showSchedule: true }, updated_at: new Date().toISOString() },
     player_aliases:         { value: {}, updated_at: new Date().toISOString() },
     // Series recording is always-on for era-streamer — every match end gets
     // captured automatically. The producer hits SAVE SERIES STATS at the

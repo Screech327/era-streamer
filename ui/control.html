@@ -434,6 +434,9 @@ h1, h2, h3 {
 .row { display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; }
 .row > * { flex:1 1 200px; min-width:0; }
 .field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+/* The HTML `hidden` attribute must win over the display rules above/below,
+   otherwise class selectors like .field/.row/.panel keep hidden groups shown. */
+[hidden] { display:none !important; }
 .label {
   font-family:'Orbitron', monospace;
   font-size:9px;
@@ -1764,9 +1767,13 @@ h1, h2, h3 {
           <input class="input" id="mg_caster2" type="text" placeholder="Caster 2 name">
           <input class="input" id="mg_deskTopic" type="text" placeholder="Topic / talking point">
         </div>
+        <div class="field" id="mg_scheduleField" hidden>
+          <label>TONIGHT'S SCHEDULE</label>
+          <button class="btn btn-toggle" id="mg_showSchedule" data-on="true">SCHEDULE: ON</button>
+        </div>
       </div>
 
-      <div class="row">
+      <div class="row" id="mg_sourceRow">
         <div class="field" style="flex:1 1 260px">
           <div class="label">Source</div>
           <select class="select select-lg" id="mg_mode">
@@ -1779,7 +1786,7 @@ h1, h2, h3 {
           <select class="select select-lg" id="mg_slate"></select>
         </div>
       </div>
-      <div class="row">
+      <div class="row" id="mg_statsRow">
         <div class="field" style="flex:0 0 auto">
           <div class="label">Show player stats</div>
           <button class="btn btn-toggle" id="mg_showStats" data-on="true">STATS: ON</button>
@@ -1804,7 +1811,7 @@ h1, h2, h3 {
       </div>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="mg_subsPanel">
       <h2>SUBS</h2>
       <div style="font-size:13px;color:var(--text-dim);padding:0 0 10px;line-height:1.5;">
         Each slot shows the current starter. Switch a slot to a substitute (same org, lower league) to sub them into the graphic.
@@ -2870,7 +2877,7 @@ $('wizCopyUrl').addEventListener('click', () => {
   var streamMatch = null; // the pushed stream_match (current mode)
   var ORG_SLOTS = ['berk','qc','bamboo','suit','leeds','mont','vb','osaka']; // teams.js slot order
   var cfg = { screen:'matchup', mode:'current', showStats:true, showSeries:true, statMode:'highlight', slateIndex:0, subs:{ home:{}, away:{} },
-              countdown:{ on:false, endsAt:null }, tagline:'', casters:[{name:'',role:'PLAY-BY-PLAY'},{name:'',role:'COLOR / ANALYST'}], deskTopic:'' };
+              countdown:{ on:false, endsAt:null }, tagline:'', casters:[{name:'',role:'PLAY-BY-PLAY'},{name:'',role:'COLOR / ANALYST'}], deskTopic:'', showSchedule:true };
 
   function writeCfg(){ upsert('stream_matchup_graphic', cfg); }
 
@@ -2989,17 +2996,27 @@ $('wizCopyUrl').addEventListener('click', () => {
           cfg.tagline = v.tagline || '';
           cfg.casters = v.casters || [{name:'',role:'PLAY-BY-PLAY'},{name:'',role:'COLOR / ANALYST'}];
           cfg.deskTopic = v.deskTopic || '';
+          cfg.showSchedule = v.showSchedule !== false;
         }
       }).catch(function(){});
   }
 
   function applyScreenVisibility() {
     var s = cfg.screen;
+    var isMatchup = (s === 'matchup');
     var timed = (s === 'starting-soon' || s === 'brb' || s === 'intermission');
+    // Scene-specific fields — each only shows on the screen it belongs to.
     $('mg_countdownField').hidden = !timed;
     $('mg_taglineField').hidden = !(s === 'brb' || s === 'starting-soon');
     $('mg_deskField').hidden = (s !== 'casters-desk');
-    // Existing matchup-only controls stay usable when screen==='matchup'.
+    $('mg_scheduleField').hidden = (s !== 'intermission');
+    // Matchup-source controls: only the card + Starting Soon pick a matchup.
+    $('mg_sourceRow').hidden = !(isMatchup || s === 'starting-soon');
+    // Card-only: stat display toggles + roster subs.
+    $('mg_statsRow').hidden = !isMatchup;
+    $('mg_subsPanel').hidden = !isMatchup;
+    // Keep the slate picker in sync with the current source mode.
+    applyModeVisibility();
   }
   function parseMinsToEndsAt(txt) {
     var parts = String(txt || '').split(':');
@@ -3029,6 +3046,7 @@ $('wizCopyUrl').addEventListener('click', () => {
     $('mg_deskTopic').value = cfg.deskTopic;
     setToggle($('mg_countdownOn'), cfg.countdown.on, 'TIMER: ON', 'TIMER: OFF');
     if (cfg.countdown.on && cfg.countdown.endsAt) { $('mg_countdownMins').value = endsAtToMins(cfg.countdown.endsAt); }
+    setToggle($('mg_showSchedule'), cfg.showSchedule, 'SCHEDULE: ON', 'SCHEDULE: OFF');
     applyScreenVisibility();
 
     $('mg_mode').addEventListener('change', function(){ cfg.mode = $('mg_mode').value; applyModeVisibility(); writeCfg(); (cfg.mode==='current'?fetchStreamMatch():Promise.resolve()).then(rebuildSubs); });
@@ -3041,6 +3059,7 @@ $('wizCopyUrl').addEventListener('click', () => {
     });
     $('mg_refreshBtn').addEventListener('click', function(){ var f=$('mg_previewFrame'); f.src = f.src; });
     $('mg_screen').addEventListener('change', function(){ cfg.screen = $('mg_screen').value; applyScreenVisibility(); writeCfg(); });
+    $('mg_showSchedule').addEventListener('click', function(){ cfg.showSchedule = !cfg.showSchedule; setToggle($('mg_showSchedule'), cfg.showSchedule, 'SCHEDULE: ON', 'SCHEDULE: OFF'); writeCfg(); });
     $('mg_countdownOn').addEventListener('click', function(){
       cfg.countdown.on = !cfg.countdown.on;
       if (cfg.countdown.on) cfg.countdown.endsAt = parseMinsToEndsAt($('mg_countdownMins').value || '5:00');

@@ -137,10 +137,11 @@
         '<div class="eyebrow">STAY TUNED</div>' +
         '<div class="title" style="font-size:112px">INTER<span class="accent">MISSION</span></div>' +
         countdownBlock(data, 'RESUMING IN') +
-        '<div class="sched">' +
-          '<div class="s-lbl">TONIGHT\'S SCHEDULE — ALL TIMES EST</div>' +
-          rows +
-        '</div>' +
+        (data.showSchedule === false ? '' :
+          '<div class="sched">' +
+            '<div class="s-lbl">TONIGHT\'S SCHEDULE — ALL TIMES EST</div>' +
+            rows +
+          '</div>') +
       '</div>' + footer();
   }
 

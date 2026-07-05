@@ -119,7 +119,7 @@
         if (!slate.length) return null;
         var m = slate[Math.min(cfg.slateIndex || 0, slate.length - 1)];
         if (!m.home.org || !m.away.org) return null;
-        matchup = { league: m.league, home: m.home, away: m.away };
+        matchup = { league: m.league, home: m.home, away: m.away, round: m.round };
       } else {
         matchup = buildFromCurrent(match);
         if (!matchup) return null;
@@ -131,6 +131,30 @@
     function mainEventFrom(mu) {
       return { home: sideMeta(mu.home, mu.league), away: sideMeta(mu.away, mu.league),
                format: (window.__series && window.__series.format) || '' };
+    }
+
+    // Same two teams (by normalized name, ignoring home/away order).
+    function sameTeams(a, s) {
+      var an = [C.normName(a.home.name), C.normName(a.away.name)];
+      var sn = [C.normName(s.home.name), C.normName(s.away.name)];
+      return an.indexOf(sn[0]) !== -1 && an.indexOf(sn[1]) !== -1;
+    }
+
+    // Top-right label that tracks the REAL match round, not a date guess:
+    // slate matchups carry `.round` (from the match_id); a current-pushed match
+    // is cross-referenced against tonight's schedule to find its round. Playoff
+    // weeks render as Quarterfinal/Semifinal/Final via C.roundLabel. Falls back
+    // to tonight's round, then the computed week only if nothing resolves.
+    function roundLabelFor(active) {
+      if (active && active.round) return active.round.toUpperCase();
+      var slate = C.resolveTonight(cloud.scheduled, cloud.players, new Date());
+      if (active) {
+        for (var i = 0; i < slate.length; i++) {
+          if (slate[i].round && sameTeams(active, slate[i])) return slate[i].round.toUpperCase();
+        }
+      }
+      if (slate.length && slate[0].round) return slate[0].round.toUpperCase();
+      return (C.roundLabel(C.getCurrentEraWeek(new Date())) || '').toUpperCase();
     }
 
     function scheduleData() {
@@ -150,10 +174,11 @@
         : (match && match.left && match.left.league ? C.ADMIN_TO_PUBLIC[match.left.league] : null);
       var data = {
         league: leagueLabelFromKey(leagueKey),
-        week: 'WEEK ' + C.getCurrentEraWeek(new Date()),
+        week: roundLabelFor(active),
         countdown: cfg.countdown || null,
         mainEvent: active ? mainEventFrom(active) : null,
         schedule: cfg.screen === 'intermission' ? scheduleData() : [],
+        showSchedule: cfg.showSchedule !== false,
         results: cfg.screen === 'thank-you'
           ? window.SceneRenderer.resolveTonightResults(window.__localArchive || { series: [] }, Date.now()) : [],
         tagline: cfg.tagline || '',
