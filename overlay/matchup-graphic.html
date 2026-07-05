@@ -7,6 +7,7 @@
 <title>ERA — Matchup Graphic Overlay</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="matchup-graphic.css">
+  <link rel="stylesheet" href="scenes.css">
 <style>
   *{box-sizing:border-box;margin:0;padding:0;}
   /* Fill whatever viewport we're in (1920x1080 OBS source, or a small
@@ -42,6 +43,7 @@
   <div id="stage"><div id="msg">Loading…</div></div>
 
   <script src="matchup-graphic-core.js"></script>
+  <script src="scenes-core.js"></script>
   <script>
   (function(){
     var C = window.MatchupCore;
@@ -93,8 +95,70 @@
       return C.buildMatchup(pubLeague, homeOrg, awayOrg, cloud.players);
     }
 
+    var countdownTimer = null;
+
+    function leagueLabel(match) {
+      var pubKey = match && match.left && match.left.league ? C.ADMIN_TO_PUBLIC[match.left.league] : null;
+      var label = pubKey ? (C.LEAGUE_LABELS[pubKey] || '').toUpperCase() : '';
+      if (!label) return 'ELITE ROCKET ASSOCIATION';
+      return label.indexOf('LEAGUE') === -1 ? label + ' LEAGUE' : label;
+    }
+
+    function sideMeta(side, league) {
+      return { name: (side.name || '').toUpperCase(), logo: side.logo,
+               color: C.colorForTeam(side.org, league) };
+    }
+
+    function currentMainEvent(match) {
+      var mu = buildFromCurrent(match);
+      if (mu) return { home: sideMeta(mu.home, mu.league), away: sideMeta(mu.away, mu.league),
+                       format: (window.__series && window.__series.format) || '' };
+      return null;
+    }
+
+    function scheduleData() {
+      var slate = C.resolveTonight(cloud.scheduled, cloud.players, new Date());
+      return window.SceneRenderer.tonightSchedule(slate.map(function (m) {
+        return { home: { name: (m.home.name||'').toUpperCase(), logo: m.home.logo },
+                 away: { name: (m.away.name||'').toUpperCase(), logo: m.away.logo }, time: m.time };
+      }));
+    }
+
+    function renderScene(cfg, match, series) {
+      window.__series = series || {};
+      var data = {
+        league: leagueLabel(match),
+        week: 'WEEK ' + C.getCurrentEraWeek(new Date()),
+        countdown: cfg.countdown || null,
+        mainEvent: cfg.screen === 'starting-soon' ? currentMainEvent(match) : null,
+        schedule: cfg.screen === 'intermission' ? scheduleData() : [],
+        results: cfg.screen === 'thank-you'
+          ? window.SceneRenderer.resolveTonightResults(window.__localArchive || { series: [] }, Date.now()) : [],
+        tagline: cfg.tagline || '',
+        casters: cfg.casters || [{ name: '', role: '' }, { name: '', role: '' }],
+        deskTopic: cfg.deskTopic || '',
+        nowMs: Date.now(),
+      };
+      stage.innerHTML = '';
+      stage.appendChild(window.SceneRenderer.buildScene(cfg.screen, data));
+      startCountdownTick(cfg);
+    }
+
+    function startCountdownTick(cfg) {
+      if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+      if (!(cfg.countdown && cfg.countdown.on)) return;
+      countdownTimer = setInterval(function () {
+        var el = stage.querySelector('[data-countdown]');
+        if (el) el.textContent = window.SceneRenderer.formatCountdown(cfg.countdown.endsAt, Date.now());
+      }, 1000);
+    }
+
     function renderNow(cfg, match, series){
       cfg = cfg || {};
+      if (cfg.screen && cfg.screen !== 'matchup') {
+        renderScene(cfg, match, series);
+        return;
+      }
       var matchup;
       if (cfg.mode === 'slate'){
         var slate = C.resolveTonight(cloud.scheduled, cloud.players, new Date());
@@ -147,6 +211,7 @@
         cloud = d;
         agg = C.aggregate(d.archive, d.aliases, d.players);
         minGames = C.minGamesFor(C.getCurrentEraWeek(new Date()));
+        localGet('local_archive').then(function (la) { window.__localArchive = la || { series: [] }; });
         return refresh();
       }).catch(function(e){ showMsg('Data error: ' + (e && e.message || e)); });
 
