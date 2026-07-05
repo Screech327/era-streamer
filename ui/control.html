@@ -1736,6 +1736,36 @@ h1, h2, h3 {
 
     <div class="panel">
       <h2>MATCHUP GRAPHIC</h2>
+      <div class="field">
+        <label>SCREEN</label>
+        <select class="select select-lg" id="mg_screen">
+          <option value="matchup">Matchup Card</option>
+          <option value="starting-soon">Starting Soon</option>
+          <option value="intermission">Intermission</option>
+          <option value="brb">Be Right Back</option>
+          <option value="thank-you">Thank You</option>
+          <option value="casters-desk">Casters' Desk</option>
+        </select>
+      </div>
+
+      <div id="mg_sceneFields">
+        <div class="field" id="mg_countdownField" hidden>
+          <label>COUNTDOWN</label>
+          <button class="btn btn-toggle" id="mg_countdownOn" data-on="false">TIMER: OFF</button>
+          <input class="input" id="mg_countdownMins" type="text" placeholder="5:00" style="width:90px">
+        </div>
+        <div class="field" id="mg_taglineField" hidden>
+          <label>TAGLINE</label>
+          <input class="input" id="mg_tagline" type="text" placeholder="Grabbing a quick break…">
+        </div>
+        <div class="field" id="mg_deskField" hidden>
+          <label>CASTERS' DESK</label>
+          <input class="input" id="mg_caster1" type="text" placeholder="Caster 1 name">
+          <input class="input" id="mg_caster2" type="text" placeholder="Caster 2 name">
+          <input class="input" id="mg_deskTopic" type="text" placeholder="Topic / talking point">
+        </div>
+      </div>
+
       <div class="row">
         <div class="field" style="flex:1 1 260px">
           <div class="label">Source</div>
@@ -2839,7 +2869,8 @@ $('wizCopyUrl').addEventListener('click', () => {
   var pool = [];        // [{name,mmr}] for sub pickers
   var streamMatch = null; // the pushed stream_match (current mode)
   var ORG_SLOTS = ['berk','qc','bamboo','suit','leeds','mont','vb','osaka']; // teams.js slot order
-  var cfg = { mode:'current', showStats:true, showSeries:true, statMode:'highlight', slateIndex:0, subs:{ home:{}, away:{} } };
+  var cfg = { screen:'matchup', mode:'current', showStats:true, showSeries:true, statMode:'highlight', slateIndex:0, subs:{ home:{}, away:{} },
+              countdown:{ on:false, endsAt:null }, tagline:'', casters:[{name:'',role:'PLAY-BY-PLAY'},{name:'',role:'COLOR / ANALYST'}], deskTopic:'' };
 
   function writeCfg(){ upsert('stream_matchup_graphic', cfg); }
 
@@ -2953,8 +2984,28 @@ $('wizCopyUrl').addEventListener('click', () => {
           cfg.subs = v.subs || { home:{}, away:{} };
           if (!cfg.subs.home) cfg.subs.home = {};
           if (!cfg.subs.away) cfg.subs.away = {};
+          cfg.screen = v.screen || 'matchup';
+          cfg.countdown = v.countdown || { on:false, endsAt:null };
+          cfg.tagline = v.tagline || '';
+          cfg.casters = v.casters || [{name:'',role:'PLAY-BY-PLAY'},{name:'',role:'COLOR / ANALYST'}];
+          cfg.deskTopic = v.deskTopic || '';
         }
       }).catch(function(){});
+  }
+
+  function applyScreenVisibility() {
+    var s = cfg.screen;
+    var timed = (s === 'starting-soon' || s === 'brb' || s === 'intermission');
+    $('mg_countdownField').hidden = !timed;
+    $('mg_taglineField').hidden = !(s === 'brb' || s === 'starting-soon');
+    $('mg_deskField').hidden = (s !== 'casters-desk');
+    // Existing matchup-only controls stay usable when screen==='matchup'.
+  }
+  function parseMinsToEndsAt(txt) {
+    var parts = String(txt || '').split(':');
+    var secs = parts.length === 2 ? (parseInt(parts[0],10)||0)*60 + (parseInt(parts[1],10)||0)
+                                  : (parseInt(parts[0],10)||0)*60;
+    return new Date(Date.now() + secs*1000).toISOString();
   }
 
   function initControls(){
@@ -2963,6 +3014,13 @@ $('wizCopyUrl').addEventListener('click', () => {
     setToggle($('mg_showStats'), cfg.showStats, 'STATS: ON', 'STATS: OFF');
     setToggle($('mg_showSeries'), cfg.showSeries, 'SERIES: ON', 'SERIES: OFF');
     applyModeVisibility();
+    $('mg_screen').value = cfg.screen;
+    $('mg_tagline').value = cfg.tagline;
+    $('mg_caster1').value = (cfg.casters[0]||{}).name || '';
+    $('mg_caster2').value = (cfg.casters[1]||{}).name || '';
+    $('mg_deskTopic').value = cfg.deskTopic;
+    setToggle($('mg_countdownOn'), cfg.countdown.on, 'TIMER: ON', 'TIMER: OFF');
+    applyScreenVisibility();
 
     $('mg_mode').addEventListener('change', function(){ cfg.mode = $('mg_mode').value; applyModeVisibility(); writeCfg(); (cfg.mode==='current'?fetchStreamMatch():Promise.resolve()).then(rebuildSubs); });
     $('mg_slate').addEventListener('change', function(){ cfg.slateIndex = parseInt($('mg_slate').value,10)||0; writeCfg(); rebuildSubs(); });
@@ -2973,6 +3031,20 @@ $('wizCopyUrl').addEventListener('click', () => {
       navigator.clipboard.writeText($('matchupObsUrl').textContent).then(function(){ showToast('MATCHUP GRAPHIC URL COPIED'); });
     });
     $('mg_refreshBtn').addEventListener('click', function(){ var f=$('mg_previewFrame'); f.src = f.src; });
+    $('mg_screen').addEventListener('change', function(){ cfg.screen = $('mg_screen').value; applyScreenVisibility(); writeCfg(); });
+    $('mg_countdownOn').addEventListener('click', function(){
+      cfg.countdown.on = !cfg.countdown.on;
+      if (cfg.countdown.on) cfg.countdown.endsAt = parseMinsToEndsAt($('mg_countdownMins').value || '5:00');
+      setToggle($('mg_countdownOn'), cfg.countdown.on, 'TIMER: ON', 'TIMER: OFF');
+      writeCfg();
+    });
+    $('mg_countdownMins').addEventListener('change', function(){
+      if (cfg.countdown.on) { cfg.countdown.endsAt = parseMinsToEndsAt($('mg_countdownMins').value); writeCfg(); }
+    });
+    $('mg_tagline').addEventListener('change', function(){ cfg.tagline = $('mg_tagline').value; writeCfg(); });
+    $('mg_caster1').addEventListener('change', function(){ cfg.casters[0] = { name:$('mg_caster1').value, role:'PLAY-BY-PLAY' }; writeCfg(); });
+    $('mg_caster2').addEventListener('change', function(){ cfg.casters[1] = { name:$('mg_caster2').value, role:'COLOR / ANALYST' }; writeCfg(); });
+    $('mg_deskTopic').addEventListener('change', function(){ cfg.deskTopic = $('mg_deskTopic').value; writeCfg(); });
   }
 
   loadExistingCfg().then(function(){
