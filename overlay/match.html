@@ -2085,6 +2085,20 @@ const DEMO_MODE = new URLSearchParams(location.search).has('demo');
 // The Customize preview (DEMO_MODE) keeps the CSS transitions and its own RAF.
 if (!DEMO_MODE) document.documentElement.classList.add('js-boost-smoothing');
 
+// ── Live boost interpolation state ────────────────────────────────────────
+// Declared up here (not beside the boost renderers below) so the DEMO_MODE
+// init path — which calls applyBoostIndicator before those renderers execute —
+// doesn't hit a temporal-dead-zone on `BS`. See boost-smoothing.js for math.
+const BS = window.BoostSmoothing || {
+  easeToward: (_d, t) => t,
+  clampBoost: (v) => Math.max(0, Math.min(100, Number(v) || 0)),
+};
+const BOOST_TAU = 0.09; // easing time constant (s); smaller = snappier
+const boostRowState = new WeakMap(); // .player-row → { target, display }
+const boostRing = { target: 0, display: 0, color: null, active: false };
+let boostRaf = null;
+let boostRafLast = 0;
+
 // ERA team colors extracted from logos. Convention: left side = TeamNum 0,
 // right side = TeamNum 1. Used by the scoreboard, post-game card, and the
 // now-watching player card so accents reflect ERA brand instead of RL's
@@ -3156,15 +3170,9 @@ function nwHide() {
 // renders as a smooth sweep. Live only — the Customize preview (DEMO_MODE) has
 // its own RAF and renders directly. Falls back to no-op easing if the module
 // failed to load, so the overlay still shows raw values rather than breaking.
-const BS = window.BoostSmoothing || {
-  easeToward: (_d, t) => t,
-  clampBoost: (v) => Math.max(0, Math.min(100, Number(v) || 0)),
-};
-const BOOST_TAU = 0.09; // easing time constant (s); smaller = snappier
-const boostRowState = new WeakMap(); // .player-row → { target, display }
-const boostRing = { target: 0, display: 0, color: null, active: false };
-let boostRaf = null;
-let boostRafLast = 0;
+// (Boost interpolation state — BS / BOOST_TAU / boostRowState / boostRing /
+// boostRaf — is declared near the top of the script so the DEMO_MODE init path
+// can call the boost renderers before this point without a TDZ error on `BS`.)
 
 // Paint one player row's boost meter (bar width + number + variant visuals)
 // from a single value so they all move in lockstep.
