@@ -181,9 +181,6 @@ body { padding:0; }
   position:relative;
 }
 
-/* Old .tabs / .tab kept for compatibility — hidden now since the
-   sidebar handles navigation. */
-.tabs { display:none; }
 
 /* === Recent matchups panel === */
 .recent-list { display:flex; flex-direction:column; gap:6px; }
@@ -597,34 +594,6 @@ h1, h2, h3 {
   color:var(--text-dim);
 }
 
-/* === Tabs === */
-.tabs {
-  display:flex;
-  gap:4px;
-  margin-top:6px;
-  border-bottom:1px solid var(--line);
-}
-.tab {
-  background:transparent;
-  border:1px solid transparent;
-  border-bottom:none;
-  border-radius:6px 6px 0 0;
-  padding:9px 18px;
-  font-family:'Orbitron', monospace;
-  font-size:10px;
-  font-weight:700;
-  letter-spacing:2px;
-  color:var(--text-dim);
-  cursor:pointer;
-  margin-bottom:-1px;
-  transition:all 0.15s;
-}
-.tab:hover { color:var(--text); }
-.tab.active {
-  background:var(--panel);
-  border-color:var(--line);
-  color:var(--gold);
-}
 .tab-pane { display:none; flex-direction:column; gap:18px; }
 .tab-pane.active { display:flex; }
 
@@ -1674,25 +1643,6 @@ h1, h2, h3 {
       </div>
     </div>
     <div class="panel">
-      <h2>OVERLAY</h2>
-      <div class="row">
-        <div class="field" style="flex:1">
-          <div class="label">Player card style</div>
-          <select class="select select-lg" id="nwStyleSel">
-            <option value="a">A · Current — dark slab, 6 stats grid</option>
-            <option value="b">B · Angular Blade — brutalist esports tab</option>
-            <option value="c">C · Team Shield — reserved logo slot</option>
-            <option value="d">D · Hero Statline — score is the headline</option>
-            <option value="e">E · Glass Bar — compact horizontal pill</option>
-            <option value="f">F · Stacked Metrics — quieter typography</option>
-          </select>
-        </div>
-      </div>
-      <div style="font-size:13px;color:var(--text-dim);padding:6px 0 0;line-height:1.5;">
-        The bottom-left now-watching card. Changes apply to the overlay live — preview reflects it within ~2s.
-      </div>
-    </div>
-    <div class="panel">
       <h2>STARTUP</h2>
       <div class="row">
         <div class="field" style="flex:0 0 auto">
@@ -2589,7 +2539,6 @@ const BOOST_BG_STYLE_NAMES = { none:'NONE', a:'A · DISC', b:'B · HEX', c:'C ·
 function reflectStyle(picker, style) {
   // Settings dropdown (legacy — kept hidden for compat) + Customize cards
   if (picker === 'nw') {
-    const sel = $('nwStyleSel'); if (sel) sel.value = style;
     const name = $('nwStyleName'); if (name) name.textContent = NW_STYLE_NAMES[style] || '';
     const asb = $('asbNwStyle'); if (asb) asb.textContent = String(style || '').toUpperCase();
   } else if (picker === 'goal') {
@@ -2700,9 +2649,6 @@ async function loadOverlayConfig() {
 document.querySelectorAll('.style-card').forEach((btn) => {
   btn.addEventListener('click', () => setStyle(btn.dataset.picker, btn.dataset.style));
 });
-// Settings-tab dropdown still works for nw-style.
-const _nwSel = $('nwStyleSel');
-if (_nwSel) _nwSel.addEventListener('change', () => setStyle('nw', _nwSel.value));
 $('capacitySaveBtn').addEventListener('click', async () => {
   const cap = parseInt($('capacityInput').value, 10);
   if (!cap || cap < 1) { showToast('Capacity must be at least 1', true); return; }
