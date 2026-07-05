@@ -3008,6 +3008,14 @@ $('wizCopyUrl').addEventListener('click', () => {
     return new Date(Date.now() + secs*1000).toISOString();
   }
 
+  function endsAtToMins(iso) {
+    if (!iso) return '';
+    var remaining = Math.max(0, Math.floor((new Date(iso) - Date.now()) / 1000));
+    var m = Math.floor(remaining / 60);
+    var s = remaining % 60;
+    return m + ':' + (s < 10 ? '0' : '') + s;
+  }
+
   function initControls(){
     $('mg_mode').value = cfg.mode;
     $('mg_statMode').value = cfg.statMode;
@@ -3020,6 +3028,7 @@ $('wizCopyUrl').addEventListener('click', () => {
     $('mg_caster2').value = (cfg.casters[1]||{}).name || '';
     $('mg_deskTopic').value = cfg.deskTopic;
     setToggle($('mg_countdownOn'), cfg.countdown.on, 'TIMER: ON', 'TIMER: OFF');
+    if (cfg.countdown.on && cfg.countdown.endsAt) { $('mg_countdownMins').value = endsAtToMins(cfg.countdown.endsAt); }
     applyScreenVisibility();
 
     $('mg_mode').addEventListener('change', function(){ cfg.mode = $('mg_mode').value; applyModeVisibility(); writeCfg(); (cfg.mode==='current'?fetchStreamMatch():Promise.resolve()).then(rebuildSubs); });
@@ -3039,7 +3048,8 @@ $('wizCopyUrl').addEventListener('click', () => {
       writeCfg();
     });
     $('mg_countdownMins').addEventListener('change', function(){
-      if (cfg.countdown.on) { cfg.countdown.endsAt = parseMinsToEndsAt($('mg_countdownMins').value); writeCfg(); }
+      var v = $('mg_countdownMins').value.trim();
+      if (cfg.countdown.on && v) { cfg.countdown.endsAt = parseMinsToEndsAt(v); writeCfg(); }
     });
     $('mg_tagline').addEventListener('change', function(){ cfg.tagline = $('mg_tagline').value; writeCfg(); });
     $('mg_caster1').addEventListener('change', function(){ cfg.casters[0] = { name:$('mg_caster1').value, role:'PLAY-BY-PLAY' }; writeCfg(); });

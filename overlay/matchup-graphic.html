@@ -106,7 +106,7 @@
 
     function sideMeta(side, league) {
       return { name: (side.name || '').toUpperCase(), logo: side.logo,
-               color: C.colorForTeam(side.org, league) };
+               color: C.colorForTeam(side.name, league) };
     }
 
     function currentMainEvent(match) {
@@ -211,8 +211,7 @@
         cloud = d;
         agg = C.aggregate(d.archive, d.aliases, d.players);
         minGames = C.minGamesFor(C.getCurrentEraWeek(new Date()));
-        localGet('local_archive').then(function (la) { window.__localArchive = la || { series: [] }; });
-        return refresh();
+        return localGet('local_archive').then(function (la) { window.__localArchive = la || { series: [] }; return refresh(); });
       }).catch(function(e){ showMsg('Data error: ' + (e && e.message || e)); });
 
       // Live updates from the control panel via the local server WebSocket.
