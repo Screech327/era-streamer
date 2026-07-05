@@ -66,7 +66,6 @@ class JsonStreamParser {
 }
 
 function startBridge({ onUpdate, onConnect, onDisconnect }) {
-  let lastUpdate = null;
   let sock = null;
   let reconnectTimer = null;
   let stopped = false;
@@ -85,7 +84,6 @@ function startBridge({ onUpdate, onConnect, onDisconnect }) {
 
     sock.on('data', (chunk) => {
       parser.feed(chunk, (msg) => {
-        if (msg.Event === 'UpdateState') lastUpdate = msg;
         if (onUpdate) {
           // A bad payload throwing inside the consumer used to take down
           // the whole TCP read pipeline (and bubble up further).
@@ -99,7 +97,6 @@ function startBridge({ onUpdate, onConnect, onDisconnect }) {
     sock.on('close', () => {
       const wasConnected = connected;
       connected = false;
-      lastUpdate = null;
       if (wasConnected && onDisconnect) onDisconnect();
       if (stopped) return;
       // Auto-reconnect — when RL closes/restarts the next attempt picks it up.
@@ -110,7 +107,6 @@ function startBridge({ onUpdate, onConnect, onDisconnect }) {
   connect();
 
   return {
-    getLastUpdate: () => lastUpdate,
     stop: () => {
       stopped = true;
       if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }

@@ -1,7 +1,7 @@
 {
   "name": "era-streamer",
   "productName": "ERA Streamer",
-  "version": "0.25.11",
+  "version": "0.25.12",
   "description": "ERA Rocket League broadcast overlay — desktop app",
   "private": true,
   "main": "src/main.js",
@@ -53,7 +53,7 @@
       ],
       "icon": "build/icon.ico",
       "artifactName": "ERA-Streamer-Setup-${version}.${ext}",
-      "signAndEditExecutable": false
+      "signAndEditExecutable": true
     },
     "nsis": {
       "oneClick": false,

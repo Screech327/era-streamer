@@ -1,6 +1,6 @@
-// Bundled snapshot of ERA team data + roster lookups. The app prefers a fresh
-// roster fetch from the website (see fetchLiveRosters) but falls back to this
-// snapshot when offline so streamers can always launch the overlay.
+// Bundled snapshot of ERA team data + roster lookups. Player names/boosts come
+// from the live RL bridge at runtime; this snapshot provides team names, logos,
+// and slot ordering so the picker and graphics work offline.
 
 const TEAM_DATA = [
   { code:'berk',   gm:'Tarry', leagues:[
@@ -74,23 +74,4 @@ function lookupTeam(slot, league) {
   };
 }
 
-// Fetch fresh rosters from the live ERA site. Falls back silently to the
-// bundled snapshot if the site is unreachable, so the app still works offline.
-// The roster table comes back from /api/streamer-roster — see the website's
-// route handler. We only ever read; we never write.
-async function fetchLiveRosters(timeoutMs = 5000) {
-  try {
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), timeoutMs);
-    const res = await fetch('https://eliterocketassociation.com/api/streamer-roster', { signal: ctrl.signal });
-    clearTimeout(timer);
-    if (!res.ok) return null;
-    const json = await res.json();
-    if (!json || !Array.isArray(json.players)) return null;
-    return json.players;
-  } catch (_) {
-    return null;
-  }
-}
-
-module.exports = { TEAM_DATA, LEAGUE_KEYS, LEAGUE_LABELS, lookupTeam, fetchLiveRosters };
+module.exports = { TEAM_DATA, LEAGUE_KEYS, LEAGUE_LABELS, lookupTeam };

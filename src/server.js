@@ -11,7 +11,6 @@
 //                                    existing overlay without rewriting its
 //                                    fetchMatch/fetchSeries/etc.
 //   POST /rest/v1/settings         → upsert (control panel writes match state)
-//   GET  /api/players?league&code  → drafted-roster lookup (live or bundled)
 //   GET  /api/teams                → bundled TEAM_DATA for the picker UI
 //   GET  /api/status               → bridge / config status pill
 // WS:
@@ -41,11 +40,6 @@ const MIME = {
   '.ico':'image/x-icon',
 };
 
-// ERA's hosted Supabase — same anon key the website's admin pages use, so
-// "SAVE SERIES STATS" pushes a recorded series straight into the public
-// archive. Anon key is a public credential; safe to embed.
-const ERA_SUPABASE_URL = 'https://qamonwkxafbzvyrlisjv.supabase.co';
-const ERA_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFhbW9ud2t4YWZienZ5cmxpc2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU5MzQ3NjcsImV4cCI6MjA5MTUxMDc2N30.AOKN9Ioz5m8Om2CutdlTownmoEbZ3DFVcAHovhhj7wM';
 
 function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck, onUpdateInstall, onWindowMinimize, onWindowMaximize, onWindowClose, onAutoLaunchGet, onAutoLaunchSet, onBridgeReconnect }) {
   // ── Persisted state (match config, series, overlay flags) ────────────
@@ -153,9 +147,8 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     const match = state.stream_match.value || {};
     if (!match.left || !match.right) throw new Error('No matchup pushed — pick teams in the MATCH panel and PUSH TO OVERLAY first.');
 
-    const teamsMod = require('./teams');
-    const leftTm  = teamsMod.lookupTeam(match.left.slot,  match.left.league);
-    const rightTm = teamsMod.lookupTeam(match.right.slot, match.right.league);
+    const leftTm  = teams.lookupTeam(match.left.slot,  match.left.league);
+    const rightTm = teams.lookupTeam(match.right.slot, match.right.league);
     if (!leftTm || !rightTm) throw new Error('Unknown team slot in the active matchup.');
 
     const seriesVal = state.stream_series.value || {};
@@ -587,7 +580,6 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
         setUpdateState,
         appendRecordingGame,
         advanceSeriesWin,
-        getState: () => state,
         // Window-bounds persistence — main.js calls these to restore
         // size/position on launch and save on resize/move.
         getWindowBounds: () => (state.window_bounds && state.window_bounds.value) || null,
