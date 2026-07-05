@@ -59,10 +59,188 @@
       });
   }
 
+  // ── DOM builders ──────────────────────────────────────────
+
+  function elh(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c];
+    });
+  }
+  function chrome(data, wkText) {
+    return '' +
+      '<div class="top">' +
+        '<div class="brand"><img class="brand-logo" src="/images/era-logo.png" alt="ERA"></div>' +
+        '<div class="meta"><div class="lg">' + esc(data.league || 'ERA') + '</div>' +
+          '<div class="wk">' + esc(wkText || data.week || '') + '</div></div>' +
+      '</div>';
+  }
+  function footer() {
+    return '' +
+      '<div class="rule"></div>' +
+      '<div class="bottom">' +
+        '<div class="social"><span class="ic">WEB</span> <b>eliterocketassociation.com</b></div>' +
+        '<div class="social"><span class="ic">DISCORD</span> <b>discord.gg/A66WJ45mqY</b></div>' +
+        '<div class="social"><span class="ic">TWITCH</span> <b>twitch.tv/eliterocketassociation</b></div>' +
+      '</div>';
+  }
+  function countdownBlock(data, label) {
+    if (!data.countdown || !data.countdown.on) return '';
+    var clock = formatCountdown(data.countdown.endsAt, data.nowMs);
+    return '<div class="count"><div class="lbl">' + esc(label) + '</div>' +
+           '<div class="clock" data-countdown="1">' + clock + '</div></div>';
+  }
+
+  function buildStartingSoon(data) {
+    var me = data.mainEvent;
+    var event = '';
+    if (me) {
+      event =
+        '<div class="upnext"><div class="un-lbl" style="text-align:center">TONIGHT\'S MAIN EVENT</div>' +
+        '<div class="un-row">' +
+          '<div class="un-team"><img src="' + esc(me.away.logo) + '"><div><div class="nm">' + esc(me.away.name) + '</div>' +
+            '<div class="bar" style="background:' + esc(me.away.color) + '"></div></div></div>' +
+          '<div class="un-vs">VS<span class="un-fmt">' + esc(me.format || 'BEST OF 5') + '</span></div>' +
+          '<div class="un-team right"><img src="' + esc(me.home.logo) + '">' +
+            '<div style="text-align:right"><div class="nm">' + esc(me.home.name) + '</div>' +
+            '<div class="bar" style="margin-left:auto;background:' + esc(me.home.color) + '"></div></div></div>' +
+        '</div></div>';
+    }
+    return chrome(data) +
+      '<div class="center"><div class="eyebrow">LIVE SHORTLY</div>' +
+        '<div class="title">STARTING <span class="accent">SOON</span></div>' +
+        countdownBlock(data, 'STREAM BEGINS IN') + event +
+      '</div>' + footer();
+  }
+
+  function buildIntermission(data) {
+    var rows = (data.schedule || []).map(function (row) {
+      var timeStr = '';
+      try {
+        timeStr = new Date(row.time).toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: 'numeric', minute: '2-digit' });
+      } catch (e) { timeStr = esc(row.time || ''); }
+      var live = row.upNext ? ' live' : '';
+      var badge = row.upNext ? '<div class="s-badge">UP NEXT</div>' : '';
+      return '<div class="s-row' + live + '">' +
+        '<div class="s-teams">' +
+          '<img src="' + esc((row.away && row.away.logo) || '') + '">' +
+          esc((row.away && row.away.name) || '') +
+          '<span class="at">AT</span>' +
+          esc((row.home && row.home.name) || '') +
+          '<img src="' + esc((row.home && row.home.logo) || '') + '">' +
+        '</div>' +
+        badge +
+        '<div class="s-time">' + esc(timeStr) + '</div>' +
+      '</div>';
+    }).join('');
+    return chrome(data) +
+      '<div class="center" style="justify-content:flex-start;padding-top:24px">' +
+        '<div class="eyebrow">STAY TUNED</div>' +
+        '<div class="title" style="font-size:112px">INTER<span class="accent">MISSION</span></div>' +
+        countdownBlock(data, 'RESUMING IN') +
+        '<div class="sched">' +
+          '<div class="s-lbl">TONIGHT\'S SCHEDULE — ALL TIMES EST</div>' +
+          rows +
+        '</div>' +
+      '</div>' + footer();
+  }
+
+  function buildBRB(data) {
+    return chrome(data) +
+      '<div class="center">' +
+        '<div class="eyebrow">HANG TIGHT</div>' +
+        '<div class="title">BE RIGHT <span class="accent">BACK</span></div>' +
+        '<div class="tagline">' + esc(data.tagline || 'Grabbing a quick break — the action resumes shortly.') + '</div>' +
+        countdownBlock(data, 'BACK IN') +
+      '</div>' + footer();
+  }
+
+  function buildThankYou(data) {
+    var rows = (data.results || []).map(function (r) {
+      var leftWins = r.leftWins || 0;
+      var rightWins = r.rightWins || 0;
+      var leftWin = leftWins > rightWins;
+      var rightWin = rightWins > leftWins;
+      var leftCls = leftWin ? ' win' : '';
+      var rightCls = rightWin ? ' win' : '';
+      var leftTag = leftWin ? '<span class="w-tag">W</span>' : '';
+      var rightTag = rightWin ? '<span class="w-tag">W</span>' : '';
+      return '<div class="res-row">' +
+        '<div class="r-teams' + leftCls + '">' +
+          '<img src="' + esc((r.left && r.left.logo) || '') + '">' +
+          esc((r.left && r.left.name) || '') + leftTag +
+        '</div>' +
+        '<div class="r-score">' + leftWins + ' – ' + rightWins + '</div>' +
+        '<div class="r-teams' + rightCls + '" style="justify-content:flex-end">' +
+          rightTag + esc((r.right && r.right.name) || '') +
+          '<img src="' + esc((r.right && r.right.logo) || '') + '">' +
+        '</div>' +
+        '<div class="r-final">FINAL</div>' +
+      '</div>';
+    }).join('');
+    return chrome(data, data.week || '') +
+      '<div class="center">' +
+        '<div class="eyebrow">GG — SEE YOU NEXT TIME</div>' +
+        '<div class="title" style="font-size:118px">THANK YOU <span class="accent">FOR WATCHING</span></div>' +
+        '<div class="tagline">Full results, standings &amp; VODs at eliterocketassociation.com</div>' +
+        '<div class="sched" style="max-width:940px">' +
+          '<div class="s-lbl">TONIGHT\'S RESULTS</div>' +
+          rows +
+        '</div>' +
+      '</div>' + footer();
+  }
+
+  function buildCastersDesk(data) {
+    var casters = data.casters || [];
+    function camSlot(idx) {
+      var c = casters[idx] || {};
+      return '<div class="cam">' +
+        '<div class="cam-box"><div class="cam-placeholder">CAMERA ' + (idx + 1) + '</div></div>' +
+        '<div class="nameplate">' +
+          '<div class="caster-name">' + esc(c.name || '') + '</div>' +
+          '<div class="caster-role">' + esc(c.role || '') + '</div>' +
+        '</div>' +
+      '</div>';
+    }
+    return chrome(data) +
+      '<div class="center">' +
+        '<div class="eyebrow">ON THE DESK</div>' +
+        '<div class="title" style="font-size:100px">CASTERS\' <span class="accent">DESK</span></div>' +
+        '<div class="desk">' + camSlot(0) + camSlot(1) + '</div>' +
+        '<div class="lower3">' + esc(data.deskTopic || '') + '</div>' +
+      '</div>' + footer();
+  }
+
+  function buildScene(screen, data) {
+    data = data || {};
+    var stage = document.createElement('div');
+    stage.className = 'scene-stage';
+    var inner = document.createElement('div');
+    inner.className = 'stage';
+    var html;
+    switch (screen) {
+      case 'starting-soon': html = buildStartingSoon(data); break;
+      case 'intermission':  html = buildIntermission(data); break;
+      case 'brb':           html = buildBRB(data); break;
+      case 'thank-you':     html = buildThankYou(data); break;
+      case 'casters-desk':  html = buildCastersDesk(data); break;
+      default:              html = buildBRB(data); break;
+    }
+    inner.innerHTML = html;
+    stage.appendChild(inner);
+    return stage;
+  }
+
   var api = {
     formatCountdown: formatCountdown,
     tonightSchedule: tonightSchedule,
     resolveTonightResults: resolveTonightResults,
+    buildScene: buildScene,
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   if (root) root.SceneRenderer = api;
