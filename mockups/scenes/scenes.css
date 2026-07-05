@@ -1,0 +1,102 @@
+/* ERA Streamer — stream scene mockups (shared brand chrome).
+   Palette + fonts lifted from overlay/matchup-graphic.css so these read as
+   the same broadcast package. 1920x1080, OBS-ready. */
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
+
+:root {
+  --ink: #ffffff;
+  --muted: rgba(255,255,255,0.46);
+  --dim: rgba(255,255,255,0.30);
+  --gold: #dcc174;
+  --accent: #e63946;
+  --panel: rgba(255,255,255,0.035);
+  --panel-line: rgba(255,255,255,0.09);
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+html, body { width:1920px; height:1080px; overflow:hidden; }
+
+body {
+  font-family:'Rajdhani', sans-serif;
+  color:var(--ink);
+  background:
+    radial-gradient(1200px 700px at 50% -8%, rgba(230,57,70,0.16) 0%, transparent 60%),
+    radial-gradient(900px 900px at 88% 118%, rgba(220,193,116,0.10) 0%, transparent 55%),
+    linear-gradient(180deg, #0e0e11 0%, #090909 60%, #070707 100%);
+  position:relative;
+}
+
+/* faint diagonal texture so the background isn't a flat void */
+body::before {
+  content:''; position:absolute; inset:0; pointer-events:none; opacity:0.5;
+  background-image:repeating-linear-gradient(115deg, rgba(255,255,255,0.018) 0 2px, transparent 2px 26px);
+}
+/* giant ghost ERA-shield watermark (screen blend drops the logo's black bg) */
+body::after {
+  content:''; position:absolute; right:10px; bottom:-90px; width:840px; height:840px;
+  background:url('era-logo.png') center/contain no-repeat; opacity:0.06; pointer-events:none;
+  mix-blend-mode:screen;
+}
+
+.stage { position:absolute; inset:0; display:flex; flex-direction:column; padding:64px 96px; }
+
+/* ── Top bar ─────────────────────────────────────────────── */
+.top { display:flex; align-items:center; justify-content:space-between; }
+.brand { display:flex; align-items:center; gap:16px; }
+/* real ELITE ERA shield; screen blend removes its black background on the dark scene */
+.brand-logo { height:108px; width:auto; display:block; mix-blend-mode:screen; }
+.top .meta { text-align:right; font-family:'Orbitron',monospace; font-weight:700; letter-spacing:4px; }
+.top .meta .lg  { font-size:20px; color:#fff; }
+.top .meta .wk  { font-size:12px; color:var(--gold); letter-spacing:5px; margin-top:6px; }
+
+/* ── Center block ────────────────────────────────────────── */
+.center { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.eyebrow { font-family:'Orbitron',monospace; font-weight:700; font-size:16px; letter-spacing:11px; color:var(--gold); margin-bottom:18px; }
+.title { font-family:'Bebas Neue',sans-serif; font-size:150px; line-height:0.92; letter-spacing:4px;
+         text-shadow:0 0 40px rgba(230,57,70,0.35), 0 6px 18px rgba(0,0,0,0.7); }
+.title .accent { color:var(--gold); }
+.tagline { font-size:30px; font-weight:500; color:var(--muted); letter-spacing:2px; margin-top:20px; }
+
+/* countdown pill */
+.count { margin-top:40px; display:inline-flex; flex-direction:column; align-items:center; gap:10px; }
+.count .lbl { font-family:'Orbitron',monospace; font-weight:700; font-size:13px; letter-spacing:7px; color:var(--dim); }
+.count .clock { font-family:'Orbitron',monospace; font-weight:900; font-size:96px; line-height:1; letter-spacing:4px; color:#fff;
+                padding:14px 46px; border:1px solid var(--panel-line); border-radius:18px; background:var(--panel);
+                box-shadow:0 0 50px rgba(230,57,70,0.10), inset 0 0 40px rgba(0,0,0,0.4); }
+
+/* ── Up-next matchup strip ───────────────────────────────── */
+.upnext { margin-top:52px; width:100%; max-width:1180px; }
+.upnext .un-lbl { font-family:'Orbitron',monospace; font-weight:700; font-size:14px; letter-spacing:8px; color:var(--dim); margin-bottom:20px; }
+.un-row { display:flex; align-items:center; justify-content:center; gap:56px; }
+.un-team { display:flex; align-items:center; gap:26px; }
+.un-team.right { flex-direction:row-reverse; }
+.un-team img { width:120px; height:120px; object-fit:contain; filter:drop-shadow(0 0 22px rgba(0,0,0,0.6)); }
+.un-team .nm { font-family:'Bebas Neue',sans-serif; font-size:52px; letter-spacing:2px; line-height:1; }
+.un-team .bar { height:5px; width:76px; border-radius:3px; margin-top:10px; }
+.un-vs { font-family:'Bebas Neue',sans-serif; font-size:60px; color:#fff;
+         text-shadow:0 0 22px rgba(230,57,70,0.7); position:relative; padding:0 8px; }
+.un-fmt { display:block; font-family:'Orbitron',monospace; font-weight:700; font-size:13px; letter-spacing:3px;
+          color:#0a0a0a; background:var(--gold); border-radius:5px; padding:3px 8px; margin-top:8px; }
+
+/* ── Schedule list ───────────────────────────────────────── */
+.sched { margin-top:44px; width:100%; max-width:1080px; }
+.sched .s-lbl { font-family:'Orbitron',monospace; font-weight:700; font-size:14px; letter-spacing:8px; color:var(--dim);
+                text-align:center; margin-bottom:18px; }
+.s-row { display:flex; align-items:center; justify-content:space-between; padding:16px 26px; border-radius:12px;
+         background:var(--panel); border:1px solid var(--panel-line); margin-bottom:12px; }
+.s-row .s-teams { display:flex; align-items:center; gap:14px; font-family:'Rajdhani',sans-serif; font-weight:700; font-size:30px; }
+.s-row .s-teams img { width:44px; height:44px; object-fit:contain; }
+.s-row .s-teams .at { color:var(--dim); font-size:22px; letter-spacing:2px; margin:0 4px; }
+.s-row .s-time { font-family:'Orbitron',monospace; font-weight:700; font-size:22px; letter-spacing:2px; color:var(--gold); }
+.s-row.live .s-time { color:var(--accent); }
+.s-row .s-badge { font-family:'Orbitron',monospace; font-weight:700; font-size:12px; letter-spacing:3px; color:#0a0a0a;
+                  background:var(--accent); border-radius:5px; padding:4px 9px; }
+
+/* ── Bottom bar (socials) ────────────────────────────────── */
+.rule { height:1px; width:100%; background:linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 55%, transparent), transparent); }
+.bottom { display:flex; align-items:center; justify-content:center; gap:52px; padding-top:26px; }
+.social { display:flex; align-items:center; gap:12px; font-family:'Rajdhani',sans-serif; font-weight:600; font-size:26px; color:var(--muted); letter-spacing:1px; }
+.social .ic { font-family:'Orbitron',monospace; font-weight:900; font-size:16px; color:var(--gold); border:1px solid var(--panel-line);
+              border-radius:8px; padding:8px 10px; letter-spacing:1px; }
+.social b { color:#fff; font-weight:700; }
