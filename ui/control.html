@@ -1693,6 +1693,7 @@ h1, h2, h3 {
         <label>SCREEN</label>
         <select class="select select-lg" id="mg_screen">
           <option value="matchup">Matchup Card</option>
+          <option value="series-stats">In-Series Stats</option>
           <option value="starting-soon">Starting Soon</option>
           <option value="intermission">Intermission</option>
           <option value="brb">Be Right Back</option>
@@ -1748,8 +1749,8 @@ h1, h2, h3 {
         <div class="field" style="flex:0 0 220px">
           <div class="label">Stat display</div>
           <select class="select select-lg" id="mg_statMode">
-            <option value="highlight">Score + best stat</option>
-            <option value="full">All per-game stats</option>
+            <option value="totals">Totals (+ score/game)</option>
+            <option value="averages">Averages</option>
           </select>
         </div>
         <div class="field" style="flex:1;min-width:240px">
@@ -2822,7 +2823,7 @@ $('wizCopyUrl').addEventListener('click', () => {
   var pool = [];        // [{name,mmr}] for sub pickers
   var streamMatch = null; // the pushed stream_match (current mode)
   var ORG_SLOTS = ['berk','qc','bamboo','suit','leeds','mont','vb','osaka']; // teams.js slot order
-  var cfg = { screen:'matchup', mode:'current', showStats:true, showSeries:true, statMode:'highlight', slateIndex:0, subs:{ home:{}, away:{} },
+  var cfg = { screen:'matchup', mode:'current', showStats:true, showSeries:true, statMode:'totals', slateIndex:0, subs:{ home:{}, away:{} },
               countdown:{ on:false, endsAt:null }, tagline:'', casters:[{name:'',role:'PLAY-BY-PLAY'},{name:'',role:'COLOR / ANALYST'}], deskTopic:'', showSchedule:true };
 
   function writeCfg(){ upsert('stream_matchup_graphic', cfg); }
@@ -2932,7 +2933,7 @@ $('wizCopyUrl').addEventListener('click', () => {
           cfg.mode = v.mode || 'current';
           cfg.showStats = v.showStats !== false;
           cfg.showSeries = v.showSeries !== false;
-          cfg.statMode = v.statMode || 'highlight';
+          cfg.statMode = (v.statMode === 'averages' || v.statMode === 'highlight' || v.statMode === 'full') ? 'averages' : 'totals';
           cfg.slateIndex = v.slateIndex || 0;
           cfg.subs = v.subs || { home:{}, away:{} };
           if (!cfg.subs.home) cfg.subs.home = {};
@@ -2956,11 +2957,12 @@ $('wizCopyUrl').addEventListener('click', () => {
     $('mg_taglineField').hidden = !(s === 'brb' || s === 'starting-soon');
     $('mg_deskField').hidden = (s !== 'casters-desk');
     $('mg_scheduleField').hidden = (s !== 'intermission');
-    // Matchup-source controls: only the card + Starting Soon pick a matchup.
-    $('mg_sourceRow').hidden = !(isMatchup || s === 'starting-soon');
-    // Card-only: stat display toggles + roster subs.
-    $('mg_statsRow').hidden = !isMatchup;
-    $('mg_subsPanel').hidden = !isMatchup;
+    var statsScreen = (s === 'matchup' || s === 'series-stats');
+    // Source (which teams) is relevant for matchup, starting-soon, and series-stats.
+    $('mg_sourceRow').hidden = !(statsScreen || s === 'starting-soon');
+    // Stat-display mode + subs only for the stats cards.
+    $('mg_statsRow').hidden = !statsScreen;
+    $('mg_subsPanel').hidden = !statsScreen;
     // Keep the slate picker in sync with the current source mode.
     applyModeVisibility();
   }
