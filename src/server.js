@@ -134,6 +134,7 @@ function start({ overlayDir, uiDir, statePath, appVersion, onLog, onUpdateCheck,
     state.stream_recording.value = rec;
     state.stream_recording.updated_at = new Date().toISOString();
     saveState();
+    broadcastJSON({ Event: 'SettingsChanged', Data: { key: 'stream_recording' } });
     if (onLog) onLog(`recording: captured match ${rec.games.length} (${game.matchGuid.slice(0, 8)})`);
   }
 
