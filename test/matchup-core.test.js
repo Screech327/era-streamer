@@ -131,3 +131,42 @@ test('buildMatchup attaches rosters by org+league', () => {
   assert.equal(m.away.name, 'Silver Spring Stars'); // suit major team
   assert.equal(m.home.roster.length, 2);
 });
+
+test('sumSeriesGames totals per player, team grouping, wins, seriesGames', () => {
+  const { sumSeriesGames } = require('../overlay/matchup-graphic-core.js');
+  const games = [
+    { winnerTeamNum: 0, teamScores: [3, 1], players: {
+      p1: { name: 'A', teamNum: 0, score: 300, goals: 2, assists: 1, saves: 0, shots: 4, demos: 1 },
+      p2: { name: 'B', teamNum: 1, score: 200, goals: 1, assists: 0, saves: 2, shots: 3, demos: 0 } } },
+    { winnerTeamNum: 1, teamScores: [0, 2], players: {
+      p1: { name: 'A', teamNum: 0, score: 100, goals: 0, assists: 2, saves: 1, shots: 1, demos: 0 } } },
+  ];
+  const r = sumSeriesGames(games);
+  assert.equal(r.seriesGames, 2);
+  assert.deepEqual(r.wins, { 0: 1, 1: 1 });
+  const a = r.players.get('p1');
+  assert.equal(a.gamesPlayed, 2);
+  assert.equal(a.score, 400);
+  assert.equal(a.goals, 2);
+  assert.equal(a.assists, 3);
+  assert.equal(a.teamNum, 0);
+  const b = r.players.get('p2');
+  assert.equal(b.gamesPlayed, 1);
+  assert.equal(b.saves, 2);
+});
+
+test('sumSeriesGames infers wins from teamScores when winnerTeamNum is null', () => {
+  const { sumSeriesGames } = require('../overlay/matchup-graphic-core.js');
+  const r = sumSeriesGames([
+    { winnerTeamNum: null, teamScores: [4, 2], players: {} },
+    { winnerTeamNum: null, teamScores: [1, 3], players: {} },
+  ]);
+  assert.deepEqual(r.wins, { 0: 1, 1: 1 });
+});
+
+test('sumSeriesGames handles empty input', () => {
+  const { sumSeriesGames } = require('../overlay/matchup-graphic-core.js');
+  const r = sumSeriesGames([]);
+  assert.equal(r.seriesGames, 0);
+  assert.equal(r.players.size, 0);
+});

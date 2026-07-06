@@ -574,6 +574,41 @@
     return c;
   }
 
+  // ───────── Series aggregation ─────────
+
+  // Sum a series' captured games into per-player totals (keyed by the game's
+  // player id), plus games won per team and the series game count. Ported from
+  // match.html renderPostSeries; adds per-player gamesPlayed for averages.
+  function sumSeriesGames(games) {
+    var players = new Map();
+    var wins = { 0: 0, 1: 0 };
+    (games || []).forEach(function (g) {
+      var w = g && g.winnerTeamNum;
+      if (w === 0 || w === 1) { wins[w] += 1; }
+      else {
+        var s0 = (g && g.teamScores && g.teamScores[0]) || 0;
+        var s1 = (g && g.teamScores && g.teamScores[1]) || 0;
+        if (s0 > s1) wins[0] += 1; else if (s1 > s0) wins[1] += 1;
+      }
+      var pls = (g && g.players) || {};
+      Object.keys(pls).forEach(function (pid) {
+        var p = pls[pid];
+        var e = players.get(pid);
+        if (!e) { e = { name: p.name, teamNum: p.teamNum, gamesPlayed: 0, score: 0, goals: 0, assists: 0, saves: 0, shots: 0, demos: 0 }; players.set(pid, e); }
+        e.gamesPlayed += 1;
+        e.score += p.score || 0;
+        e.goals += p.goals || 0;
+        e.assists += p.assists || 0;
+        e.saves += p.saves || 0;
+        e.shots += p.shots || 0;
+        e.demos += p.demos || 0;
+        if (p.name) e.name = p.name;
+        if (p.teamNum != null) e.teamNum = p.teamNum;
+      });
+    });
+    return { players: players, wins: wins, seriesGames: (games || []).length };
+  }
+
   // ───────── Export ─────────
 
   var MatchupCore = {
@@ -585,7 +620,7 @@
     getCurrentEraWeek: getCurrentEraWeek, minGamesFor: minGamesFor,
     aggregate: aggregate, perGame: perGame, pickBestOfRest: pickBestOfRest,
     rosterFor: rosterFor, eligibleSubs: eligibleSubs, LEAGUE_NUM: LEAGUE_NUM, buildMatchup: buildMatchup, resolveTonight: resolveTonight,
-    leagueTotals: leagueTotals, fetchCloud: fetchCloud, renderCard: renderCard,
+    leagueTotals: leagueTotals, fetchCloud: fetchCloud, renderCard: renderCard, sumSeriesGames: sumSeriesGames,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = MatchupCore;
