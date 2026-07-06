@@ -200,8 +200,80 @@
       }, 1000);
     }
 
-    function renderNow(cfg, match, series){
+    function renderSeriesStats(cfg, match, recording) {
+      var el = C.el; // element helper exported from matchup-graphic-core.js (Task 2)
+      var games = (recording && recording.games) || [];
+      var mu = resolveActiveMatchup(cfg, match);
+      if (!mu) { showMsg('Pick teams in the MATCH panel and PUSH TO OVERLAY'); return; }
+      if (!games.length) { showMsg('No games recorded yet — the card fills in after game 1.'); return; }
+
+      var agg = C.sumSeriesGames(games);
+      var mode = C.normalizeStatMode(cfg.statMode);
+      var leftColor  = C.colorForTeam(mu.home.name, mu.league);
+      var rightColor = C.colorForTeam(mu.away.name, mu.league);
+
+      function column(side, teamNum, team, color) {
+        var col = document.createElement('div');
+        col.className = 'mg-team mg-team-' + side;
+        col.style.setProperty('--team', color);
+        var head = document.createElement('div'); head.className = 'mg-team-head';
+        var lw = document.createElement('div'); lw.className = 'mg-logo-wrap';
+        if (team.logo) { var im = document.createElement('img'); im.className='mg-logo'; im.src=team.logo; im.onerror=function(){lw.classList.add('mg-logo-missing');im.remove();}; lw.appendChild(im); }
+        else { lw.classList.add('mg-logo-missing'); }
+        head.appendChild(lw);
+        var nw = document.createElement('div'); nw.className='mg-team-name-wrap';
+        var nm = document.createElement('div'); nm.className='mg-team-name'; nm.textContent = (team.name || '—').toUpperCase(); nw.appendChild(nm);
+        var bar = document.createElement('div'); bar.className='mg-team-bar'; nw.appendChild(bar);
+        head.appendChild(nw); col.appendChild(head);
+
+        var list = [];
+        agg.players.forEach(function (p) { if (p.teamNum === teamNum) list.push(p); });
+        list.sort(function (a, b) { return (b.score || 0) - (a.score || 0); });
+
+        var players = document.createElement('div'); players.className='mg-players';
+        list.forEach(function (p) {
+          var prow = document.createElement('div'); prow.className='mg-player';
+          var pn = document.createElement('div'); pn.className='mg-pname';
+          var span = document.createElement('span'); span.className='mg-pn'; span.textContent = p.name || '—'; pn.appendChild(span);
+          prow.appendChild(pn);
+          prow.appendChild(C.statRowEl(p, mode));
+          players.appendChild(prow);
+        });
+        col.appendChild(players);
+        return col;
+      }
+
+      var card = document.createElement('div'); card.className = 'mg-card';
+      card.style.setProperty('--accent', (C.LEAGUE_COLORS[mu.league] || '#888'));
+      card.style.setProperty('--home', leftColor); card.style.setProperty('--away', rightColor);
+      card.appendChild(el('div', 'mg-bg'));
+
+      var eyebrow = el('div', 'mg-eyebrow');
+      eyebrow.appendChild(el('span', 'mg-eyebrow-mark', 'ELITE ROCKET ASSOCIATION'));
+      eyebrow.appendChild(el('span', 'mg-eyebrow-dot'));
+      eyebrow.appendChild(el('span', 'mg-eyebrow-sub', 'SERIES STATS'));
+      card.appendChild(eyebrow);
+
+      var banner = el('div', 'mg-banner');
+      banner.appendChild(el('div', 'mg-banner-league', 'THROUGH GAME ' + agg.seriesGames));
+      var meta = el('div', 'mg-banner-meta');
+      meta.appendChild(el('span', 'mg-banner-score', (agg.wins[0] || 0) + ' – ' + (agg.wins[1] || 0)));
+      banner.appendChild(meta);
+      card.appendChild(banner);
+
+      var body = el('div', 'mg-body');
+      body.appendChild(column('left', 0, mu.home, leftColor));
+      var vs = el('div', 'mg-vs'); vs.appendChild(el('span', 'mg-vs-text', 'VS')); body.appendChild(vs);
+      body.appendChild(column('right', 1, mu.away, rightColor));
+      card.appendChild(body);
+
+      stage.innerHTML = '';
+      stage.appendChild(card);
+    }
+
+    function renderNow(cfg, match, series, recording){
       cfg = cfg || {};
+      if (cfg.screen === 'series-stats') { renderSeriesStats(cfg, match, recording); return; }
       if (cfg.screen && cfg.screen !== 'matchup') {
         renderScene(cfg, match, series);
         return;
@@ -241,7 +313,8 @@
         localGet('stream_matchup_graphic'),
         localGet('stream_match'),
         localGet('stream_series'),
-      ]).then(function(r){ renderNow(r[0], r[1], r[2]); });
+        localGet('stream_recording'),
+      ]).then(function(r){ renderNow(r[0], r[1], r[2], r[3]); });
     }
 
     function init(){
@@ -259,7 +332,7 @@
         ws.onmessage = function(evt){
           var msg; try { msg = JSON.parse(evt.data); } catch(_) { return; }
           if (msg && msg.Event === 'SettingsChanged' && msg.Data &&
-              (msg.Data.key === 'stream_matchup_graphic' || msg.Data.key === 'stream_match' || msg.Data.key === 'stream_series')){
+              (msg.Data.key === 'stream_matchup_graphic' || msg.Data.key === 'stream_match' || msg.Data.key === 'stream_series' || msg.Data.key === 'stream_recording')){
             if (cloud) refresh();
           }
         };
