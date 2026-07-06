@@ -624,6 +624,7 @@
     var row = el('div', 'mg-pstats mg-pstats-full');
     statCells(t, mode).forEach(function (c) {
       var chipEl = chip(c.label, c.value);
+      if (c.label === 'SC/G') chipEl.className += ' mg-chip-score';
       if (c.sub) {
         var v = chipEl.querySelector('.mg-chip-v');
         var sub = el('span', 'mg-chip-sub', c.sub);

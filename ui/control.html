@@ -2950,7 +2950,6 @@ $('wizCopyUrl').addEventListener('click', () => {
 
   function applyScreenVisibility() {
     var s = cfg.screen;
-    var isMatchup = (s === 'matchup');
     var timed = (s === 'starting-soon' || s === 'brb' || s === 'intermission');
     // Scene-specific fields — each only shows on the screen it belongs to.
     $('mg_countdownField').hidden = !timed;
