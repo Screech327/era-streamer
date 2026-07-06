@@ -541,21 +541,7 @@
 
     if (opts.showStats !== false) {
       var t = agg.get(String(pl.name).toLowerCase()) || blankTotals(pl.name);
-      var pg = perGame(t);
-      if (opts.statMode === 'full') {
-        // Compact per-game line: all stats as small chips.
-        var full = el('div', 'mg-pstats mg-pstats-full');
-        // [label, per-game value, isScore(round + accent)]
-        [['G', pg.goalsPG, false], ['A', pg.assistsPG, false], ['SV', pg.savesPG, false], ['SH', pg.shotsPG, false], ['DM', pg.demosPG, false], ['SC/G', pg.scorePG, true]]
-          .forEach(function (s) { full.appendChild(chip(s[0], s[2] ? String(Math.round(s[1])) : fmt(s[1]))); });
-        row.appendChild(full);
-      } else {
-        var best = pickBestOfRest(t, peers, minGames);
-        var stats = el('div', 'mg-pstats');
-        stats.appendChild(statBox('SCORE/G', fmt(pg.scorePG), false));
-        stats.appendChild(statBox(best.label.toUpperCase() + '/G', fmt(best.value), true));
-        row.appendChild(stats);
-      }
+      row.appendChild(statRowEl(t, opts.statMode));
     }
     return row;
   }
@@ -609,6 +595,45 @@
     return { players: players, wins: wins, seriesGames: (games || []).length };
   }
 
+  function normalizeStatMode(m) {
+    if (m === 'averages' || m === 'highlight' || m === 'full') return 'averages';
+    return 'totals';
+  }
+
+  // 6 stat cells for one player. Score is always per-game (rounded). Counting
+  // stats are totals in 'totals' mode and per-game (1 decimal) in 'averages'.
+  // Goals always carries the other representation in `sub`.
+  function statCells(t, mode) {
+    t = t || {};
+    var pg = perGame(t);
+    var avg = (normalizeStatMode(mode) === 'averages');
+    var scg = String(Math.round(pg.scorePG));
+    function tot(k) { return String(t[k] || 0); }
+    return [
+      { label: 'SC/G', value: scg, sub: '' },
+      { label: 'G',  value: avg ? fmt(pg.goalsPG)   : tot('goals'),
+                     sub:   avg ? tot('goals')       : (fmt(pg.goalsPG) + '/g') },
+      { label: 'A',  value: avg ? fmt(pg.assistsPG) : tot('assists'), sub: '' },
+      { label: 'SV', value: avg ? fmt(pg.savesPG)   : tot('saves'),   sub: '' },
+      { label: 'SH', value: avg ? fmt(pg.shotsPG)   : tot('shots'),   sub: '' },
+      { label: 'DM', value: avg ? fmt(pg.demosPG)   : tot('demos'),   sub: '' },
+    ];
+  }
+
+  function statRowEl(t, mode) {
+    var row = el('div', 'mg-pstats mg-pstats-full');
+    statCells(t, mode).forEach(function (c) {
+      var chipEl = chip(c.label, c.value);
+      if (c.sub) {
+        var v = chipEl.querySelector('.mg-chip-v');
+        var sub = el('span', 'mg-chip-sub', c.sub);
+        if (v) v.appendChild(sub);
+      }
+      row.appendChild(chipEl);
+    });
+    return row;
+  }
+
   // ───────── Export ─────────
 
   var MatchupCore = {
@@ -621,6 +646,7 @@
     aggregate: aggregate, perGame: perGame, pickBestOfRest: pickBestOfRest,
     rosterFor: rosterFor, eligibleSubs: eligibleSubs, LEAGUE_NUM: LEAGUE_NUM, buildMatchup: buildMatchup, resolveTonight: resolveTonight,
     leagueTotals: leagueTotals, fetchCloud: fetchCloud, renderCard: renderCard, sumSeriesGames: sumSeriesGames,
+    el: el, normalizeStatMode: normalizeStatMode, statCells: statCells, statRowEl: statRowEl,
   };
 
   if (typeof module !== 'undefined' && module.exports) module.exports = MatchupCore;

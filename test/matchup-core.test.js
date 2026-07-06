@@ -170,3 +170,41 @@ test('sumSeriesGames handles empty input', () => {
   assert.equal(r.seriesGames, 0);
   assert.equal(r.players.size, 0);
 });
+
+test('normalizeStatMode maps legacy + defaults to totals', () => {
+  const { normalizeStatMode } = require('../overlay/matchup-graphic-core.js');
+  assert.equal(normalizeStatMode('highlight'), 'averages');
+  assert.equal(normalizeStatMode('full'), 'averages');
+  assert.equal(normalizeStatMode('averages'), 'averages');
+  assert.equal(normalizeStatMode('totals'), 'totals');
+  assert.equal(normalizeStatMode(undefined), 'totals');
+});
+
+test('statCells totals mode: counting stats are totals, score per-game, goals both ways', () => {
+  const { statCells } = require('../overlay/matchup-graphic-core.js');
+  const t = { gamesPlayed: 24, score: 11853, goals: 31, assists: 22, saves: 38, shots: 98, demos: 23 };
+  const cells = statCells(t, 'totals');
+  const by = {}; cells.forEach(c => by[c.label] = c);
+  assert.equal(by['SC/G'].value, '494');          // round(11853/24)
+  assert.equal(by['G'].value, '31');               // total
+  assert.equal(by['G'].sub, '1.3/g');              // goals per-game secondary
+  assert.equal(by['A'].value, '22');
+  assert.equal(by['DM'].value, '23');
+});
+
+test('statCells averages mode: per-game values, goals shows total as sub', () => {
+  const { statCells } = require('../overlay/matchup-graphic-core.js');
+  const t = { gamesPlayed: 24, score: 11853, goals: 31, assists: 22, saves: 38, shots: 98, demos: 23 };
+  const cells = statCells(t, 'averages');
+  const by = {}; cells.forEach(c => by[c.label] = c);
+  assert.equal(by['SC/G'].value, '494');
+  assert.equal(by['G'].value, '1.3');
+  assert.equal(by['G'].sub, '31');                 // total goals secondary
+  assert.equal(by['A'].value, '0.9');
+});
+
+test('statCells guards zero games (no NaN)', () => {
+  const { statCells } = require('../overlay/matchup-graphic-core.js');
+  const cells = statCells({ gamesPlayed: 0, score: 0, goals: 0, assists: 0, saves: 0, shots: 0, demos: 0 }, 'averages');
+  cells.forEach(c => assert.ok(!/NaN/.test(c.value + c.sub)));
+});
